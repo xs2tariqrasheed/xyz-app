@@ -55,7 +55,9 @@ export default function MakeReservationScreen() {
   }));
   const [addresses, setAddresses] = useState<RideAddressInfoValue>({
     pickup: null,
+    pickupNotes: '',
     destination: null,
+    destinationNotes: '',
   });
   const [preferences, setPreferences] = useState<PreferencesValue>(() =>
     emptyPreferences(DEFAULT_CAR_TYPE),
