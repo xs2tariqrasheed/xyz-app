@@ -162,6 +162,35 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
   );
 }
 
+/** Globe — the country select. A ring with one meridian and one parallel. */
+export function GlobeGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: 1.6,
+        borderColor: color,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View
+        style={{
+          position: 'absolute',
+          width: size * 0.44,
+          height: size - 3.2,
+          borderRadius: size * 0.22,
+          borderWidth: 1.4,
+          borderColor: color,
+        }}
+      />
+      <View style={{ width: size - 3.2, height: 1.4, backgroundColor: color }} />
+    </View>
+  );
+}
+
 /** Static tick — marks the chosen row in a select sheet. */
 export function TickGlyph({ color = colors.primary[600], size = 12 }: GlyphProps) {
   return (

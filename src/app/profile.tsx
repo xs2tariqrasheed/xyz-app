@@ -31,6 +31,12 @@ const SAVED_PROFILE: PersonalInfoValue = {
   lastName: 'TEST',
 };
 
+/** Destinations not covered by the panel above, or by the primary nav. */
+const ACCOUNT_ROWS = [
+  { label: 'Update mailing address', detail: 'Where statements and account mail are sent.', href: '/mailing-address' as const },
+  { label: 'Change password', detail: 'Update the password you use to sign in.', href: '/change-password' as const },
+];
+
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
   const roomy = width >= breakpoints.sm;
@@ -116,19 +122,21 @@ export default function ProfileScreen() {
         <PersonalInfoSection value={draft} onChange={handleChange} errors={errors} />
       </PanelCard>
 
-      <Link href="/change-password" asChild>
-        <Pressable accessibilityRole="link" accessibilityLabel="Change password">
-          {({ pressed }) => (
-            <View style={[styles.row, pressed ? styles.rowPressed : null]}>
-              <View style={styles.rowText}>
-                <Text style={styles.rowTitle}>Change password</Text>
-                <Text style={styles.rowDetail}>Update the password you use to sign in.</Text>
+      {ACCOUNT_ROWS.map((row) => (
+        <Link key={row.href} href={row.href} asChild>
+          <Pressable accessibilityRole="link" accessibilityLabel={row.label}>
+            {({ pressed }) => (
+              <View style={[styles.row, pressed ? styles.rowPressed : null]}>
+                <View style={styles.rowText}>
+                  <Text style={styles.rowTitle}>{row.label}</Text>
+                  <Text style={styles.rowDetail}>{row.detail}</Text>
+                </View>
+                <ChevronGlyph direction="right" color={colors.textMuted} size={8} />
               </View>
-              <ChevronGlyph direction="right" color={colors.textMuted} size={8} />
-            </View>
-          )}
-        </Pressable>
-      </Link>
+            )}
+          </Pressable>
+        </Link>
+      ))}
 
       <ComingSoon
         blurb="Still to come in the account area: saved pickup and drop-off addresses, and the contacts a ride can be booked for."
