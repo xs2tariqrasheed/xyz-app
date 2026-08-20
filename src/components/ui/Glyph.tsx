@@ -116,25 +116,6 @@ export function ChevronGlyph({
   );
 }
 
-/** Tick mark — marks the chosen row in a list of options. */
-export function CheckGlyph({ color = colors.success, size = 12 }: GlyphProps) {
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View
-        style={{
-          width: size * 0.42,
-          height: size * 0.8,
-          borderRightWidth: 2,
-          borderBottomWidth: 2,
-          borderColor: color,
-          marginTop: -size * 0.12,
-          transform: [{ rotate: '45deg' }],
-        }}
-      />
-    </View>
-  );
-}
-
 /** Filled dot — the "live" pulse and the calendar's today marker. */
 export function Dot({ color = colors.accent, size = 6 }: GlyphProps) {
   return (
@@ -176,6 +157,107 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
       <View style={{ alignItems: 'center' }}>
         <View style={stem} />
         <ChevronGlyph direction="down" color={color} size={size * 0.3} />
+      </View>
+    </View>
+  );
+}
+
+/** Static tick — marks the chosen row in a select sheet. */
+export function TickGlyph({ color = colors.primary[600], size = 12 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.5,
+          height: size * 0.85,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }, { translateY: -size * 0.08 }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Payment card: a rounded rectangle with a magnetic stripe. */
+export function CardGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center' }}>
+      <View
+        style={{
+          height: size * 0.72,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 3,
+          justifyContent: 'flex-start',
+          overflow: 'hidden',
+        }}
+      >
+        <View style={{ height: size * 0.18, marginTop: size * 0.1, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Magnifier — the search action and the empty-results state. */
+export function SearchGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const ring = size * 0.66;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <View
+        style={{
+          width: ring,
+          height: ring,
+          borderRadius: ring / 2,
+          borderWidth: 1.8,
+          borderColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          right: size * 0.08,
+          bottom: size * 0.08,
+          width: 1.8,
+          height: size * 0.34,
+          borderRadius: 1,
+          backgroundColor: color,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Office block — marks anything billed to the company rather than a person. */
+export function BuildingGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const pane = { width: size * 0.15, height: size * 0.15, borderRadius: 1, backgroundColor: color } as const;
+  const row = { flexDirection: 'row', justifyContent: 'space-between' } as const;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.76,
+          height: size * 0.84,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 2,
+          paddingHorizontal: size * 0.12,
+          paddingTop: size * 0.12,
+          gap: size * 0.11,
+        }}
+      >
+        <View style={row}>
+          <View style={pane} />
+          <View style={pane} />
+        </View>
+        <View style={row}>
+          <View style={pane} />
+          <View style={pane} />
+        </View>
       </View>
     </View>
   );

@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Field } from '@/components/ui/Field';
-import { CheckGlyph, PinGlyph } from '@/components/ui/Glyph';
+import { PinGlyph, TickGlyph } from '@/components/ui/Glyph';
 import type { AddressSuggestion } from '@/services/places';
 import { colors, radii, space } from '@/theme';
 
@@ -50,6 +50,8 @@ export function LocationSelect({
                 key={option.placeId}
                 accessibilityRole="radio"
                 accessibilityState={{ selected, checked: selected }}
+                // react-native-web no longer derives aria-checked from accessibilityState.
+                aria-checked={selected}
                 accessibilityLabel={`${option.primary}, ${option.secondary}`}
                 onPress={() => onChange(option)}
                 style={({ pressed }) => [
@@ -69,7 +71,7 @@ export function LocationSelect({
                   </Text>
                 </View>
 
-                {selected ? <CheckGlyph color={colors.primary[600]} size={12} /> : null}
+                {selected ? <TickGlyph size={12} /> : null}
               </Pressable>
             );
           })}

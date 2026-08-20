@@ -4,7 +4,7 @@ import { StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewS
 import { Button } from '@/components/ui/Button';
 import { DEMO_SESSION } from '@/data/session';
 import { breakpoints, colors, space } from '@/theme';
-import { formatFullDate, formatTimeOfDay } from '@/utils/datetime';
+import { formatClockTime, formatFullDate } from '@/utils/datetime';
 
 import { HomePanel } from './HomePanel';
 import { SedanIllustration } from './SedanIllustration';
@@ -30,7 +30,7 @@ export function WhatsNewPanel({ style }: WhatsNewPanelProps) {
   const roomy = width >= breakpoints.md;
 
   const { lastLoginAt } = DEMO_SESSION;
-  const lastLogin = `${formatFullDate(lastLoginAt)} · ${formatTimeOfDay(lastLoginAt)}`;
+  const lastLogin = `${formatFullDate(lastLoginAt)} · ${formatClockTime(lastLoginAt)}`;
 
   return (
     <HomePanel
@@ -68,7 +68,7 @@ export function WhatsNewPanel({ style }: WhatsNewPanelProps) {
           label="Previous orders"
           variant="outline"
           size="lg"
-          onPress={() => router.navigate('/receipts')}
+          onPress={() => router.navigate('/rides')}
         />
       </View>
     </HomePanel>
