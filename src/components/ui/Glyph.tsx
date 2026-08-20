@@ -161,3 +161,56 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
     </View>
   );
 }
+
+export function EyeGlyph({ color = colors.textMuted, size = 18, off = false }: GlyphProps & { off?: boolean }) {
+  const lens = size * 0.64;
+  const pupil = size * 0.3;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size,
+          height: lens,
+          borderRadius: lens / 2,
+          borderWidth: 1.6,
+          borderColor: color,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View style={{ width: pupil, height: pupil, borderRadius: pupil / 2, backgroundColor: color }} />
+      </View>
+
+      {off ? (
+        <View
+          style={{
+            position: 'absolute',
+            width: size * 1.15,
+            height: 1.6,
+            backgroundColor: color,
+            borderRadius: 1,
+            transform: [{ rotate: '-45deg' }],
+          }}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+export function CheckGlyph({ color = colors.success, size = 14 }: GlyphProps) {
+  const stroke = 1.8;
+  const bar = { position: 'absolute', height: stroke, backgroundColor: color, borderRadius: 1 } as const;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      {/* Short down-stroke, then the long up-stroke — a tick from two bars. */}
+      <View
+        style={[bar, { width: size * 0.37, left: size * 0.1, top: size * 0.675 - stroke / 2, transform: [{ rotate: '42deg' }] }]}
+      />
+      <View
+        style={[bar, { width: size * 0.7, left: size * 0.285, top: size * 0.525 - stroke / 2, transform: [{ rotate: '-52deg' }] }]}
+      />
+    </View>
+  );
+}
