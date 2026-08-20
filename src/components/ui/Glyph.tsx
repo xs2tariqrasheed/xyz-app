@@ -162,6 +162,126 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
   );
 }
 
+/** Static tick — marks the chosen row in a select sheet. */
+export function TickGlyph({ color = colors.primary[600], size = 12 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.5,
+          height: size * 0.85,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }, { translateY: -size * 0.08 }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Payment card: a rounded rectangle with a magnetic stripe. */
+export function CardGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center' }}>
+      <View
+        style={{
+          height: size * 0.72,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 3,
+          justifyContent: 'flex-start',
+          overflow: 'hidden',
+        }}
+      >
+        <View style={{ height: size * 0.18, marginTop: size * 0.1, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Magnifier — the search action and the empty-results state. */
+export function SearchGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const ring = size * 0.66;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <View
+        style={{
+          width: ring,
+          height: ring,
+          borderRadius: ring / 2,
+          borderWidth: 1.8,
+          borderColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          right: size * 0.08,
+          bottom: size * 0.08,
+          width: 1.8,
+          height: size * 0.34,
+          borderRadius: 1,
+          backgroundColor: color,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Office block — marks anything billed to the company rather than a person. */
+export function BuildingGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const pane = { width: size * 0.15, height: size * 0.15, borderRadius: 1, backgroundColor: color } as const;
+  const row = { flexDirection: 'row', justifyContent: 'space-between' } as const;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.76,
+          height: size * 0.84,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 2,
+          paddingHorizontal: size * 0.12,
+          paddingTop: size * 0.12,
+          gap: size * 0.11,
+        }}
+      >
+        <View style={row}>
+          <View style={pane} />
+          <View style={pane} />
+        </View>
+        <View style={row}>
+          <View style={pane} />
+          <View style={pane} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** Shield outline — marks the human-verification control. */
+export function ShieldGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View
+      style={{
+        width: size * 0.82,
+        height: size,
+        borderWidth: 1.8,
+        borderColor: color,
+        borderTopLeftRadius: size * 0.16,
+        borderTopRightRadius: size * 0.16,
+        borderBottomLeftRadius: size * 0.44,
+        borderBottomRightRadius: size * 0.44,
+      }}
+    />
+  );
+}
+
+/** Eye outline — the password reveal toggle. `off` draws the slash through it. */
 export function EyeGlyph({ color = colors.textMuted, size = 18, off = false }: GlyphProps & { off?: boolean }) {
   const lens = size * 0.64;
   const pupil = size * 0.3;
@@ -198,6 +318,7 @@ export function EyeGlyph({ color = colors.textMuted, size = 18, off = false }: G
   );
 }
 
+/** Tick from two positioned bars — the password rules checklist. */
 export function CheckGlyph({ color = colors.success, size = 14 }: GlyphProps) {
   const stroke = 1.8;
   const bar = { position: 'absolute', height: stroke, backgroundColor: color, borderRadius: 1 } as const;

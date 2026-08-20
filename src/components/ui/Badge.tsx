@@ -33,7 +33,10 @@ export function Badge({ label, tone = 'muted', pulse, style }: BadgeProps) {
       style={[styles.badge, { backgroundColor: palette.bg, borderColor: palette.border }, style]}
     >
       {pulse ? <PulseDot color={palette.fg} /> : null}
-      <Text style={[styles.label, { color: palette.fg }]}>{label}</Text>
+      {/* A badge is a pill, never a paragraph — it clips before it wraps. */}
+      <Text numberOfLines={1} style={[styles.label, { color: palette.fg }]}>
+        {label}
+      </Text>
     </View>
   );
 }

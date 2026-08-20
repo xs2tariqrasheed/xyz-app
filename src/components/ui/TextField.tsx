@@ -9,6 +9,10 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   label: string;
   required?: boolean;
   hint?: string;
+  /** Shown under the field and reddens the border. */
+  error?: string;
+  /** Lays the label out beside the input on tablet-and-wider viewports. */
+  inline?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -16,11 +20,21 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
  * Single-line text input. Focus is drawn with a brand border plus a 3px
  * `--focus-ring` halo, the same treatment as the theme page's focused field.
  */
-export function TextField({ label, required, hint, style, onFocus, onBlur, ...inputProps }: TextFieldProps) {
+export function TextField({
+  label,
+  required,
+  hint,
+  error,
+  inline,
+  style,
+  onFocus,
+  onBlur,
+  ...inputProps
+}: TextFieldProps) {
   const [focused, setFocused] = useState(false);
 
   return (
-    <Field label={label} required={required} hint={hint} style={style}>
+    <Field label={label} required={required} hint={hint} error={error} inline={inline} style={style}>
       <TextInput
         {...inputProps}
         placeholderTextColor={colors.textDisabled}
@@ -32,7 +46,11 @@ export function TextField({ label, required, hint, style, onFocus, onBlur, ...in
           setFocused(false);
           onBlur?.(event);
         }}
-        style={[styles.input, focused ? styles.inputFocused : null]}
+        style={[
+          styles.input,
+          error ? styles.inputInvalid : null,
+          focused ? (error ? styles.inputFocusedInvalid : styles.inputFocused) : null,
+        ]}
       />
     </Field>
   );
@@ -50,5 +68,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textStrong,
   },
+  inputInvalid: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
   inputFocused: focusedFieldStyle,
+  // Focus on an errored field keeps the danger tint but swaps the brand halo
+  // for a danger one, so the ring never contradicts the message below.
+  inputFocusedInvalid: {
+    borderColor: colors.danger,
+    boxShadow: `0 0 0 3px ${colors.dangerBorder}`,
+  },
 });
