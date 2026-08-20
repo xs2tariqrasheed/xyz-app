@@ -15,30 +15,51 @@ import {
 
 import { ChevronGlyph } from './Glyph';
 
+/** A chip that jumps the selection `offset` days from today. Negative reaches back. */
+export type QuickPick = { label: string; offset: number };
+
 export type CalendarPickerProps = {
   value: Date;
   onChange: (date: Date) => void;
-  /** "Now", used to mark today and to grey out days that have already passed. */
+  /** "Now", used to mark today in the grid. */
   today: Date;
+  /** Earliest selectable day. Defaults to `today` — bookings never go backwards. */
+  minDate?: Date;
+  quickPicks?: readonly QuickPick[];
 };
 
-const QUICK_PICKS = [
+/** Booking default: forwards only. */
+export const BOOKING_QUICK_PICKS: readonly QuickPick[] = [
   { label: 'Today', offset: 0 },
   { label: 'Tomorrow', offset: 1 },
   { label: 'In a week', offset: 7 },
-] as const;
+];
 
-/** Month grid with quick-pick shortcuts. Past days are not selectable. */
-export function CalendarPicker({ value, onChange, today }: CalendarPickerProps) {
+/** Searching history: the same shortcuts, pointed the other way. */
+export const HISTORY_QUICK_PICKS: readonly QuickPick[] = [
+  { label: 'Today', offset: 0 },
+  { label: 'A week ago', offset: -7 },
+  { label: 'A month ago', offset: -30 },
+];
+
+/** Month grid with quick-pick shortcuts. Days before the floor are inert. */
+export function CalendarPicker({
+  value,
+  onChange,
+  today,
+  minDate,
+  quickPicks = BOOKING_QUICK_PICKS,
+}: CalendarPickerProps) {
   const [month, setMonth] = useState(() => new Date(value.getFullYear(), value.getMonth(), 1));
 
-  const days = buildMonthGrid(month, today);
-  const atFloorMonth = isSameMonth(month, today);
+  const floor = minDate ?? today;
+  const days = buildMonthGrid(month, today, floor);
+  const atFloorMonth = isSameMonth(month, floor);
 
   return (
     <View style={styles.root}>
       <View style={styles.quickRow}>
-        {QUICK_PICKS.map((pick) => {
+        {quickPicks.map((pick) => {
           const date = addDays(startOfDay(today), pick.offset);
           const active = isSameDay(date, value);
           return (
