@@ -161,3 +161,78 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
     </View>
   );
 }
+
+/** Tick mark — the selected row in an option list. */
+export function CheckGlyph({ color = colors.primary[600], size = 12 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.44,
+          height: size * 0.78,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }, { translateY: -size * 0.06 }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Handset outline — marks a phone, mobile, work or fax contact. */
+export function PhoneGlyph({ color = colors.primary[600], size = 16 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.62,
+          height: size,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: size * 0.18,
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          paddingBottom: size * 0.08,
+        }}
+      >
+        <View
+          style={{
+            width: size * 0.2,
+            height: 1.6,
+            borderRadius: 1,
+            backgroundColor: color,
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
+/** Envelope — marks an email contact. */
+export function MailGlyph({ color = colors.primary[600], size = 16 }: GlyphProps) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size * 0.76,
+        borderWidth: 1.6,
+        borderColor: color,
+        borderRadius: size * 0.12,
+        overflow: 'hidden',
+        alignItems: 'center',
+      }}
+    >
+      <View
+        style={{
+          width: size * 0.52,
+          height: size * 0.52,
+          borderRightWidth: 1.6,
+          borderBottomWidth: 1.6,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }, { translateY: -size * 0.24 }],
+        }}
+      />
+    </View>
+  );
+}
