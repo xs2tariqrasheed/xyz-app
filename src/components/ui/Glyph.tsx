@@ -161,3 +161,51 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
     </View>
   );
 }
+
+/** Globe — the country select. A ring with one meridian and one parallel. */
+export function GlobeGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: 1.6,
+        borderColor: color,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View
+        style={{
+          position: 'absolute',
+          width: size * 0.44,
+          height: size - 3.2,
+          borderRadius: size * 0.22,
+          borderWidth: 1.4,
+          borderColor: color,
+        }}
+      />
+      <View style={{ width: size - 3.2, height: 1.4, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** Tick — marks the chosen option in a select. */
+export function CheckGlyph({ color = colors.primary[600], size = 12 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.45,
+          height: size * 0.82,
+          marginTop: -size * 0.14,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+    </View>
+  );
+}

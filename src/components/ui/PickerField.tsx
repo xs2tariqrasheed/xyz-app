@@ -16,6 +16,7 @@ export type PickerFieldProps = {
   onPress: () => void;
   required?: boolean;
   hint?: string;
+  error?: string;
   tone?: 'primary' | 'accent';
   style?: StyleProp<ViewStyle>;
 };
@@ -30,6 +31,7 @@ export function PickerField({
   onPress,
   required,
   hint,
+  error,
   tone = 'primary',
   style,
 }: PickerFieldProps) {
@@ -39,12 +41,16 @@ export function PickerField({
       : { backgroundColor: colors.surfaceSelected };
 
   return (
-    <Field label={label} required={required} hint={hint} style={style}>
+    <Field label={label} required={required} hint={hint} error={error} style={style}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${value ?? placeholder}`}
         onPress={onPress}
-        style={({ pressed }) => [styles.control, pressed ? styles.pressed : null]}
+        style={({ pressed }) => [
+          styles.control,
+          error ? styles.invalid : null,
+          pressed ? styles.pressed : null,
+        ]}
       >
         <View style={[styles.iconWell, iconWell]}>{icon}</View>
         <View style={styles.text}>
@@ -76,6 +82,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm + 1,
     minHeight: 50,
   },
+  invalid: { borderColor: colors.danger, backgroundColor: colors.dangerBg },
   pressed: { backgroundColor: colors.surfaceSunken },
   iconWell: {
     width: 32,
