@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -24,6 +24,10 @@ import {
   RideAddressInfoSection,
   type RideAddressInfoValue,
 } from '@/components/reservation/RideAddressInfoSection';
+import {
+  makeReservationNumber,
+  RideReceiptSection,
+} from '@/components/reservation/RideReceiptSection';
 import { SectionCard, type SectionState } from '@/components/reservation/SectionCard';
 import { DEFAULT_CAR_TYPE } from '@/components/reservation/carTypes';
 import { RESERVATION_SECTIONS } from '@/components/reservation/sections';
@@ -39,6 +43,7 @@ const LAST_INDEX = RESERVATION_SECTIONS.length - 1;
 export default function MakeReservationScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   // `wide` earns the step rail; `roomy` only earns a right-aligned action bar.
   const wide = width >= breakpoints.lg;
   const roomy = width >= breakpoints.md;
@@ -63,6 +68,10 @@ export default function MakeReservationScreen() {
     emptyPreferences(DEFAULT_CAR_TYPE),
   );
 
+  // Stands in for the number a booking endpoint will return; fixed for the
+  // life of the screen so the receipt never renumbers itself mid-flow.
+  const [reservationNumber] = useState(() => makeReservationNumber(today));
+
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -72,6 +81,21 @@ export default function MakeReservationScreen() {
   };
 
   const nextSection = RESERVATION_SECTIONS[activeIndex + 1];
+
+  /**
+   * The return leg reuses the passenger and flips the addresses, so the
+   * customer only has to pick a new date and time.
+   */
+  const bookAnotherLeg = () => {
+    setAddresses({
+      pickup: addresses.destination,
+      pickupNotes: addresses.destinationNotes,
+      destination: addresses.pickup,
+      destinationNotes: addresses.pickupNotes,
+    });
+    setInfo((current) => ({ ...current, isLive: false }));
+    goToSection(0);
+  };
 
   return (
     <View style={styles.root}>
@@ -122,6 +146,13 @@ export default function MakeReservationScreen() {
                       <RideAddressInfoSection value={addresses} onChange={setAddresses} />
                     ) : section.id === 'preferences' ? (
                       <PreferencesSection value={preferences} onChange={setPreferences} />
+                    ) : section.id === 'receipt' ? (
+                      <RideReceiptSection
+                        reservationNumber={reservationNumber}
+                        onViewReservation={() => router.push('/receipts')}
+                        onBookAnotherLeg={bookAnotherLeg}
+                      />
+
                     ) : (
                       <NotBuiltYet title={section.title} />
                     )}
