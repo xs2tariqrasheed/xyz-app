@@ -1,6 +1,6 @@
-import { Stack } from 'expo-router';
+import { Link, Stack } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { ComingSoon } from '@/components/layout/ComingSoon';
 import { Screen } from '@/components/layout/Screen';
@@ -15,8 +15,9 @@ import {
 } from '@/components/profile/PersonalInfoSection';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ChevronGlyph } from '@/components/ui/Glyph';
 import { Reveal } from '@/components/ui/Reveal';
-import { breakpoints, colors, radii, space } from '@/theme';
+import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 
 /**
  * The account as it stands today.
@@ -115,6 +116,20 @@ export default function ProfileScreen() {
         <PersonalInfoSection value={draft} onChange={handleChange} errors={errors} />
       </PanelCard>
 
+      <Link href="/change-password" asChild>
+        <Pressable accessibilityRole="link" accessibilityLabel="Change password">
+          {({ pressed }) => (
+            <View style={[styles.row, pressed ? styles.rowPressed : null]}>
+              <View style={styles.rowText}>
+                <Text style={styles.rowTitle}>Change password</Text>
+                <Text style={styles.rowDetail}>Update the password you use to sign in.</Text>
+              </View>
+              <ChevronGlyph direction="right" color={colors.textMuted} size={8} />
+            </View>
+          )}
+        </Pressable>
+      </Link>
+
       <ComingSoon
         blurb="Still to come in the account area: saved pickup and drop-off addresses, and the contacts a ride can be booked for."
         points={['Saved addresses', 'Contacts', 'Payment methods']}
@@ -143,4 +158,20 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: space.md },
   actionsStacked: { flexDirection: 'column-reverse', alignItems: 'stretch' },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.xl,
+    padding: space.lg,
+    boxShadow: shadowValues.sm,
+  },
+  rowPressed: { backgroundColor: colors.surfaceSelected, borderColor: colors.primary[200] },
+  rowText: { flex: 1, gap: 2 },
+  rowTitle: { color: colors.textHeading, fontSize: 16, fontWeight: '700' },
+  rowDetail: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
 });
