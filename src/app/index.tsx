@@ -9,6 +9,7 @@ const QUICK_LINKS = [
   { label: 'Rates', hint: 'What a ride costs', href: '/rates' },
   { label: 'Receipts & Invoices', hint: 'Past rides and paperwork', href: '/receipts' },
   { label: 'Profile', hint: 'Details and saved addresses', href: '/profile' },
+  { label: 'Reservation info', hint: 'Review a booked ride', href: '/reservation-info' },
 ] as const;
 
 export default function HomeScreen() {
