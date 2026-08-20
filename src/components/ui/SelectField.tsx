@@ -13,27 +13,29 @@ import {
 
 import { colors, focusedFieldStyle, nativeFocusRingReset, radii, space } from '@/theme';
 
-import { CheckGlyph } from './Glyph';
+import { ChevronGlyph, TickGlyph } from './Glyph';
 import { PickerField } from './PickerField';
 import { Sheet } from './Sheet';
 
-export type SelectOption = {
-  value: string;
+export type SelectOption<T extends string> = {
+  value: T;
   label: string;
-  /** Secondary text on the option row, e.g. a state code. */
-  caption?: string;
+  /** Optional second line, e.g. what the option covers, or a state code. */
+  description?: string;
 };
 
-export type SelectFieldProps = {
+export type SelectFieldProps<T extends string> = {
   label: string;
-  /** The chosen option's `value`; empty string means nothing is picked yet. */
-  value: string;
-  options: readonly SelectOption[];
-  onChange: (value: string) => void;
-  icon: React.ReactNode;
+  /** The chosen option's `value`. Pass `''` (part of `T`) while nothing is picked yet. */
+  value: T;
+  options: readonly SelectOption<T>[];
+  onChange: (next: T) => void;
+  /** Leading icon in the closed control. Defaults to a chevron well. */
+  icon?: React.ReactNode;
   placeholder?: string;
   sheetTitle?: string;
   sheetSubtitle?: string;
+  confirmLabel?: string;
   searchPlaceholder?: string;
   required?: boolean;
   hint?: string;
@@ -45,12 +47,13 @@ export type SelectFieldProps = {
 const SEARCH_THRESHOLD = 12;
 
 /**
- * Single-choice select: a picker field over a sheet full of options.
- *
- * Same draft-then-confirm contract as `DateField` — the sheet edits a draft and
- * only the Confirm button commits, so a mis-tap on a long list costs nothing.
+ * Dropdown. A native `<select>` would only exist on web, so this is the same
+ * picker sheet the date and time fields use, with a list of options in it —
+ * identical on web, iOS and Android. Same draft-then-confirm contract as
+ * `DateField`: the sheet edits a draft and only the confirm button commits,
+ * so a mis-tap on a long list costs nothing.
  */
-export function SelectField({
+export function SelectField<T extends string>({
   label,
   value,
   options,
@@ -59,12 +62,13 @@ export function SelectField({
   placeholder = 'Select',
   sheetTitle,
   sheetSubtitle,
+  confirmLabel = 'Apply',
   searchPlaceholder = 'Search',
   required,
   hint,
   error,
   style,
-}: SelectFieldProps) {
+}: SelectFieldProps<T>) {
   const { height } = useWindowDimensions();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -82,7 +86,7 @@ export function SelectField({
     return options.filter(
       (option) =>
         option.label.toLowerCase().includes(needle) ||
-        option.caption?.toLowerCase().includes(needle),
+        option.description?.toLowerCase().includes(needle),
     );
   }, [options, query]);
 
@@ -119,9 +123,9 @@ export function SelectField({
         error={error}
         style={style}
         value={selected?.label}
-        caption={selected?.caption}
+        caption={selected?.description}
         placeholder={placeholder}
-        icon={icon}
+        icon={icon ?? <ChevronGlyph direction="down" color={colors.primary[600]} size={9} />}
         onPress={openSheet}
       />
 
@@ -130,10 +134,10 @@ export function SelectField({
         title={sheetTitle ?? label}
         subtitle={sheetSubtitle}
         footerHint={draftOption?.label ?? 'Nothing selected'}
-        confirmLabel="Select"
+        confirmLabel={confirmLabel}
         onClose={() => setOpen(false)}
         onConfirm={() => {
-          if (draftOption) onChange(draftOption.value);
+          onChange(draft);
           setOpen(false);
         }}
       >
@@ -156,6 +160,7 @@ export function SelectField({
         <ScrollView
           ref={listRef}
           style={[styles.list, { maxHeight: Math.min(340, height * 0.42) }]}
+          contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -164,7 +169,7 @@ export function SelectField({
           ) : null}
 
           {matches.map((option, index) => {
-            const checked = option.value === draft;
+            const active = option.value === draft;
 
             return (
               <Pressable
@@ -178,32 +183,24 @@ export function SelectField({
                     : undefined
                 }
                 accessibilityRole="radio"
-                accessibilityState={{ checked }}
-                // react-native-web no longer derives aria-checked from accessibilityState.
-                aria-checked={checked}
+                accessibilityState={{ selected: active }}
                 accessibilityLabel={option.label}
                 onPress={() => setDraft(option.value)}
                 style={({ pressed }) => [
                   styles.option,
-                  index > 0 ? styles.optionDivided : null,
-                  checked ? styles.optionChecked : null,
-                  pressed && !checked ? styles.optionPressed : null,
+                  active ? styles.optionActive : null,
+                  pressed ? styles.pressed : null,
                 ]}
               >
                 <View style={styles.optionText}>
-                  <Text
-                    style={[styles.optionLabel, checked ? styles.optionLabelChecked : null]}
-                    numberOfLines={1}
-                  >
+                  <Text style={[styles.optionLabel, active ? styles.optionLabelActive : null]}>
                     {option.label}
                   </Text>
-                  {option.caption ? (
-                    <Text style={styles.optionCaption} numberOfLines={1}>
-                      {option.caption}
-                    </Text>
+                  {option.description ? (
+                    <Text style={styles.optionDescription}>{option.description}</Text>
                   ) : null}
                 </View>
-                {checked ? <CheckGlyph color={colors.primary[600]} /> : null}
+                {active ? <TickGlyph /> : null}
               </Pressable>
             );
           })}
@@ -228,27 +225,32 @@ const styles = StyleSheet.create({
   },
   searchFocused: focusedFieldStyle,
 
+  // Capped so a long list scrolls inside the sheet instead of pushing the
+  // footer off a short phone screen.
   list: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
   },
+  listContent: { gap: space.sm, padding: space.sm },
   empty: { color: colors.textMuted, fontSize: 14, padding: space.md },
-
+  pressed: { opacity: 0.7 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
     paddingHorizontal: space.md,
-    paddingVertical: space.md,
-    minHeight: 46,
+    paddingVertical: space.md - 2,
+    minHeight: 48,
   },
-  optionDivided: { borderTopWidth: 1, borderTopColor: colors.surfaceSunken },
-  optionChecked: { backgroundColor: colors.surfaceSelected },
-  optionPressed: { backgroundColor: colors.surfaceSunken },
-  optionText: { flex: 1 },
-  optionLabel: { color: colors.textStrong, fontSize: 15 },
-  optionLabelChecked: { color: colors.primary[600], fontWeight: '600' },
-  optionCaption: { color: colors.textMuted, fontSize: 12, marginTop: 1 },
+  optionActive: { borderColor: colors.primary[300], backgroundColor: colors.surfaceSelected },
+  optionText: { flex: 1, gap: 2 },
+  optionLabel: { color: colors.textStrong, fontSize: 15, fontWeight: '600' },
+  optionLabelActive: { color: colors.primary[600] },
+  optionDescription: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
 });

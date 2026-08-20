@@ -35,12 +35,12 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
   const domestic = isUnitedStates(value);
   const patch = (next: Partial<MailingAddress>) => onChange({ ...value, ...next });
 
-  const countryOptions = useMemo<readonly SelectOption[]>(
+  const countryOptions = useMemo<readonly SelectOption<string>[]>(
     () => COUNTRIES.map((country) => ({ value: country, label: country })),
     [],
   );
-  const stateOptions = useMemo<readonly SelectOption[]>(
-    () => US_STATES.map((state) => ({ value: state.code, label: state.name, caption: state.code })),
+  const stateOptions = useMemo<readonly SelectOption<string>[]>(
+    () => US_STATES.map((state) => ({ value: state.code, label: state.name, description: state.code })),
     [],
   );
 

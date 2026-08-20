@@ -16,6 +16,7 @@ export type PickerFieldProps = {
   onPress: () => void;
   required?: boolean;
   hint?: string;
+  /** Validation message. Replaces `hint` and turns the border danger-red. */
   error?: string;
   tone?: 'primary' | 'accent';
   style?: StyleProp<ViewStyle>;
@@ -48,7 +49,7 @@ export function PickerField({
         onPress={onPress}
         style={({ pressed }) => [
           styles.control,
-          error ? styles.invalid : null,
+          error ? styles.controlError : null,
           pressed ? styles.pressed : null,
         ]}
       >
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm + 1,
     minHeight: 50,
   },
-  invalid: { borderColor: colors.danger, backgroundColor: colors.dangerBg },
+  controlError: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
   pressed: { backgroundColor: colors.surfaceSunken },
   iconWell: {
     width: 32,
