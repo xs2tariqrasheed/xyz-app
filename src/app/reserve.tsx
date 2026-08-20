@@ -16,6 +16,11 @@ import {
   type PassengerRideInfoValue,
 } from '@/components/reservation/PassengerRideInfoSection';
 import {
+  emptyPreferences,
+  PreferencesSection,
+  type PreferencesValue,
+} from '@/components/reservation/PreferencesSection';
+import {
   RideAddressInfoSection,
   type RideAddressInfoValue,
 } from '@/components/reservation/RideAddressInfoSection';
@@ -24,6 +29,7 @@ import {
   RideReceiptSection,
 } from '@/components/reservation/RideReceiptSection';
 import { SectionCard, type SectionState } from '@/components/reservation/SectionCard';
+import { DEFAULT_CAR_TYPE } from '@/components/reservation/carTypes';
 import { RESERVATION_SECTIONS } from '@/components/reservation/sections';
 import { StepProgress, StepRail } from '@/components/reservation/StepRail';
 import { AppHeader } from '@/components/nav/AppHeader';
@@ -54,8 +60,13 @@ export default function MakeReservationScreen() {
   }));
   const [addresses, setAddresses] = useState<RideAddressInfoValue>({
     pickup: null,
+    pickupNotes: '',
     destination: null,
+    destinationNotes: '',
   });
+  const [preferences, setPreferences] = useState<PreferencesValue>(() =>
+    emptyPreferences(DEFAULT_CAR_TYPE),
+  );
 
   // Stands in for the number a booking endpoint will return; fixed for the
   // life of the screen so the receipt never renumbers itself mid-flow.
@@ -76,7 +87,12 @@ export default function MakeReservationScreen() {
    * customer only has to pick a new date and time.
    */
   const bookAnotherLeg = () => {
-    setAddresses({ pickup: addresses.destination, destination: addresses.pickup });
+    setAddresses({
+      pickup: addresses.destination,
+      pickupNotes: addresses.destinationNotes,
+      destination: addresses.pickup,
+      destinationNotes: addresses.pickupNotes,
+    });
     setInfo((current) => ({ ...current, isLive: false }));
     goToSection(0);
   };
@@ -128,12 +144,15 @@ export default function MakeReservationScreen() {
                       <PassengerRideInfoSection value={info} onChange={setInfo} today={today} />
                     ) : section.id === 'address' ? (
                       <RideAddressInfoSection value={addresses} onChange={setAddresses} />
+                    ) : section.id === 'preferences' ? (
+                      <PreferencesSection value={preferences} onChange={setPreferences} />
                     ) : section.id === 'receipt' ? (
                       <RideReceiptSection
                         reservationNumber={reservationNumber}
                         onViewReservation={() => router.push('/receipts')}
                         onBookAnotherLeg={bookAnotherLeg}
                       />
+
                     ) : (
                       <NotBuiltYet title={section.title} />
                     )}
