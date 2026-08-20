@@ -12,6 +12,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  BillingMethodSection,
+  emptyCardDetails,
+  type BillingMethodValue,
+} from '@/components/reservation/BillingMethodSection';
+import {
   PassengerRideInfoSection,
   type PassengerRideInfoValue,
 } from '@/components/reservation/PassengerRideInfoSection';
@@ -63,6 +68,15 @@ export default function MakeReservationScreen() {
     pickupNotes: '',
     destination: null,
     destinationNotes: '',
+  });
+  const [billing, setBilling] = useState<BillingMethodValue>({
+    method: 'corporate',
+    // Stands in for the account on the customer's profile, which is why the
+    // field renders locked behind an Edit button rather than empty.
+    accountNumber: 'CORP-48213',
+    vipNumber: '',
+    card: emptyCardDetails,
+    saveCard: false,
   });
   const [preferences, setPreferences] = useState<PreferencesValue>(() =>
     emptyPreferences(DEFAULT_CAR_TYPE),
@@ -144,6 +158,8 @@ export default function MakeReservationScreen() {
                       <PassengerRideInfoSection value={info} onChange={setInfo} today={today} />
                     ) : section.id === 'address' ? (
                       <RideAddressInfoSection value={addresses} onChange={setAddresses} />
+                    ) : section.id === 'billing' ? (
+                      <BillingMethodSection value={billing} onChange={setBilling} today={today} />
                     ) : section.id === 'preferences' ? (
                       <PreferencesSection value={preferences} onChange={setPreferences} />
                     ) : section.id === 'receipt' ? (
@@ -152,7 +168,6 @@ export default function MakeReservationScreen() {
                         onViewReservation={() => router.push('/receipts')}
                         onBookAnotherLeg={bookAnotherLeg}
                       />
-
                     ) : (
                       <NotBuiltYet title={section.title} />
                     )}
