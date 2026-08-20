@@ -1,24 +1,16 @@
 import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, radii, space } from '@/theme';
 
-import { CheckGlyph, ChevronGlyph } from './Glyph';
+import { ChevronGlyph, TickGlyph } from './Glyph';
 import { PickerField } from './PickerField';
 import { Sheet } from './Sheet';
 
 export type SelectOption<T extends string> = {
   value: T;
   label: string;
-  /** Secondary line under the option label. */
+  /** Optional second line, e.g. what the option covers. */
   description?: string;
 };
 
@@ -26,24 +18,21 @@ export type SelectFieldProps<T extends string> = {
   label: string;
   value: T;
   options: readonly SelectOption<T>[];
-  onChange: (value: T) => void;
-  /** Sits in the control's icon well. */
-  icon: React.ReactNode;
-  required?: boolean;
-  hint?: string;
-  error?: string;
-  /** Sheet copy; defaults to the field label. */
+  onChange: (next: T) => void;
+  /** Leading icon in the closed control. Defaults to a chevron well. */
+  icon?: React.ReactNode;
   sheetTitle?: string;
   sheetSubtitle?: string;
   confirmLabel?: string;
+  required?: boolean;
+  hint?: string;
   style?: StyleProp<ViewStyle>;
 };
 
 /**
- * Single-choice picker: a native `<select>` is web-only and iOS/Android wheels
- * look nothing alike, so the same list sheet is used on all three targets.
- *
- * The sheet edits a draft and commits on confirm, matching `DateField`.
+ * Dropdown. A native `<select>` would only exist on web, so this is the same
+ * picker sheet the date and time fields use, with a list of options in it —
+ * identical on web, iOS and Android.
  */
 export function SelectField<T extends string>({
   label,
@@ -51,12 +40,11 @@ export function SelectField<T extends string>({
   options,
   onChange,
   icon,
-  required,
-  hint,
-  error,
   sheetTitle,
   sheetSubtitle,
-  confirmLabel = 'Select',
+  confirmLabel = 'Apply',
+  required,
+  hint,
   style,
 }: SelectFieldProps<T>) {
   const [open, setOpen] = useState(false);
@@ -71,11 +59,10 @@ export function SelectField<T extends string>({
         label={label}
         required={required}
         hint={hint}
-        error={error}
         style={style}
         value={selected?.label}
         caption={selected?.description}
-        icon={icon}
+        icon={icon ?? <ChevronGlyph direction="down" color={colors.primary[600]} size={9} />}
         onPress={() => {
           setDraft(value);
           setOpen(true);
@@ -86,7 +73,7 @@ export function SelectField<T extends string>({
         visible={open}
         title={sheetTitle ?? label}
         subtitle={sheetSubtitle}
-        footerHint={draftOption?.label}
+        footerHint={draftOption?.label ?? ''}
         confirmLabel={confirmLabel}
         onClose={() => setOpen(false)}
         onConfirm={() => {
@@ -108,7 +95,7 @@ export function SelectField<T extends string>({
                 style={({ pressed }) => [
                   styles.option,
                   active ? styles.optionActive : null,
-                  pressed && !active ? styles.optionPressed : null,
+                  pressed ? styles.pressed : null,
                 ]}
               >
                 <View style={styles.optionText}>
@@ -119,11 +106,7 @@ export function SelectField<T extends string>({
                     <Text style={styles.optionDescription}>{option.description}</Text>
                   ) : null}
                 </View>
-                {active ? (
-                  <CheckGlyph color={colors.primary[600]} size={13} />
-                ) : (
-                  <ChevronGlyph direction="right" color={colors.textDisabled} size={7} />
-                )}
+                {active ? <TickGlyph /> : null}
               </Pressable>
             );
           })}
@@ -134,9 +117,11 @@ export function SelectField<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  // Caps the sheet on a short phone; a five-option list never reaches it.
-  list: { maxHeight: 340 },
+  // Capped so a long list scrolls inside the sheet instead of pushing the
+  // footer off a short phone screen.
+  list: { maxHeight: 320 },
   listContent: { gap: space.sm },
+  pressed: { opacity: 0.7 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -144,14 +129,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.md,
     backgroundColor: colors.surface,
+    paddingHorizontal: space.md,
+    paddingVertical: space.md - 2,
+    minHeight: 48,
   },
-  optionActive: { borderColor: colors.primary[400], backgroundColor: colors.surfaceSelected },
-  optionPressed: { backgroundColor: colors.surfaceSunken },
-  optionText: { flex: 1 },
+  optionActive: { borderColor: colors.primary[300], backgroundColor: colors.surfaceSelected },
+  optionText: { flex: 1, gap: 2 },
   optionLabel: { color: colors.textStrong, fontSize: 15, fontWeight: '600' },
   optionLabelActive: { color: colors.primary[600] },
-  optionDescription: { color: colors.textMuted, fontSize: 12, lineHeight: 16, marginTop: 2 },
+  optionDescription: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
 });

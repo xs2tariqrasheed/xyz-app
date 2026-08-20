@@ -4,7 +4,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { colors } from '@/theme';
 import { formatDayDistance, formatFullDate } from '@/utils/datetime';
 
-import { CalendarPicker } from './CalendarPicker';
+import { CalendarPicker, type QuickPick } from './CalendarPicker';
 import { CalendarGlyph } from './Glyph';
 import { PickerField } from './PickerField';
 import { Sheet } from './Sheet';
@@ -14,13 +14,31 @@ export type DateFieldProps = {
   value: Date;
   onChange: (date: Date) => void;
   today: Date;
+  /** Earliest selectable day. Defaults to `today`. */
+  minDate?: Date;
+  quickPicks?: readonly QuickPick[];
+  /** Sheet copy. Defaults to the reservation wording. */
+  sheetTitle?: string;
+  sheetSubtitle?: string;
   required?: boolean;
   hint?: string;
   style?: StyleProp<ViewStyle>;
 };
 
 /** Date input + calendar sheet. The sheet edits a draft, committed on confirm. */
-export function DateField({ label, value, onChange, today, required, hint, style }: DateFieldProps) {
+export function DateField({
+  label,
+  value,
+  onChange,
+  today,
+  minDate,
+  quickPicks,
+  sheetTitle = 'Pick a date',
+  sheetSubtitle = 'When should we collect the passenger?',
+  required,
+  hint,
+  style,
+}: DateFieldProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -41,8 +59,8 @@ export function DateField({ label, value, onChange, today, required, hint, style
       />
       <Sheet
         visible={open}
-        title="Pick a date"
-        subtitle="When should we collect the passenger?"
+        title={sheetTitle}
+        subtitle={sheetSubtitle}
         footerHint={formatFullDate(draft)}
         confirmLabel="Set date"
         onClose={() => setOpen(false)}
@@ -51,7 +69,13 @@ export function DateField({ label, value, onChange, today, required, hint, style
           setOpen(false);
         }}
       >
-        <CalendarPicker value={draft} onChange={setDraft} today={today} />
+        <CalendarPicker
+          value={draft}
+          onChange={setDraft}
+          today={today}
+          minDate={minDate}
+          quickPicks={quickPicks}
+        />
       </Sheet>
     </>
   );

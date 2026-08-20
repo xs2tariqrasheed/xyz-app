@@ -9,8 +9,10 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   label: string;
   required?: boolean;
   hint?: string;
-  /** Validation message. Replaces `hint` and turns the border danger-red. */
+  /** Shown under the field and reddens the border. */
   error?: string;
+  /** Lays the label out beside the input on tablet-and-wider viewports. */
+  inline?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -23,6 +25,7 @@ export function TextField({
   required,
   hint,
   error,
+  inline,
   style,
   onFocus,
   onBlur,
@@ -31,10 +34,9 @@ export function TextField({
   const [focused, setFocused] = useState(false);
 
   return (
-    <Field label={label} required={required} hint={hint} error={error} style={style}>
+    <Field label={label} required={required} hint={hint} error={error} inline={inline} style={style}>
       <TextInput
         {...inputProps}
-        aria-invalid={error ? true : undefined}
         placeholderTextColor={colors.textDisabled}
         onFocus={(event) => {
           setFocused(true);
@@ -46,8 +48,8 @@ export function TextField({
         }}
         style={[
           styles.input,
-          error ? styles.inputError : null,
-          focused ? (error ? styles.inputErrorFocused : styles.inputFocused) : null,
+          error ? styles.inputInvalid : null,
+          focused ? (error ? styles.inputFocusedInvalid : styles.inputFocused) : null,
         ]}
       />
     </Field>
@@ -66,10 +68,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textStrong,
   },
+  inputInvalid: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
   inputFocused: focusedFieldStyle,
-  inputError: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
-  inputErrorFocused: {
+  // Focus on an errored field keeps the danger tint but swaps the brand halo
+  // for a danger one, so the ring never contradicts the message below.
+  inputFocusedInvalid: {
     borderColor: colors.danger,
-    boxShadow: `0 0 0 3px ${colors.dangerBg}`,
+    boxShadow: `0 0 0 3px ${colors.dangerBorder}`,
   },
 });
