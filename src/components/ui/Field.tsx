@@ -8,7 +8,7 @@ export type FieldProps = {
   required?: boolean;
   /** Small helper line under the control. */
   hint?: string;
-  /** Validation message. Replaces `hint` and paints the line in `--danger`. */
+  /** Replaces the hint with a danger-toned message when set. */
   error?: string;
   /**
    * Moves the label into a right-aligned column beside the control once the
@@ -30,6 +30,7 @@ export const INLINE_LABEL_WIDTH = 132;
 export function Field({ label, required, hint, error, inline, style, children }: FieldProps) {
   const { width } = useWindowDimensions();
   const row = !!inline && width >= breakpoints.md;
+  const note = error ?? hint;
 
   return (
     <View style={[row ? styles.rootInline : styles.root, style]}>
@@ -40,10 +41,13 @@ export function Field({ label, required, hint, error, inline, style, children }:
 
       <View style={row ? styles.controlInline : styles.control}>
         {children}
-        {error ? (
-          <Text style={styles.error}>{error}</Text>
-        ) : hint ? (
-          <Text style={styles.hint}>{hint}</Text>
+        {note ? (
+          <Text
+            style={[styles.hint, error ? styles.error : null]}
+            accessibilityRole={error ? 'alert' : undefined}
+          >
+            {note}
+          </Text>
         ) : null}
       </View>
     </View>
@@ -71,5 +75,5 @@ const styles = StyleSheet.create({
   controlInline: { flex: 1, gap: GAP },
 
   hint: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
-  error: { color: colors.danger, fontSize: 12, lineHeight: 16, fontWeight: '500' },
+  error: { color: colors.danger, fontWeight: '500' },
 });

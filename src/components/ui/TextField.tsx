@@ -9,7 +9,7 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   label: string;
   required?: boolean;
   hint?: string;
-  /** Validation message. Also switches the border and focus halo to `--danger`. */
+  /** Shown under the field and reddens the border. */
   error?: string;
   /** Lays the label out beside the input on tablet-and-wider viewports. */
   inline?: boolean;
@@ -48,8 +48,8 @@ export function TextField({
         }}
         style={[
           styles.input,
-          error ? styles.inputError : null,
-          focused ? (error ? styles.inputFocusedError : styles.inputFocused) : null,
+          error ? styles.inputInvalid : null,
+          focused ? (error ? styles.inputFocusedInvalid : styles.inputFocused) : null,
         ]}
       />
     </Field>
@@ -68,9 +68,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textStrong,
   },
+  inputInvalid: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
   inputFocused: focusedFieldStyle,
-  inputError: { borderColor: colors.danger },
-  inputFocusedError: {
+  // Focus on an errored field keeps the danger tint but swaps the brand halo
+  // for a danger one, so the ring never contradicts the message below.
+  inputFocusedInvalid: {
     borderColor: colors.danger,
     boxShadow: `0 0 0 3px ${colors.dangerBorder}`,
   },
