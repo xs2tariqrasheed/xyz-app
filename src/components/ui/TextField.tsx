@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, TextInput, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 
-import { colors, radii, space } from '@/theme';
+import { colors, focusedFieldStyle, nativeFocusRingReset, radii, space } from '@/theme';
 
 import { Field } from './Field';
 
@@ -40,6 +40,7 @@ export function TextField({ label, required, hint, style, onFocus, onBlur, ...in
 
 const styles = StyleSheet.create({
   input: {
+    ...nativeFocusRingReset,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -48,11 +49,6 @@ const styles = StyleSheet.create({
     paddingVertical: space.md,
     fontSize: 15,
     color: colors.textStrong,
-    // Focus is drawn with our own ring, not the platform outline.
-    outlineWidth: 0,
   },
-  inputFocused: {
-    borderColor: colors.primary[500],
-    boxShadow: `0 0 0 3px ${colors.focusRing}`,
-  },
+  inputFocused: focusedFieldStyle,
 });

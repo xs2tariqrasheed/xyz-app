@@ -1,11 +1,13 @@
 import { brand } from './brand';
 import { colors, primary, primaryShades, status } from './colors';
+import { focusedFieldStyle, nativeFocusRingReset } from './forms';
 import { breakpoints, contentMaxWidth, formMaxWidth, radii, space } from './layout';
 import { shadows, shadowValues } from './shadows';
 
 export { brand } from './brand';
 export type { Brand } from './brand';
 export { colors, primary, primaryShades, status } from './colors';
+export { focusedFieldStyle, nativeFocusRingReset } from './forms';
 export type { Colors, PrimaryShade, StatusName } from './colors';
 export { shadows, shadowValues } from './shadows';
 export type { ShadowName } from './shadows';
@@ -16,6 +18,8 @@ export type { Breakpoint, Radius, Space } from './layout';
 export const theme = {
   brand,
   colors,
+  focusedFieldStyle,
+  nativeFocusRingReset,
   primary,
   primaryShades,
   status,

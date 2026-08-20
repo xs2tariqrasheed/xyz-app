@@ -1,10 +1,11 @@
 import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
+  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -14,17 +15,20 @@ import {
   PassengerRideInfoSection,
   type PassengerRideInfoValue,
 } from '@/components/reservation/PassengerRideInfoSection';
+import {
+  RideAddressInfoSection,
+  type RideAddressInfoValue,
+} from '@/components/reservation/RideAddressInfoSection';
 import { SectionCard, type SectionState } from '@/components/reservation/SectionCard';
 import { RESERVATION_SECTIONS } from '@/components/reservation/sections';
 import { StepProgress, StepRail } from '@/components/reservation/StepRail';
 import { AppHeader } from '@/components/nav/AppHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { breakpoints, colors, contentMaxWidth, formMaxWidth, space } from '@/theme';
+import { breakpoints, colors, contentMaxWidth, formMaxWidth, radii, space } from '@/theme';
 import { nextSlot, startOfDay } from '@/utils/datetime';
 
-/** Section 1 is the only one built out so far. */
-const ACTIVE_INDEX = 0;
+const LAST_INDEX = RESERVATION_SECTIONS.length - 1;
 
 export default function MakeReservationScreen() {
   const { width } = useWindowDimensions();
@@ -43,6 +47,20 @@ export default function MakeReservationScreen() {
     date: startOfDay(today),
     time: nextSlot(today),
   }));
+  const [addresses, setAddresses] = useState<RideAddressInfoValue>({
+    pickup: null,
+    destination: null,
+  });
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const goToSection = (index: number) => {
+    setActiveIndex(index);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const nextSection = RESERVATION_SECTIONS[activeIndex + 1];
 
   return (
     <View style={styles.root}>
@@ -59,6 +77,7 @@ export default function MakeReservationScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          ref={scrollRef}
           style={styles.flex}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[styles.scrollContent, { paddingBottom: space.xxl }]}
@@ -66,16 +85,16 @@ export default function MakeReservationScreen() {
           <View style={[styles.page, wide ? styles.pageWide : null]}>
             {wide ? (
               <View style={styles.railColumn}>
-                <StepRail activeIndex={ACTIVE_INDEX} />
+                <StepRail activeIndex={activeIndex} onSelect={goToSection} />
               </View>
             ) : null}
 
             <View style={styles.formColumn}>
-              {wide ? null : <StepProgress activeIndex={ACTIVE_INDEX} />}
+              {wide ? null : <StepProgress activeIndex={activeIndex} onSelect={goToSection} />}
 
               {RESERVATION_SECTIONS.map((section, index) => {
                 const state: SectionState =
-                  index === ACTIVE_INDEX ? 'active' : index < ACTIVE_INDEX ? 'complete' : 'upcoming';
+                  index === activeIndex ? 'active' : index < activeIndex ? 'complete' : 'upcoming';
 
                 return (
                   <SectionCard
@@ -84,10 +103,15 @@ export default function MakeReservationScreen() {
                     title={section.title}
                     description={section.description}
                     state={state}
+                    onPress={state === 'complete' ? () => goToSection(index) : undefined}
                   >
                     {section.id === 'passenger' ? (
                       <PassengerRideInfoSection value={info} onChange={setInfo} today={today} />
-                    ) : null}
+                    ) : section.id === 'address' ? (
+                      <RideAddressInfoSection value={addresses} onChange={setAddresses} />
+                    ) : (
+                      <NotBuiltYet title={section.title} />
+                    )}
                   </SectionCard>
                 );
               })}
@@ -99,13 +123,26 @@ export default function MakeReservationScreen() {
           <View style={[styles.actionInner, roomy ? styles.actionInnerWide : null]}>
             <Button label="Save draft" variant="outline" />
             <Button
-              label={wide ? 'Continue to ride address info' : 'Continue'}
+              label={
+                nextSection ? (wide ? `Continue to ${nextSection.title}` : 'Continue') : 'Book reservation'
+              }
               size="lg"
+              disabled={activeIndex === LAST_INDEX}
+              onPress={() => goToSection(Math.min(activeIndex + 1, LAST_INDEX))}
               style={roomy ? null : styles.continue}
             />
           </View>
         </View>
       </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+/** Keeps an unbuilt step honest instead of rendering an empty card. */
+function NotBuiltYet({ title }: { title: string }) {
+  return (
+    <View style={styles.notBuilt}>
+      <Text style={styles.notBuiltText}>{title} is not built yet.</Text>
     </View>
   );
 }
@@ -139,4 +176,11 @@ const styles = StyleSheet.create({
   // park the pair on the right, where the form column ends.
   actionInnerWide: { justifyContent: 'flex-end' },
   continue: { flex: 1 },
+
+  notBuilt: {
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radii.md,
+    padding: space.lg,
+  },
+  notBuiltText: { color: colors.textMuted, fontSize: 14 },
 });

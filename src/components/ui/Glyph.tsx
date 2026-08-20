@@ -122,3 +122,42 @@ export function Dot({ color = colors.accent, size = 6 }: GlyphProps) {
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color }} />
   );
 }
+
+/** Teardrop map pin, drawn as a rotated square with three rounded corners. */
+export function PinGlyph({ color = colors.primary[600], size = 16 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.78,
+          height: size * 0.78,
+          borderWidth: 1.8,
+          borderColor: color,
+          borderTopLeftRadius: size * 0.4,
+          borderTopRightRadius: size * 0.4,
+          borderBottomLeftRadius: size * 0.4,
+          borderBottomRightRadius: 0,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Two opposed arrows — swaps pickup and destination. */
+export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) {
+  const stem = { width: 1.6, height: size * 0.46, backgroundColor: color, borderRadius: 1 } as const;
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: size * 0.22 }}>
+      <View style={{ alignItems: 'center' }}>
+        <ChevronGlyph direction="up" color={color} size={size * 0.3} />
+        <View style={stem} />
+      </View>
+      <View style={{ alignItems: 'center' }}>
+        <View style={stem} />
+        <ChevronGlyph direction="down" color={color} size={size * 0.3} />
+      </View>
+    </View>
+  );
+}

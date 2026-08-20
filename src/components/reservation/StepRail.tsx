@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radii, shadowValues, space } from '@/theme';
 
@@ -7,10 +7,12 @@ import { RESERVATION_SECTIONS } from './sections';
 export type StepRailProps = {
   /** 0-based index of the section currently being filled in. */
   activeIndex: number;
+  /** Jump back to an already-reached step. */
+  onSelect?: (index: number) => void;
 };
 
 /** Vertical checklist for tablet/desktop, where there is a column to spare. */
-export function StepRail({ activeIndex }: StepRailProps) {
+export function StepRail({ activeIndex, onSelect }: StepRailProps) {
   return (
     <View style={styles.rail}>
       <Text style={styles.railHeading}>Reservation steps</Text>
@@ -19,8 +21,17 @@ export function StepRail({ activeIndex }: StepRailProps) {
         const state = index === activeIndex ? 'active' : index < activeIndex ? 'done' : 'todo';
         const last = index === RESERVATION_SECTIONS.length - 1;
 
+        const reachable = index <= activeIndex && index !== activeIndex;
+
         return (
-          <View key={section.id} style={styles.railRow}>
+          <Pressable
+            key={section.id}
+            accessibilityRole={reachable ? 'button' : undefined}
+            accessibilityLabel={reachable ? `Go to ${section.title}` : undefined}
+            disabled={!reachable || !onSelect}
+            onPress={() => onSelect?.(index)}
+            style={styles.railRow}
+          >
             <View style={styles.railMarkerColumn}>
               <View
                 style={[
@@ -48,7 +59,7 @@ export function StepRail({ activeIndex }: StepRailProps) {
               </Text>
               <Text style={styles.railDescription}>{section.description}</Text>
             </View>
-          </View>
+          </Pressable>
         );
       })}
     </View>
@@ -56,7 +67,7 @@ export function StepRail({ activeIndex }: StepRailProps) {
 }
 
 /** Compact progress header for phones: a bar plus horizontally scrolling chips. */
-export function StepProgress({ activeIndex }: StepRailProps) {
+export function StepProgress({ activeIndex, onSelect }: StepRailProps) {
   const total = RESERVATION_SECTIONS.length;
   const active = RESERVATION_SECTIONS[activeIndex];
   const percent = ((activeIndex + 1) / total) * 100;
@@ -83,15 +94,24 @@ export function StepProgress({ activeIndex }: StepRailProps) {
       >
         {RESERVATION_SECTIONS.map((section, index) => {
           const isActive = index === activeIndex;
+          const reachable = index < activeIndex;
+
           return (
-            <View key={section.id} style={[styles.chip, isActive ? styles.chipActive : null]}>
+            <Pressable
+              key={section.id}
+              accessibilityRole={reachable ? 'button' : undefined}
+              accessibilityLabel={reachable ? `Go to ${section.title}` : undefined}
+              disabled={!reachable || !onSelect}
+              onPress={() => onSelect?.(index)}
+              style={[styles.chip, isActive ? styles.chipActive : null]}
+            >
               <Text style={[styles.chipIndex, isActive ? styles.chipIndexActive : null]}>
                 {index + 1}
               </Text>
               <Text style={[styles.chipLabel, isActive ? styles.chipLabelActive : null]}>
                 {section.short}
               </Text>
-            </View>
+            </Pressable>
           );
         })}
       </ScrollView>

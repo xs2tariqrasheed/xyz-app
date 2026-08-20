@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/Badge';
+import { ChevronGlyph } from '@/components/ui/Glyph';
 import { colors, radii, shadowValues, space } from '@/theme';
 
 export type SectionState = 'active' | 'complete' | 'upcoming';
@@ -11,6 +12,8 @@ export type SectionCardProps = {
   title: string;
   description: string;
   state: SectionState;
+  /** Makes the header tappable — used to reopen a finished section. */
+  onPress?: () => void;
   children?: React.ReactNode;
 };
 
@@ -24,24 +27,34 @@ const STATE_BADGE: Record<SectionState, { label: string; tone: 'primary' | 'succ
  * One numbered block of the reservation form. Only the active section renders
  * its body; the rest stay collapsed so the flow reads as a checklist.
  */
-export function SectionCard({ step, title, description, state, children }: SectionCardProps) {
+export function SectionCard({ step, title, description, state, onPress, children }: SectionCardProps) {
   const active = state === 'active';
   const badge = STATE_BADGE[state];
 
   return (
     <View style={[styles.card, active ? styles.cardActive : styles.cardIdle]}>
-      <View style={styles.header}>
-        <View style={[styles.step, active ? styles.stepActive : null]}>
-          <Text style={[styles.stepLabel, active ? styles.stepLabelActive : null]}>{step}</Text>
-        </View>
+      <Pressable
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={onPress ? `Reopen ${title}` : undefined}
+        disabled={!onPress}
+        onPress={onPress}
+      >
+        {({ pressed }) => (
+          <View style={[styles.header, pressed && onPress ? styles.headerPressed : null]}>
+            <View style={[styles.step, active ? styles.stepActive : null]}>
+              <Text style={[styles.stepLabel, active ? styles.stepLabelActive : null]}>{step}</Text>
+            </View>
 
-        <View style={styles.headerText}>
-          <Text style={[styles.title, active ? null : styles.titleIdle]}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
-        </View>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, active ? null : styles.titleIdle]}>{title}</Text>
+              <Text style={styles.description}>{description}</Text>
+            </View>
 
-        <Badge label={badge.label} tone={badge.tone} />
-      </View>
+            <Badge label={badge.label} tone={badge.tone} />
+            {onPress ? <ChevronGlyph direction="down" color={colors.textMuted} size={7} /> : null}
+          </View>
+        )}
+      </Pressable>
 
       {active && children ? (
         <>
@@ -64,6 +77,7 @@ const styles = StyleSheet.create({
   cardIdle: { borderColor: colors.border, backgroundColor: colors.surface, boxShadow: shadowValues.sm },
 
   header: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  headerPressed: { opacity: 0.7 },
   step: {
     width: 30,
     height: 30,
