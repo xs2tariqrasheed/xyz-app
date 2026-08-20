@@ -14,6 +14,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Rates', href: '/rates', match: '/rates' },
   { label: 'Receipts & Invoices', href: '/receipts', match: '/receipts' },
   { label: 'Profile', href: '/profile', match: '/profile' },
+  { label: 'Preferences', href: '/preferences', match: '/preferences' },
   { label: 'Reservation', href: '/reserve', match: '/reserve' },
 ];
 
