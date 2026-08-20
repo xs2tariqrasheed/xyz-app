@@ -1,73 +1,60 @@
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { PhoneField, type PhoneValue } from '@/components/ui/PhoneField';
 import { TextField } from '@/components/ui/TextField';
 import { breakpoints, space } from '@/theme';
-import {
-  digitsOnly,
-  formatSubscriber,
-  formatUsPhone,
-  hasDigits,
-  isCompleteSubscriber,
-  isCompleteUsPhone,
-  MAX_CODE_LENGTH,
-  MAX_EXTENSION_LENGTH,
-} from '@/utils/phone';
-
-import { PhoneField } from './PhoneField';
+import { isCompleteUsPhone } from '@/utils/phone';
 
 /** Everything the personal info panel edits. */
 export type PersonalInfoValue = {
   firstName: string;
   lastName: string;
-  /** Domestic callback number, held formatted as typed. */
-  usPhone: string;
-  usPhoneExt: string;
-  /** Country + city code for the international callback number. */
-  intlCode: string;
-  intlPhone: string;
-  intlPhoneExt: string;
-  faxCode: string;
-  faxNumber: string;
+  /** Domestic callback number, pinned to +1. */
+  usPhone: PhoneValue;
+  intlPhone: PhoneValue;
+  fax: PhoneValue;
 };
 
-export type PersonalInfoField = keyof PersonalInfoValue;
+export type PersonalInfoField = 'firstName' | 'lastName' | 'usPhone' | 'intlPhone' | 'fax';
 export type PersonalInfoErrors = Partial<Record<PersonalInfoField, string>>;
+
+const EMPTY_PHONE: PhoneValue = { country: null, number: '', ext: '' };
 
 export const EMPTY_PERSONAL_INFO: PersonalInfoValue = {
   firstName: '',
   lastName: '',
-  usPhone: '',
-  usPhoneExt: '',
-  intlCode: '',
-  intlPhone: '',
-  intlPhoneExt: '',
-  faxCode: '',
-  faxNumber: '',
+  usPhone: EMPTY_PHONE,
+  intlPhone: EMPTY_PHONE,
+  fax: EMPTY_PHONE,
 };
 
-/**
- * Checks the panel as a whole.
- *
- * A number is only half-entered when one of its two boxes is filled, so the
- * code and the subscriber number are validated as a pair rather than alone.
- */
+/** Shortest run of digits we will accept as a real international number. */
+const MIN_INTL_DIGITS = 4;
+
+/** An international number is only whole once it has a country and a number. */
+function intlProblem(phone: PhoneValue, what: string): string | undefined {
+  if (phone.number.length === 0 && phone.country === null) return undefined;
+  if (phone.country === null) return `Choose the country for the ${what}.`;
+  if (phone.number.length < MIN_INTL_DIGITS) return `Add the full ${what}.`;
+  return undefined;
+}
+
+/** Checks the panel as a whole. */
 export function validatePersonalInfo(value: PersonalInfoValue): PersonalInfoErrors {
   const errors: PersonalInfoErrors = {};
 
   if (value.firstName.trim().length === 0) errors.firstName = 'Enter your first name.';
   if (value.lastName.trim().length === 0) errors.lastName = 'Enter your last name.';
 
-  const hasUs = hasDigits(value.usPhone);
-  const hasIntl = hasDigits(value.intlCode) || hasDigits(value.intlPhone);
+  const hasUs = value.usPhone.number.length > 0;
+  const hasIntl = value.intlPhone.number.length > 0 || value.intlPhone.country !== null;
 
-  if (hasUs && !isCompleteUsPhone(value.usPhone)) {
+  if (hasUs && !isCompleteUsPhone(value.usPhone.number)) {
     errors.usPhone = 'A US number needs 10 digits, area code first.';
   }
 
-  if (hasIntl) {
-    if (!hasDigits(value.intlCode)) errors.intlCode = 'Add the country and city code.';
-    else if (!isCompleteSubscriber(value.intlPhone)) errors.intlPhone = 'Add the full number.';
-  }
+  const intlError = intlProblem(value.intlPhone, 'international number');
+  if (intlError) errors.intlPhone = intlError;
 
   // A callback number is the whole point of the panel: a driver who cannot
   // find you has to be able to ring someone.
@@ -75,17 +62,24 @@ export function validatePersonalInfo(value: PersonalInfoValue): PersonalInfoErro
     errors.usPhone = 'Add a callback number — US or international.';
   }
 
-  const hasFax = hasDigits(value.faxCode) || hasDigits(value.faxNumber);
-  if (hasFax) {
-    if (!hasDigits(value.faxCode)) errors.faxCode = 'Add the fax country and city code.';
-    else if (!isCompleteSubscriber(value.faxNumber)) errors.faxNumber = 'Add the full fax number.';
-  }
+  const faxError = intlProblem(value.fax, 'fax number');
+  if (faxError) errors.fax = faxError;
 
   return errors;
 }
 
+function isSamePhone(a: PhoneValue, b: PhoneValue): boolean {
+  return a.country === b.country && a.number === b.number && a.ext === b.ext;
+}
+
 export function isSamePersonalInfo(a: PersonalInfoValue, b: PersonalInfoValue): boolean {
-  return (Object.keys(EMPTY_PERSONAL_INFO) as PersonalInfoField[]).every((key) => a[key] === b[key]);
+  return (
+    a.firstName === b.firstName &&
+    a.lastName === b.lastName &&
+    isSamePhone(a.usPhone, b.usPhone) &&
+    isSamePhone(a.intlPhone, b.intlPhone) &&
+    isSamePhone(a.fax, b.fax)
+  );
 }
 
 export type PersonalInfoSectionProps = {
@@ -133,64 +127,28 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
 
       <PhoneField
         label="Callback phone (US)"
+        variant="us"
+        value={value.usPhone}
+        onChange={(usPhone) => patch({ usPhone })}
         hint="The number a driver rings on the day of the ride."
         error={errors.usPhone}
-        number={{
-          value: value.usPhone,
-          onChangeText: (usPhone) => patch({ usPhone: formatUsPhone(usPhone) }),
-          placeholder: '(555) 123-4567',
-          invalid: !!errors.usPhone,
-        }}
-        extension={{
-          value: value.usPhoneExt,
-          onChangeText: (usPhoneExt) => patch({ usPhoneExt: digitsOnly(usPhoneExt, MAX_EXTENSION_LENGTH) }),
-          placeholder: '000',
-        }}
       />
 
       <PhoneField
         label="Callback phone (international)"
-        error={errors.intlCode ?? errors.intlPhone}
-        code={{
-          value: value.intlCode,
-          onChangeText: (intlCode) => patch({ intlCode: digitsOnly(intlCode, MAX_CODE_LENGTH) }),
-          placeholder: '44 20',
-          caption: 'Country + city code',
-          invalid: !!errors.intlCode,
-        }}
-        number={{
-          value: value.intlPhone,
-          onChangeText: (intlPhone) => patch({ intlPhone: formatSubscriber(intlPhone) }),
-          placeholder: '794 609 58',
-          caption: 'Phone number',
-          invalid: !!errors.intlPhone,
-        }}
-        extension={{
-          value: value.intlPhoneExt,
-          onChangeText: (intlPhoneExt) =>
-            patch({ intlPhoneExt: digitsOnly(intlPhoneExt, MAX_EXTENSION_LENGTH) }),
-          placeholder: '000',
-        }}
+        variant="international"
+        value={value.intlPhone}
+        onChange={(intlPhone) => patch({ intlPhone })}
+        error={errors.intlPhone}
       />
 
       <PhoneField
         label="Fax"
+        variant="international"
+        value={value.fax}
+        onChange={(fax) => patch({ fax })}
         hint="Optional. Used for corporate ride confirmations."
-        error={errors.faxCode ?? errors.faxNumber}
-        code={{
-          value: value.faxCode,
-          onChangeText: (faxCode) => patch({ faxCode: digitsOnly(faxCode, MAX_CODE_LENGTH) }),
-          placeholder: '1 212',
-          caption: 'Country + city code',
-          invalid: !!errors.faxCode,
-        }}
-        number={{
-          value: value.faxNumber,
-          onChangeText: (faxNumber) => patch({ faxNumber: formatSubscriber(faxNumber) }),
-          placeholder: '555 0147',
-          caption: 'Fax number',
-          invalid: !!errors.faxNumber,
-        }}
+        error={errors.fax}
       />
     </View>
   );

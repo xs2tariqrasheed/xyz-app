@@ -1,26 +1,70 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, TextInput, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+
+import { colors, focusedFieldStyle, nativeFocusRingReset, radii, space } from '@/theme';
 
 import { Field } from './Field';
-import { Input, type InputProps } from './Input';
 
-export type TextFieldProps = Omit<InputProps, 'style' | 'invalid'> & {
+export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   label: string;
   required?: boolean;
   hint?: string;
-  /** Validation message. Reddens the control and replaces `hint`. */
+  /** Shown under the field and reddens the border. */
   error?: string;
   style?: StyleProp<ViewStyle>;
 };
 
 /**
- * Single-line text input with its label. Focus is drawn with a brand border
- * plus a 3px `--focus-ring` halo, the same treatment as the theme page's
- * focused field.
+ * Single-line text input. Focus is drawn with a brand border plus a 3px
+ * `--focus-ring` halo, the same treatment as the theme page's focused field.
  */
-export function TextField({ label, required, hint, error, style, ...inputProps }: TextFieldProps) {
+export function TextField({
+  label,
+  required,
+  hint,
+  error,
+  style,
+  onFocus,
+  onBlur,
+  ...inputProps
+}: TextFieldProps) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <Field label={label} required={required} hint={hint} error={error} style={style}>
-      <Input {...inputProps} invalid={!!error} accessibilityLabel={inputProps.accessibilityLabel ?? label} />
+      <TextInput
+        {...inputProps}
+        placeholderTextColor={colors.textDisabled}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
+        style={[
+          styles.input,
+          error ? styles.inputInvalid : null,
+          focused ? styles.inputFocused : null,
+        ]}
+      />
     </Field>
   );
 }
+
+const styles = StyleSheet.create({
+  input: {
+    ...nativeFocusRingReset,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.md,
+    fontSize: 15,
+    color: colors.textStrong,
+  },
+  inputInvalid: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
+  inputFocused: focusedFieldStyle,
+});

@@ -8,7 +8,7 @@ export type FieldProps = {
   required?: boolean;
   /** Small helper line under the control. */
   hint?: string;
-  /** Validation message. Replaces `hint` while it is set. */
+  /** Replaces the hint with a danger-toned message when set. */
   error?: string;
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
@@ -16,7 +16,7 @@ export type FieldProps = {
 
 /** Label + control + hint. Every input in the reservation form sits in one. */
 export function Field({ label, required, hint, error, style, children }: FieldProps) {
-  const footnote = error ?? hint;
+  const note = error ?? hint;
 
   return (
     <View style={[styles.root, style]}>
@@ -25,9 +25,12 @@ export function Field({ label, required, hint, error, style, children }: FieldPr
         {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
       {children}
-      {footnote ? (
-        <Text style={[styles.hint, error ? styles.errorText : null]} accessibilityRole={error ? 'alert' : undefined}>
-          {footnote}
+      {note ? (
+        <Text
+          style={[styles.hint, error ? styles.error : null]}
+          accessibilityRole={error ? 'alert' : undefined}
+        >
+          {note}
         </Text>
       ) : null}
     </View>
@@ -39,5 +42,5 @@ const styles = StyleSheet.create({
   label: { color: colors.textStrong, fontSize: 13, fontWeight: '600', letterSpacing: 0.1 },
   required: { color: colors.textMuted, fontWeight: '400' },
   hint: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
-  errorText: { color: colors.danger, fontWeight: '600' },
+  error: { color: colors.danger, fontWeight: '500' },
 });
