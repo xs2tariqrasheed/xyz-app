@@ -161,3 +161,50 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
     </View>
   );
 }
+
+/** Waste bin — the destructive action on a saved address. */
+export function TrashGlyph({ color = colors.danger, size = 16 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: size * 0.3,
+          right: size * 0.3,
+          height: size * 0.2,
+          borderWidth: 1.6,
+          borderBottomWidth: 0,
+          borderColor: color,
+          borderTopLeftRadius: 2,
+          borderTopRightRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.2,
+          left: 0,
+          right: 0,
+          height: 1.6,
+          backgroundColor: color,
+          borderRadius: 1,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.3,
+          left: size * 0.16,
+          right: size * 0.16,
+          bottom: 0,
+          borderWidth: 1.6,
+          borderTopWidth: 0,
+          borderColor: color,
+          borderBottomLeftRadius: 3,
+          borderBottomRightRadius: 3,
+        }}
+      />
+    </View>
+  );
+}

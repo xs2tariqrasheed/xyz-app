@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'rea
 
 import { colors, radii, shadowValues, space } from '@/theme';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 export type ButtonSize = 'md' | 'lg';
 
 export type ButtonProps = {
@@ -70,6 +70,10 @@ const tones: Record<ButtonVariant, Tone> = {
   ghost: {
     container: { backgroundColor: 'transparent' },
     label: { color: colors.textLink },
+  },
+  danger: {
+    container: { backgroundColor: colors.danger, boxShadow: shadowValues.sm },
+    label: { color: colors.textOnPrimary },
   },
 };
 
