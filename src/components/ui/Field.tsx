@@ -25,7 +25,14 @@ export function Field({ label, required, hint, error, style, children }: FieldPr
         {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
       {children}
-      {note ? <Text style={[styles.hint, error ? styles.error : null]}>{note}</Text> : null}
+      {note ? (
+        <Text
+          style={[styles.hint, error ? styles.error : null]}
+          accessibilityRole={error ? 'alert' : undefined}
+        >
+          {note}
+        </Text>
+      ) : null}
     </View>
   );
 }
