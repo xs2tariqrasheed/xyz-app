@@ -11,6 +11,8 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   hint?: string;
   /** Shown under the field and reddens the border. */
   error?: string;
+  /** Lays the label out beside the input on tablet-and-wider viewports. */
+  inline?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -23,6 +25,7 @@ export function TextField({
   required,
   hint,
   error,
+  inline,
   style,
   onFocus,
   onBlur,
@@ -31,7 +34,7 @@ export function TextField({
   const [focused, setFocused] = useState(false);
 
   return (
-    <Field label={label} required={required} hint={hint} error={error} style={style}>
+    <Field label={label} required={required} hint={hint} error={error} inline={inline} style={style}>
       <TextInput
         {...inputProps}
         placeholderTextColor={colors.textDisabled}
@@ -46,7 +49,7 @@ export function TextField({
         style={[
           styles.input,
           error ? styles.inputInvalid : null,
-          focused ? styles.inputFocused : null,
+          focused ? (error ? styles.inputFocusedInvalid : styles.inputFocused) : null,
         ]}
       />
     </Field>
@@ -67,4 +70,10 @@ const styles = StyleSheet.create({
   },
   inputInvalid: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
   inputFocused: focusedFieldStyle,
+  // Focus on an errored field keeps the danger tint but swaps the brand halo
+  // for a danger one, so the ring never contradicts the message below.
+  inputFocusedInvalid: {
+    borderColor: colors.danger,
+    boxShadow: `0 0 0 3px ${colors.dangerBorder}`,
+  },
 });

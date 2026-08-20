@@ -262,3 +262,21 @@ export function BuildingGlyph({ color = colors.primary[600], size = 18 }: GlyphP
     </View>
   );
 }
+
+/** Shield outline — marks the human-verification control. */
+export function ShieldGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View
+      style={{
+        width: size * 0.82,
+        height: size,
+        borderWidth: 1.8,
+        borderColor: color,
+        borderTopLeftRadius: size * 0.16,
+        borderTopRightRadius: size * 0.16,
+        borderBottomLeftRadius: size * 0.44,
+        borderBottomRightRadius: size * 0.44,
+      }}
+    />
+  );
+}
