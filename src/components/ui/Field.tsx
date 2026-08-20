@@ -8,7 +8,7 @@ export type FieldProps = {
   required?: boolean;
   /** Small helper line under the control. */
   hint?: string;
-  /** Replaces the hint with a danger-toned line — for a value we can reject on the spot. */
+  /** Replaces the hint with a danger-toned message when set. */
   error?: string;
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
@@ -16,6 +16,8 @@ export type FieldProps = {
 
 /** Label + control + hint. Every input in the reservation form sits in one. */
 export function Field({ label, required, hint, error, style, children }: FieldProps) {
+  const note = error ?? hint;
+
   return (
     <View style={[styles.root, style]}>
       <Text style={styles.label}>
@@ -23,7 +25,7 @@ export function Field({ label, required, hint, error, style, children }: FieldPr
         {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
       {children}
-      {error ? <Text style={styles.error}>{error}</Text> : hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      {note ? <Text style={[styles.hint, error ? styles.error : null]}>{note}</Text> : null}
     </View>
   );
 }
@@ -33,5 +35,5 @@ const styles = StyleSheet.create({
   label: { color: colors.textStrong, fontSize: 13, fontWeight: '600', letterSpacing: 0.1 },
   required: { color: colors.textMuted, fontWeight: '400' },
   hint: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
-  error: { color: colors.danger, fontSize: 12, lineHeight: 16 },
+  error: { color: colors.danger, fontWeight: '500' },
 });

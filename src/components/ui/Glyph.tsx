@@ -162,43 +162,69 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
   );
 }
 
-/** Payment card: rounded rect with a magnetic stripe and a signature line. */
-export function CardGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
-  const height = size * 0.72;
-
+/** Static tick — marks the chosen row in a select sheet. */
+export function TickGlyph({ color = colors.primary[600], size = 12 }: GlyphProps) {
   return (
-    <View style={{ width: size, height }}>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          width: size * 0.5,
+          height: size * 0.85,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }, { translateY: -size * 0.08 }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Payment card: a rounded rectangle with a magnetic stripe. */
+export function CardGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center' }}>
+      <View
+        style={{
+          height: size * 0.72,
           borderWidth: 1.6,
           borderColor: color,
           borderRadius: 3,
+          justifyContent: 'flex-start',
+          overflow: 'hidden',
+        }}
+      >
+        <View style={{ height: size * 0.18, marginTop: size * 0.1, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Magnifier — the search action and the empty-results state. */
+export function SearchGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const ring = size * 0.66;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <View
+        style={{
+          width: ring,
+          height: ring,
+          borderRadius: ring / 2,
+          borderWidth: 1.8,
+          borderColor: color,
         }}
       />
       <View
         style={{
           position: 'absolute',
-          top: height * 0.26,
-          left: 0,
-          right: 0,
-          height: 3,
-          backgroundColor: color,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          bottom: height * 0.2,
-          left: size * 0.16,
-          width: size * 0.3,
-          height: 1.6,
+          right: size * 0.08,
+          bottom: size * 0.08,
+          width: 1.8,
+          height: size * 0.34,
           borderRadius: 1,
           backgroundColor: color,
+          transform: [{ rotate: '-45deg' }],
         }}
       />
     </View>

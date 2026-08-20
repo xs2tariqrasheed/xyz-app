@@ -9,6 +9,7 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   label: string;
   required?: boolean;
   hint?: string;
+  /** Shown under the field and reddens the border. */
   error?: string;
   style?: StyleProp<ViewStyle>;
 };
@@ -17,7 +18,16 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
  * Single-line text input. Focus is drawn with a brand border plus a 3px
  * `--focus-ring` halo, the same treatment as the theme page's focused field.
  */
-export function TextField({ label, required, hint, error, style, onFocus, onBlur, ...inputProps }: TextFieldProps) {
+export function TextField({
+  label,
+  required,
+  hint,
+  error,
+  style,
+  onFocus,
+  onBlur,
+  ...inputProps
+}: TextFieldProps) {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -33,7 +43,11 @@ export function TextField({ label, required, hint, error, style, onFocus, onBlur
           setFocused(false);
           onBlur?.(event);
         }}
-        style={[styles.input, focused ? styles.inputFocused : null, error ? styles.inputError : null]}
+        style={[
+          styles.input,
+          error ? styles.inputInvalid : null,
+          focused ? styles.inputFocused : null,
+        ]}
       />
     </Field>
   );
@@ -51,7 +65,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textStrong,
   },
+  inputInvalid: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
   inputFocused: focusedFieldStyle,
-  // Applied last: a rejected value keeps the focus halo but reads as danger.
-  inputError: { borderColor: colors.danger },
 });
