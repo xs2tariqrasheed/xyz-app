@@ -161,3 +161,78 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
     </View>
   );
 }
+
+/** Payment card: rounded rect with a magnetic stripe and a signature line. */
+export function CardGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const height = size * 0.72;
+
+  return (
+    <View style={{ width: size, height }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: height * 0.26,
+          left: 0,
+          right: 0,
+          height: 3,
+          backgroundColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: height * 0.2,
+          left: size * 0.16,
+          width: size * 0.3,
+          height: 1.6,
+          borderRadius: 1,
+          backgroundColor: color,
+        }}
+      />
+    </View>
+  );
+}
+
+/** Office block — marks anything billed to the company rather than a person. */
+export function BuildingGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const pane = { width: size * 0.15, height: size * 0.15, borderRadius: 1, backgroundColor: color } as const;
+  const row = { flexDirection: 'row', justifyContent: 'space-between' } as const;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.76,
+          height: size * 0.84,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 2,
+          paddingHorizontal: size * 0.12,
+          paddingTop: size * 0.12,
+          gap: size * 0.11,
+        }}
+      >
+        <View style={row}>
+          <View style={pane} />
+          <View style={pane} />
+        </View>
+        <View style={row}>
+          <View style={pane} />
+          <View style={pane} />
+        </View>
+      </View>
+    </View>
+  );
+}

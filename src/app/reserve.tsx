@@ -12,6 +12,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  BillingMethodSection,
+  emptyCardDetails,
+  type BillingMethodValue,
+} from '@/components/reservation/BillingMethodSection';
+import {
   PassengerRideInfoSection,
   type PassengerRideInfoValue,
 } from '@/components/reservation/PassengerRideInfoSection';
@@ -50,6 +55,15 @@ export default function MakeReservationScreen() {
   const [addresses, setAddresses] = useState<RideAddressInfoValue>({
     pickup: null,
     destination: null,
+  });
+  const [billing, setBilling] = useState<BillingMethodValue>({
+    method: 'corporate',
+    // Stands in for the account on the customer's profile, which is why the
+    // field renders locked behind an Edit button rather than empty.
+    accountNumber: 'CORP-48213',
+    vipNumber: '',
+    card: emptyCardDetails,
+    saveCard: false,
   });
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -109,6 +123,8 @@ export default function MakeReservationScreen() {
                       <PassengerRideInfoSection value={info} onChange={setInfo} today={today} />
                     ) : section.id === 'address' ? (
                       <RideAddressInfoSection value={addresses} onChange={setAddresses} />
+                    ) : section.id === 'billing' ? (
+                      <BillingMethodSection value={billing} onChange={setBilling} today={today} />
                     ) : (
                       <NotBuiltYet title={section.title} />
                     )}
