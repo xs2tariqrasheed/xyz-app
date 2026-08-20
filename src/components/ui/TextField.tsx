@@ -48,6 +48,7 @@ export function TextField({
         }}
         style={[
           styles.input,
+          inputProps.multiline ? styles.multiline : null,
           error ? styles.inputInvalid : null,
           focused ? (error ? styles.inputFocusedInvalid : styles.inputFocused) : null,
         ]}
@@ -76,4 +77,7 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
     boxShadow: `0 0 0 3px ${colors.dangerBorder}`,
   },
+  // `textAlignVertical` is the Android-only knob that keeps the caret on the
+  // first line; iOS and web already top-align a multiline input.
+  multiline: { minHeight: 96, textAlignVertical: 'top' },
 });

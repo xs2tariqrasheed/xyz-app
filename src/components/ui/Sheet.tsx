@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 
-import { Button } from './Button';
+import { Button, type ButtonVariant } from './Button';
 
 const useNative = Platform.OS !== 'web';
 
@@ -24,6 +24,8 @@ export type SheetProps = {
   onClose: () => void;
   onConfirm: () => void;
   confirmLabel?: string;
+  /** `danger` for a destructive confirm, e.g. deleting a saved address. */
+  confirmVariant?: ButtonVariant;
   /** Shown on the left of the footer, e.g. "Today". */
   footerHint?: string;
   children: React.ReactNode;
@@ -40,6 +42,7 @@ export function Sheet({
   onClose,
   onConfirm,
   confirmLabel = 'Confirm',
+  confirmVariant = 'primary',
   footerHint,
   children,
 }: SheetProps) {
@@ -92,7 +95,7 @@ export function Sheet({
               </Text>
               <View style={styles.footerActions}>
                 <Button label="Cancel" variant="ghost" onPress={onClose} />
-                <Button label={confirmLabel} onPress={onConfirm} />
+                <Button label={confirmLabel} variant={confirmVariant} onPress={onConfirm} />
               </View>
             </View>
           </View>

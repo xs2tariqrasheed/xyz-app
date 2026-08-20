@@ -134,3 +134,10 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export function isValidEmail(input: string): boolean {
   return EMAIL.test(input.trim());
 }
+
+/** Appends `ext. 12` when there is one. */
+export function withExtension(number: string, extension: string): string {
+  const ext = toExtension(extension);
+  if (!number) return '';
+  return ext ? `${number} ext. ${ext}` : number;
+}

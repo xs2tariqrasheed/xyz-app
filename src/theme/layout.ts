@@ -10,8 +10,8 @@ export const breakpoints = {
   sm: 600,
   /** Tablet portrait. */
   md: 768,
-  /** Wide enough for the six primary nav links to sit inline in the header. */
-  nav: 900,
+  /** Wide enough for the ten primary nav links to sit inline in the header. */
+  nav: 1080,
   /** Tablet landscape: the picker sheet becomes a centred dialog. */
   lg: 1024,
 } as const;
