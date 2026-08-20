@@ -150,6 +150,11 @@ export function formatTime(time: TimeValue): string {
   return `${pad2(time.hour)}:${pad2(time.minute)} ${time.meridiem}`;
 }
 
+/** "09:20 AM" — the twelve-hour clock time of a `Date`. */
+export function formatTimeOfDay(date: Date): string {
+  return formatTime(toTimeValue(date));
+}
+
 export function timeEquals(a: TimeValue, b: TimeValue): boolean {
   return a.hour === b.hour && a.minute === b.minute && a.meridiem === b.meridiem;
 }

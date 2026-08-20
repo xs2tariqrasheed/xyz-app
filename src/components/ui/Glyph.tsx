@@ -116,6 +116,25 @@ export function ChevronGlyph({
   );
 }
 
+/** Tick mark — marks the chosen row in a list of options. */
+export function CheckGlyph({ color = colors.success, size = 12 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.42,
+          height: size * 0.8,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          marginTop: -size * 0.12,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
 /** Filled dot — the "live" pulse and the calendar's today marker. */
 export function Dot({ color = colors.accent, size = 6 }: GlyphProps) {
   return (
