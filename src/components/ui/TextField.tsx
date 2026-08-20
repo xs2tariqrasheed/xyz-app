@@ -9,8 +9,10 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   label: string;
   required?: boolean;
   hint?: string;
-  /** Validation message; also tints the border. */
+  /** Shown under the field and reddens the border. */
   error?: string;
+  /** Lays the label out beside the input on tablet-and-wider viewports. */
+  inline?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -23,6 +25,7 @@ export function TextField({
   required,
   hint,
   error,
+  inline,
   style,
   onFocus,
   onBlur,
@@ -31,7 +34,7 @@ export function TextField({
   const [focused, setFocused] = useState(false);
 
   return (
-    <Field label={label} required={required} hint={hint} error={error} style={style}>
+    <Field label={label} required={required} hint={hint} error={error} inline={inline} style={style}>
       <TextInput
         {...inputProps}
         placeholderTextColor={colors.textDisabled}
@@ -46,10 +49,8 @@ export function TextField({
         style={[
           styles.input,
           inputProps.multiline ? styles.multiline : null,
-          focused ? styles.inputFocused : null,
-          // Last, so an invalid field keeps its red border while focused — the
-          // focus halo above only sets a shadow.
           error ? styles.inputInvalid : null,
+          focused ? (error ? styles.inputFocusedInvalid : styles.inputFocused) : null,
         ]}
       />
     </Field>
@@ -68,8 +69,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textStrong,
   },
+  inputInvalid: { borderColor: colors.dangerBorder, backgroundColor: colors.dangerBg },
   inputFocused: focusedFieldStyle,
-  inputInvalid: { borderColor: colors.danger },
+  // Focus on an errored field keeps the danger tint but swaps the brand halo
+  // for a danger one, so the ring never contradicts the message below.
+  inputFocusedInvalid: {
+    borderColor: colors.danger,
+    boxShadow: `0 0 0 3px ${colors.dangerBorder}`,
+  },
   // `textAlignVertical` is the Android-only knob that keeps the caret on the
   // first line; iOS and web already top-align a multiline input.
   multiline: { minHeight: 96, textAlignVertical: 'top' },

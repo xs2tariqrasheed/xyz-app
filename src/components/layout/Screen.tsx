@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppHeader, type AppHeaderProps } from '@/components/nav/AppHeader';
 import { colors, contentMaxWidth, space } from '@/theme';
@@ -17,15 +17,22 @@ export function Screen({ children, ...header }: ScreenProps) {
   return (
     <View style={styles.root}>
       <AppHeader {...header} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.page}>{children}</View>
-      </ScrollView>
+      {/* Only the scroller lifts for the keyboard — the header stays put. */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+          <View style={styles.page}>{children}</View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  flex: { flex: 1 },
   content: { paddingHorizontal: space.lg, paddingTop: space.xl, paddingBottom: space.xxl },
   page: { width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', gap: space.lg },
 });

@@ -1,4 +1,4 @@
-import { formatIntlPhone, formatUsPhone, isCompleteUsPhone, withExtension } from '@/utils/phone';
+import { formatUsPhone, isCompleteUsPhone, toDigits, withExtension } from '@/utils/phone';
 
 /**
  * A saved pickup location, as the address form collects it.
@@ -111,8 +111,12 @@ export function formatUsCallback(address: AddressDraft): string | null {
 }
 
 export function formatIntlCallback(address: AddressDraft): string | null {
-  const number = formatIntlPhone(address.phoneIntlCode, address.phoneIntl);
-  return number ? withExtension(number, address.phoneIntlExt) : null;
+  // International numbers are kept as the customer typed them — grouping
+  // varies by country — so only the dial code is normalised.
+  const rest = address.phoneIntl.trim();
+  if (!rest) return null;
+  const dial = toDigits(address.phoneIntlCode, 4);
+  return withExtension(dial ? `+${dial} ${rest}` : rest, address.phoneIntlExt);
 }
 
 /**

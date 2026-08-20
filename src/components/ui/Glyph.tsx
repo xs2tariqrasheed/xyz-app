@@ -162,6 +162,237 @@ export function SwapGlyph({ color = colors.textStrong, size = 16 }: GlyphProps) 
   );
 }
 
+/** Static tick — marks the chosen row in a select sheet. */
+export function TickGlyph({ color = colors.primary[600], size = 12 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.5,
+          height: size * 0.85,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }, { translateY: -size * 0.08 }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Payment card: a rounded rectangle with a magnetic stripe. */
+export function CardGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center' }}>
+      <View
+        style={{
+          height: size * 0.72,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 3,
+          justifyContent: 'flex-start',
+          overflow: 'hidden',
+        }}
+      >
+        <View style={{ height: size * 0.18, marginTop: size * 0.1, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Magnifier — the search action and the empty-results state. */
+export function SearchGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const ring = size * 0.66;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <View
+        style={{
+          width: ring,
+          height: ring,
+          borderRadius: ring / 2,
+          borderWidth: 1.8,
+          borderColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          right: size * 0.08,
+          bottom: size * 0.08,
+          width: 1.8,
+          height: size * 0.34,
+          borderRadius: 1,
+          backgroundColor: color,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
+/** Office block — marks anything billed to the company rather than a person. */
+export function BuildingGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  const pane = { width: size * 0.15, height: size * 0.15, borderRadius: 1, backgroundColor: color } as const;
+  const row = { flexDirection: 'row', justifyContent: 'space-between' } as const;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.76,
+          height: size * 0.84,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 2,
+          paddingHorizontal: size * 0.12,
+          paddingTop: size * 0.12,
+          gap: size * 0.11,
+        }}
+      >
+        <View style={row}>
+          <View style={pane} />
+          <View style={pane} />
+        </View>
+        <View style={row}>
+          <View style={pane} />
+          <View style={pane} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** Shield outline — marks the human-verification control. */
+export function ShieldGlyph({ color = colors.primary[600], size = 18 }: GlyphProps) {
+  return (
+    <View
+      style={{
+        width: size * 0.82,
+        height: size,
+        borderWidth: 1.8,
+        borderColor: color,
+        borderTopLeftRadius: size * 0.16,
+        borderTopRightRadius: size * 0.16,
+        borderBottomLeftRadius: size * 0.44,
+        borderBottomRightRadius: size * 0.44,
+      }}
+    />
+  );
+}
+
+/** Eye outline — the password reveal toggle. `off` draws the slash through it. */
+export function EyeGlyph({ color = colors.textMuted, size = 18, off = false }: GlyphProps & { off?: boolean }) {
+  const lens = size * 0.64;
+  const pupil = size * 0.3;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size,
+          height: lens,
+          borderRadius: lens / 2,
+          borderWidth: 1.6,
+          borderColor: color,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View style={{ width: pupil, height: pupil, borderRadius: pupil / 2, backgroundColor: color }} />
+      </View>
+
+      {off ? (
+        <View
+          style={{
+            position: 'absolute',
+            width: size * 1.15,
+            height: 1.6,
+            backgroundColor: color,
+            borderRadius: 1,
+            transform: [{ rotate: '-45deg' }],
+          }}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/** Tick from two positioned bars — the password rules checklist. */
+export function CheckGlyph({ color = colors.success, size = 14 }: GlyphProps) {
+  const stroke = 1.8;
+  const bar = { position: 'absolute', height: stroke, backgroundColor: color, borderRadius: 1 } as const;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      {/* Short down-stroke, then the long up-stroke — a tick from two bars. */}
+      <View
+        style={[bar, { width: size * 0.37, left: size * 0.1, top: size * 0.675 - stroke / 2, transform: [{ rotate: '42deg' }] }]}
+      />
+      <View
+        style={[bar, { width: size * 0.7, left: size * 0.285, top: size * 0.525 - stroke / 2, transform: [{ rotate: '-52deg' }] }]}
+      />
+    </View>
+  );
+}
+
+/** Handset outline — marks a phone, mobile, work or fax contact. */
+export function PhoneGlyph({ color = colors.primary[600], size = 16 }: GlyphProps) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.62,
+          height: size,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: size * 0.18,
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          paddingBottom: size * 0.08,
+        }}
+      >
+        <View
+          style={{
+            width: size * 0.2,
+            height: 1.6,
+            borderRadius: 1,
+            backgroundColor: color,
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
+/** Envelope — marks an email contact. */
+export function MailGlyph({ color = colors.primary[600], size = 16 }: GlyphProps) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size * 0.76,
+        borderWidth: 1.6,
+        borderColor: color,
+        borderRadius: size * 0.12,
+        overflow: 'hidden',
+        alignItems: 'center',
+      }}
+    >
+      <View
+        style={{
+          width: size * 0.52,
+          height: size * 0.52,
+          borderRightWidth: 1.6,
+          borderBottomWidth: 1.6,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }, { translateY: -size * 0.24 }],
+        }}
+      />
+    </View>
+  );
+}
+
 /** Waste bin — the destructive action on a saved address. */
 export function TrashGlyph({ color = colors.danger, size = 16 }: GlyphProps) {
   return (
