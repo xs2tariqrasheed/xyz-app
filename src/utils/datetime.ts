@@ -106,6 +106,11 @@ export function formatFullDate(date: Date): string {
   return `${WEEKDAYS_SHORT[date.getDay()]}, ${date.getDate()} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+/** "30 Sep 2026" — the same date as {@link formatFullDate}, without the weekday. */
+export function formatShortDate(date: Date): string {
+  return `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 /** "August 2026" — the calendar header. */
 export function formatMonthTitle(date: Date): string {
   return `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
@@ -154,11 +159,16 @@ export function timeEquals(a: TimeValue, b: TimeValue): boolean {
   return a.hour === b.hour && a.minute === b.minute && a.meridiem === b.meridiem;
 }
 
-function toTimeValue(date: Date): TimeValue {
+export function toTimeValue(date: Date): TimeValue {
   const hours24 = date.getHours();
   const meridiem: Meridiem = hours24 >= 12 ? 'PM' : 'AM';
   const hour = hours24 % 12 === 0 ? 12 : hours24 % 12;
   return { hour, minute: date.getMinutes(), meridiem };
+}
+
+/** "02:00 PM" — the clock time of a `Date`, in the same shape as {@link formatTime}. */
+export function formatClockTime(date: Date): string {
+  return formatTime(toTimeValue(date));
 }
 
 /** Rounds `from` up to the next five-minute mark — the default pickup slot. */

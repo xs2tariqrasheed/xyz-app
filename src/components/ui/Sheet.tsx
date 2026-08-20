@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -13,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 
-import { Button } from './Button';
+import { Button, type ButtonVariant } from './Button';
 
 const useNative = Platform.OS !== 'web';
 
@@ -24,6 +25,12 @@ export type SheetProps = {
   onClose: () => void;
   onConfirm: () => void;
   confirmLabel?: string;
+  /** Tone of the confirm button — `danger` for a destructive confirmation. */
+  confirmVariant?: ButtonVariant;
+  /** Blocks the confirm button while the sheet's own input is incomplete. */
+  confirmDisabled?: boolean;
+  /** Label of the dismiss button. Rename it when "Cancel" would be ambiguous. */
+  dismissLabel?: string;
   /** Shown on the left of the footer, e.g. "Today". */
   footerHint?: string;
   children: React.ReactNode;
@@ -40,6 +47,9 @@ export function Sheet({
   onClose,
   onConfirm,
   confirmLabel = 'Confirm',
+  confirmVariant = 'primary',
+  confirmDisabled,
+  dismissLabel = 'Cancel',
   footerHint,
   children,
 }: SheetProps) {
@@ -52,7 +62,10 @@ export function Sheet({
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <View style={[styles.root, isDialog ? styles.rootDialog : styles.rootSheet]}>
+      <KeyboardAvoidingView
+        style={[styles.root, isDialog ? styles.rootDialog : styles.rootSheet]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Close picker"
@@ -91,13 +104,18 @@ export function Sheet({
                 {footerHint ?? ''}
               </Text>
               <View style={styles.footerActions}>
-                <Button label="Cancel" variant="ghost" onPress={onClose} />
-                <Button label={confirmLabel} onPress={onConfirm} />
+                <Button label={dismissLabel} variant="ghost" onPress={onClose} />
+                <Button
+                  label={confirmLabel}
+                  variant={confirmVariant}
+                  disabled={confirmDisabled}
+                  onPress={onConfirm}
+                />
               </View>
             </View>
           </View>
         </Panel>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
