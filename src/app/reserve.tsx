@@ -16,10 +16,16 @@ import {
   type PassengerRideInfoValue,
 } from '@/components/reservation/PassengerRideInfoSection';
 import {
+  emptyPreferences,
+  PreferencesSection,
+  type PreferencesValue,
+} from '@/components/reservation/PreferencesSection';
+import {
   RideAddressInfoSection,
   type RideAddressInfoValue,
 } from '@/components/reservation/RideAddressInfoSection';
 import { SectionCard, type SectionState } from '@/components/reservation/SectionCard';
+import { DEFAULT_CAR_TYPE } from '@/components/reservation/carTypes';
 import { RESERVATION_SECTIONS } from '@/components/reservation/sections';
 import { StepProgress, StepRail } from '@/components/reservation/StepRail';
 import { AppHeader } from '@/components/nav/AppHeader';
@@ -51,6 +57,9 @@ export default function MakeReservationScreen() {
     pickup: null,
     destination: null,
   });
+  const [preferences, setPreferences] = useState<PreferencesValue>(() =>
+    emptyPreferences(DEFAULT_CAR_TYPE),
+  );
 
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -109,6 +118,8 @@ export default function MakeReservationScreen() {
                       <PassengerRideInfoSection value={info} onChange={setInfo} today={today} />
                     ) : section.id === 'address' ? (
                       <RideAddressInfoSection value={addresses} onChange={setAddresses} />
+                    ) : section.id === 'preferences' ? (
+                      <PreferencesSection value={preferences} onChange={setPreferences} />
                     ) : (
                       <NotBuiltYet title={section.title} />
                     )}
