@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -26,6 +27,10 @@ export type SheetProps = {
   confirmLabel?: string;
   /** `danger` for a destructive confirm, e.g. deleting a saved address. */
   confirmVariant?: ButtonVariant;
+  /** Blocks the confirm button while the sheet's own input is incomplete. */
+  confirmDisabled?: boolean;
+  /** Label of the dismiss button. Rename it when "Cancel" would be ambiguous. */
+  dismissLabel?: string;
   /** Shown on the left of the footer, e.g. "Today". */
   footerHint?: string;
   children: React.ReactNode;
@@ -43,6 +48,8 @@ export function Sheet({
   onConfirm,
   confirmLabel = 'Confirm',
   confirmVariant = 'primary',
+  confirmDisabled,
+  dismissLabel = 'Cancel',
   footerHint,
   children,
 }: SheetProps) {
@@ -55,7 +62,10 @@ export function Sheet({
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <View style={[styles.root, isDialog ? styles.rootDialog : styles.rootSheet]}>
+      <KeyboardAvoidingView
+        style={[styles.root, isDialog ? styles.rootDialog : styles.rootSheet]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Close picker"
@@ -94,13 +104,18 @@ export function Sheet({
                 {footerHint ?? ''}
               </Text>
               <View style={styles.footerActions}>
-                <Button label="Cancel" variant="ghost" onPress={onClose} />
-                <Button label={confirmLabel} variant={confirmVariant} onPress={onConfirm} />
+                <Button label={dismissLabel} variant="ghost" onPress={onClose} />
+                <Button
+                  label={confirmLabel}
+                  variant={confirmVariant}
+                  disabled={confirmDisabled}
+                  onPress={onConfirm}
+                />
               </View>
             </View>
           </View>
         </Panel>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

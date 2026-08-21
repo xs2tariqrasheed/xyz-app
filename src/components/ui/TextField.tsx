@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  type StyleProp,
+  type TextInputProps,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 
 import { colors, focusedFieldStyle, nativeFocusRingReset, radii, space } from '@/theme';
 
@@ -14,11 +21,16 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   /** Lays the label out beside the input on tablet-and-wider viewports. */
   inline?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** Applied to the input itself, e.g. a `minHeight` for a multi-line box. */
+  inputStyle?: StyleProp<TextStyle>;
 };
 
 /**
- * Single-line text input. Focus is drawn with a brand border plus a 3px
- * `--focus-ring` halo, the same treatment as the theme page's focused field.
+ * Text input. Focus is drawn with a brand border plus a 3px `--focus-ring`
+ * halo, the same treatment as the theme page's focused field.
+ *
+ * Single line by default; pass `multiline` with an `inputStyle` height for a
+ * box that takes a sentence or two.
  */
 export function TextField({
   label,
@@ -27,6 +39,7 @@ export function TextField({
   error,
   inline,
   style,
+  inputStyle,
   onFocus,
   onBlur,
   ...inputProps
@@ -51,6 +64,7 @@ export function TextField({
           inputProps.multiline ? styles.multiline : null,
           error ? styles.inputInvalid : null,
           focused ? (error ? styles.inputFocusedInvalid : styles.inputFocused) : null,
+          inputStyle,
         ]}
       />
     </Field>
