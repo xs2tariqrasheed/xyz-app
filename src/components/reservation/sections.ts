@@ -45,7 +45,7 @@ export const RESERVATION_SECTIONS: readonly ReservationSection[] = [
   {
     id: 'receipt',
     title: 'Ride Receipt',
-    description: 'Review everything before you book.',
+    description: 'Your confirmation number and what happens next.',
     short: 'Receipt',
   },
 ];

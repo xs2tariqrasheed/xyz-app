@@ -44,6 +44,11 @@ export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/** Last millisecond of `date` — the inclusive end of a day-range filter. */
+export function endOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+}
+
 export function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -72,21 +77,25 @@ export type CalendarDay = {
   /** False for the leading/trailing days that belong to the neighbouring month. */
   inMonth: boolean;
   isToday: boolean;
-  /** Earlier than `today` — a reservation can never be placed in the past. */
+  /** Earlier than the selectable floor — rendered greyed out and inert. */
   isPast: boolean;
 };
 
 /**
  * Builds a whole number of weeks for `month`, padded with the neighbouring
  * months' days so every row has seven cells. Trailing empty weeks are trimmed.
+ *
+ * `minDate` is the earliest selectable day, defaulting to `today` — a booking
+ * can never be placed in the past, but a history search reaches back, so that
+ * floor is a parameter rather than baked in.
  */
-export function buildMonthGrid(month: Date, today: Date): CalendarDay[] {
+export function buildMonthGrid(month: Date, today: Date, minDate?: Date): CalendarDay[] {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const leading = new Date(year, monthIndex, 1).getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const cellCount = Math.ceil((leading + daysInMonth) / 7) * 7;
-  const floor = startOfDay(today).getTime();
+  const floor = startOfDay(minDate ?? today).getTime();
 
   return Array.from({ length: cellCount }, (_, index) => {
     const date = new Date(year, monthIndex, index + 1 - leading);
@@ -106,9 +115,16 @@ export function formatFullDate(date: Date): string {
   return `${WEEKDAYS_SHORT[date.getDay()]}, ${date.getDate()} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-/** "30 Sep 2026" — the same date as {@link formatFullDate}, without the weekday. */
-export function formatShortDate(date: Date): string {
-  return `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
+/** "08/05/2026" — the compact form used in the ride history table. */
+export function formatSlashDate(date: Date): string {
+  return `${pad2(date.getMonth() + 1)}/${pad2(date.getDate())}/${date.getFullYear()}`;
+}
+
+/** "3:00 pm" — the clock line under a pickup date. */
+export function formatClockTime(date: Date): string {
+  const hours24 = date.getHours();
+  const hour = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  return `${hour}:${pad2(date.getMinutes())} ${hours24 >= 12 ? 'pm' : 'am'}`;
 }
 
 /** "August 2026" — the calendar header. */
@@ -159,16 +175,11 @@ export function timeEquals(a: TimeValue, b: TimeValue): boolean {
   return a.hour === b.hour && a.minute === b.minute && a.meridiem === b.meridiem;
 }
 
-export function toTimeValue(date: Date): TimeValue {
+function toTimeValue(date: Date): TimeValue {
   const hours24 = date.getHours();
   const meridiem: Meridiem = hours24 >= 12 ? 'PM' : 'AM';
   const hour = hours24 % 12 === 0 ? 12 : hours24 % 12;
   return { hour, minute: date.getMinutes(), meridiem };
-}
-
-/** "02:00 PM" — the clock time of a `Date`, in the same shape as {@link formatTime}. */
-export function formatClockTime(date: Date): string {
-  return formatTime(toTimeValue(date));
 }
 
 /** Rounds `from` up to the next five-minute mark — the default pickup slot. */

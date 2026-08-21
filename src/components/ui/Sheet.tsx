@@ -25,7 +25,7 @@ export type SheetProps = {
   onClose: () => void;
   onConfirm: () => void;
   confirmLabel?: string;
-  /** Tone of the confirm button — `danger` for a destructive confirmation. */
+  /** `danger` for a destructive confirm, e.g. deleting a saved address. */
   confirmVariant?: ButtonVariant;
   /** Blocks the confirm button while the sheet's own input is incomplete. */
   confirmDisabled?: boolean;

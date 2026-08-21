@@ -1,9 +1,16 @@
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 
 import { colors, radii, shadowValues, space } from '@/theme';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-export type ButtonSize = 'md' | 'lg';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export type ButtonProps = {
   label: string;
@@ -36,14 +43,14 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        size === 'lg' ? styles.lg : styles.md,
+        SIZE_CONTAINER[size],
         tone.container,
         fill ? styles.fill : null,
         pressed && !disabled ? styles.pressed : null,
         style,
       ]}
     >
-      <Text style={[styles.label, size === 'lg' ? styles.labelLg : null, tone.label]}>{label}</Text>
+      <Text style={[styles.label, SIZE_LABEL[size], tone.label]}>{label}</Text>
     </Pressable>
   );
 }
@@ -84,10 +91,24 @@ const disabledTone: Tone = {
 
 const styles = StyleSheet.create({
   base: { alignItems: 'center', justifyContent: 'center', borderRadius: radii.md },
+  sm: { paddingHorizontal: space.md + 2, paddingVertical: space.sm - 1 },
   md: { paddingHorizontal: space.lg, paddingVertical: space.md - 2 },
   lg: { paddingHorizontal: space.xl, paddingVertical: space.lg - 2 },
   fill: { flex: 1 },
   pressed: { opacity: 0.85 },
   label: { fontSize: 14, fontWeight: '600' },
+  labelSm: { fontSize: 13 },
   labelLg: { fontSize: 15 },
 });
+
+const SIZE_CONTAINER: Record<ButtonSize, ViewStyle> = {
+  sm: styles.sm,
+  md: styles.md,
+  lg: styles.lg,
+};
+
+const SIZE_LABEL: Record<ButtonSize, TextStyle> = {
+  sm: styles.labelSm,
+  md: styles.label,
+  lg: styles.labelLg,
+};
