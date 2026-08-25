@@ -1,58 +1,9 @@
-import { View } from 'react-native';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { colors } from '@/theme';
 
 /** The vehicle silhouettes the Preferences step offers. */
 export type CarGlyphVariant = 'sedan' | 'suv' | 'van' | 'limo';
-
-type Box = {
-  /** All values are fractions: horizontal of the width, vertical of the height. */
-  left: number;
-  right: number;
-  top: number;
-  height: number;
-  radius: number;
-};
-
-type Geometry = {
-  cabin: Box;
-  body: Omit<Box, 'left' | 'right'>;
-  /** Diameter as a fraction of the height; `x` is the centre across the width. */
-  wheel: number;
-  wheelsAt: readonly number[];
-};
-
-/**
- * Side profiles, tuned so the four read apart at 36px: the cabin's width and
- * height carry the difference, the body only grounds it.
- */
-const GEOMETRY: Record<CarGlyphVariant, Geometry> = {
-  sedan: {
-    cabin: { left: 0.28, right: 0.28, top: 0.08, height: 0.4, radius: 0.13 },
-    body: { top: 0.42, height: 0.32, radius: 0.14 },
-    wheel: 0.32,
-    wheelsAt: [0.25, 0.75],
-  },
-  suv: {
-    cabin: { left: 0.22, right: 0.27, top: 0.04, height: 0.46, radius: 0.1 },
-    body: { top: 0.42, height: 0.33, radius: 0.12 },
-    wheel: 0.32,
-    wheelsAt: [0.25, 0.77],
-  },
-  // Nearly full-width and nearly full-height: a box on wheels, not a bonnet.
-  van: {
-    cabin: { left: 0.02, right: 0.14, top: 0.0, height: 0.58, radius: 0.14 },
-    body: { top: 0.5, height: 0.26, radius: 0.09 },
-    wheel: 0.3,
-    wheelsAt: [0.22, 0.82],
-  },
-  limo: {
-    cabin: { left: 0.36, right: 0.28, top: 0.14, height: 0.32, radius: 0.08 },
-    body: { top: 0.4, height: 0.34, radius: 0.09 },
-    wheel: 0.28,
-    wheelsAt: [0.15, 0.87],
-  },
-};
 
 export type CarGlyphProps = {
   variant: CarGlyphVariant;
@@ -61,55 +12,92 @@ export type CarGlyphProps = {
   size?: number;
 };
 
+/** Each icon is drawn in a 100 × 62 box. */
+const VIEW_BOX = '0 0 100 62';
+const STROKE = 6;
+
+function Wheel({ cx, cy, r, color, filled }: { cx: number; cy: number; r: number; color: string; filled: boolean }) {
+  return filled ? (
+    <Circle cx={cx} cy={cy} r={r} fill={color} />
+  ) : (
+    <Circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={STROKE} />
+  );
+}
+
 /**
- * Filled vehicle icon built from plain views, so it renders identically on
- * web, iOS and Android without pulling in an icon package.
+ * Side-profile vehicle icons. Van and SUV are outlined, sedan and limo are
+ * filled silhouettes — matching the reference artwork for the car-type tiles.
  */
 export function CarGlyph({ variant, color = colors.primary[600], size = 40 }: CarGlyphProps) {
   const w = size;
   const h = size * 0.62;
-  const { cabin, body, wheel, wheelsAt } = GEOMETRY[variant];
-  const diameter = wheel * h;
 
   return (
-    <View style={{ width: w, height: h }}>
-      <View
-        style={{
-          position: 'absolute',
-          left: cabin.left * w,
-          right: cabin.right * w,
-          top: cabin.top * h,
-          height: cabin.height * h,
-          backgroundColor: color,
-          borderTopLeftRadius: cabin.radius * w,
-          borderTopRightRadius: cabin.radius * w,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: body.top * h,
-          height: body.height * h,
-          backgroundColor: color,
-          borderRadius: body.radius * w,
-        }}
-      />
-      {wheelsAt.map((x) => (
-        <View
-          key={x}
-          style={{
-            position: 'absolute',
-            left: x * w - diameter / 2,
-            top: h - diameter,
-            width: diameter,
-            height: diameter,
-            borderRadius: diameter / 2,
-            backgroundColor: color,
-          }}
-        />
-      ))}
-    </View>
+    <Svg width={w} height={h} viewBox={VIEW_BOX}>
+      {variant === 'van' && (
+        <>
+          {/* Cargo box */}
+          <Rect x={4} y={4} width={56} height={40} rx={5} fill="none" stroke={color} strokeWidth={STROKE} strokeLinejoin="round" />
+          {/* Cab */}
+          <Path
+            d="M60 14 H78 Q83 14 85.5 18 L94 31 Q96 34 96 38 V42 Q96 44 94 44 H60 Z"
+            fill="none"
+            stroke={color}
+            strokeWidth={STROKE}
+            strokeLinejoin="round"
+          />
+          {/* Cab window */}
+          <Path d="M67 20 H78 L85 30 H67 Z" fill="none" stroke={color} strokeWidth={4.5} strokeLinejoin="round" />
+          <Wheel cx={22} cy={50} r={8} color={color} filled={false} />
+          <Wheel cx={76} cy={50} r={8} color={color} filled={false} />
+        </>
+      )}
+
+      {variant === 'limo' && (
+        <>
+          <Path
+            d="M3 36 Q3 30 8 29 L22 28 L36 18 Q38 16.5 41 16.5 H72 Q75 16.5 77 18 L88 27 L94 29 Q97 30 97 34 V40 Q97 43 94 43 H6 Q3 43 3 40 Z"
+            fill={color}
+          />
+          {/* Windows carved out of the silhouette */}
+          <Path d="M27 27 L39 19.5 H48 V27 Z M52 19.5 H63 V27 H52 Z M67 19.5 H73 L82 27 H67 Z" fill={colors.surface} />
+          <Circle cx={17} cy={44} r={8} fill={colors.surface} />
+          <Circle cx={83} cy={44} r={8} fill={colors.surface} />
+          <Wheel cx={17} cy={44} r={6.5} color={color} filled={false} />
+          <Wheel cx={83} cy={44} r={6.5} color={color} filled={false} />
+        </>
+      )}
+
+      {variant === 'suv' && (
+        <>
+          <Path
+            d="M14 8 H60 Q64 8 66.5 11 L78 24 L92 27 Q96 28 96 32 V42 Q96 45 93 45 H7 Q4 45 4 42 V18 Q4 8 14 8 Z"
+            fill="none"
+            stroke={color}
+            strokeWidth={STROKE}
+            strokeLinejoin="round"
+          />
+          {/* Side window line */}
+          <Path d="M16 24 H52" stroke={color} strokeWidth={STROKE} strokeLinecap="round" />
+          <Circle cx={24} cy={48} r={9} fill={colors.surface} stroke={color} strokeWidth={STROKE} />
+          <Circle cx={74} cy={48} r={9} fill={colors.surface} stroke={color} strokeWidth={STROKE} />
+        </>
+      )}
+
+      {variant === 'sedan' && (
+        <>
+          <Path
+            d="M3 36 Q3 29 9 28 L24 26 L40 14 Q43 12 47 12 H63 Q67 12 70 14 L84 25 L93 28 Q97 29.5 97 34 V41 Q97 44 94 44 H6 Q3 44 3 41 Z"
+            fill={color}
+          />
+          {/* Windows */}
+          <Path d="M30 26 L42 16.5 H53 V26 Z M57 16.5 H64 L77 26 H57 Z" fill={colors.surface} />
+          <Circle cx={19} cy={44} r={10.5} fill={colors.surface} />
+          <Circle cx={81} cy={44} r={10.5} fill={colors.surface} />
+          <Wheel cx={19} cy={44} r={7.5} color={color} filled />
+          <Wheel cx={81} cy={44} r={7.5} color={color} filled />
+        </>
+      )}
+    </Svg>
   );
 }

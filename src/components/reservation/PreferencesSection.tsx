@@ -1,22 +1,26 @@
-import { useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useState } from "react";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
-import { CAR_TYPES, findCarType, type CarTypeId } from '@/components/reservation/carTypes';
-import { CarGlyph } from '@/components/ui/CarGlyph';
-import { CheckboxCard } from '@/components/ui/Checkbox';
-import { Field } from '@/components/ui/Field';
-import { OptionCards } from '@/components/ui/OptionCards';
-import { PhoneField, type PhoneValue } from '@/components/ui/PhoneField';
-import { Stepper } from '@/components/ui/Stepper';
-import { TextField } from '@/components/ui/TextField';
-import { breakpoints, colors, radii, space } from '@/theme';
+import {
+  CAR_TYPES,
+  findCarType,
+  type CarTypeId,
+} from "@/components/reservation/carTypes";
+import { CarGlyph } from "@/components/ui/CarGlyph";
+import { CheckboxCard } from "@/components/ui/Checkbox";
+import { Field } from "@/components/ui/Field";
+import { OptionCards } from "@/components/ui/OptionCards";
+import { PhoneField, type PhoneValue } from "@/components/ui/PhoneField";
+import { Stepper } from "@/components/ui/Stepper";
+import { TextField } from "@/components/ui/TextField";
+import { breakpoints, colors, radii, space } from "@/theme";
 import {
   findCountry,
   formatIntlPhone,
   formatUsPhone,
   isCompleteUsPhone,
   isValidEmail,
-} from '@/utils/phone';
+} from "@/utils/phone";
 
 /** Everything section 4 collects. */
 export type PreferencesValue = {
@@ -38,9 +42,9 @@ export function emptyPreferences(carType: CarTypeId): PreferencesValue {
   return {
     carType,
     confirmByPhone: false,
-    callbackUs: { country: null, number: '', ext: '' },
-    callbackIntl: { country: null, number: '', ext: '' },
-    email: '',
+    callbackUs: { country: null, number: "", ext: "" },
+    callbackIntl: { country: null, number: "", ext: "" },
+    email: "",
     passengers: 1,
     stops: 0,
   };
@@ -51,7 +55,10 @@ export type PreferencesSectionProps = {
   onChange: (next: PreferencesValue) => void;
 };
 
-export function PreferencesSection({ value, onChange }: PreferencesSectionProps) {
+export function PreferencesSection({
+  value,
+  onChange,
+}: PreferencesSectionProps) {
   const { width } = useWindowDimensions();
   const twoUp = width >= breakpoints.sm;
 
@@ -59,14 +66,15 @@ export function PreferencesSection({ value, onChange }: PreferencesSectionProps)
   const [emailTouched, setEmailTouched] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
 
-  const patch = (next: Partial<PreferencesValue>) => onChange({ ...value, ...next });
+  const patch = (next: Partial<PreferencesValue>) =>
+    onChange({ ...value, ...next });
 
   const car = findCarType(value.carType);
   const overCapacity = value.passengers > car.seats;
 
   const emailError =
     emailTouched && value.email.trim().length > 0 && !isValidEmail(value.email)
-      ? 'Enter an email address in the form name@example.com.'
+      ? "Enter an email address in the form name@example.com."
       : undefined;
 
   const usPhoneError = phoneTouched ? checkUsPhone(value) : undefined;
@@ -90,18 +98,13 @@ export function PreferencesSection({ value, onChange }: PreferencesSectionProps)
         }))}
         value={value.carType}
         onChange={(carType) => patch({ carType })}
-        hint="Fares differ by vehicle. You can change this before booking."
       />
 
-      <Field
-        label="Confirmation by"
-        hint="Leave this off and we'll confirm by email only."
-      >
+      <Field label="Confirmation by">
         <CheckboxCard
           checked={value.confirmByPhone}
           onChange={(confirmByPhone) => patch({ confirmByPhone })}
           label="Phone"
-          description="Call the passenger on the callback number to confirm before the driver sets off."
         />
       </Field>
 
@@ -113,7 +116,6 @@ export function PreferencesSection({ value, onChange }: PreferencesSectionProps)
         onChange={(callbackUs) => patch({ callbackUs })}
         onBlur={() => setPhoneTouched(true)}
         error={usPhoneError}
-        hint="Area code plus seven digits. Add an extension if the line needs one."
       />
 
       <PhoneField
@@ -121,7 +123,6 @@ export function PreferencesSection({ value, onChange }: PreferencesSectionProps)
         variant="international"
         value={value.callbackIntl}
         onChange={(callbackIntl) => patch({ callbackIntl })}
-        hint="Only if the passenger is reachable outside the US."
       />
 
       <TextField
@@ -138,7 +139,6 @@ export function PreferencesSection({ value, onChange }: PreferencesSectionProps)
         textContentType="emailAddress"
         autoCapitalize="none"
         autoCorrect={false}
-        hint="The booking confirmation and receipt go here."
       />
 
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
@@ -150,12 +150,7 @@ export function PreferencesSection({ value, onChange }: PreferencesSectionProps)
           onChange={(passengers) => patch({ passengers })}
           min={MIN_PASSENGERS}
           max={MAX_PASSENGERS}
-          unit={(count) => (count === 1 ? 'passenger' : 'passengers')}
-          hint={
-            overCapacity
-              ? `A ${car.label.toLowerCase()} seats ${car.seats}. Pick a larger vehicle for ${value.passengers}.`
-              : 'Counts everyone riding, including the person booking.'
-          }
+          unit={(count) => (count === 1 ? "passenger" : "passengers")}
         />
         <Stepper
           style={styles.field}
@@ -164,8 +159,7 @@ export function PreferencesSection({ value, onChange }: PreferencesSectionProps)
           onChange={(stops) => patch({ stops })}
           min={0}
           max={MAX_STOPS}
-          unit={(count) => (count === 1 ? 'stop' : 'stops')}
-          hint="Extra pickups or drop-offs between A and B."
+          unit={(count) => (count === 1 ? "stop" : "stops")}
         />
       </View>
 
@@ -180,13 +174,13 @@ function checkUsPhone(value: PreferencesValue): string | undefined {
 
   if (number.length === 0) {
     return value.confirmByPhone
-      ? 'Add a number we can call, or turn phone confirmation off.'
+      ? "Add a number we can call, or turn phone confirmation off."
       : undefined;
   }
 
   return isCompleteUsPhone(number)
     ? undefined
-    : 'A US number needs all 10 digits, area code first.';
+    : "A US number needs all 10 digits, area code first.";
 }
 
 /** Restates the choices in two lines, the way section 1 reads its ride back. */
@@ -195,14 +189,20 @@ function Summary({ value }: { value: PreferencesValue }) {
 
   const ride = [
     car.label,
-    `${value.passengers} ${value.passengers === 1 ? 'passenger' : 'passengers'}`,
-    value.stops === 0 ? 'no extra stops' : `${value.stops} ${value.stops === 1 ? 'stop' : 'stops'}`,
-    value.confirmByPhone ? 'confirm by phone' : 'confirm by email',
-  ].join(' · ');
+    `${value.passengers} ${value.passengers === 1 ? "passenger" : "passengers"}`,
+    value.stops === 0
+      ? "no extra stops"
+      : `${value.stops} ${value.stops === 1 ? "stop" : "stops"}`,
+    value.confirmByPhone ? "confirm by phone" : "confirm by email",
+  ].join(" · ");
 
-  const contact = [describePhone(value.callbackUs, 'us'), describePhone(value.callbackIntl, 'intl'), value.email.trim()]
+  const contact = [
+    describePhone(value.callbackUs, "us"),
+    describePhone(value.callbackIntl, "intl"),
+    value.email.trim(),
+  ]
     .filter(Boolean)
-    .join(' · ');
+    .join(" · ");
 
   return (
     <View style={styles.summary}>
@@ -214,20 +214,23 @@ function Summary({ value }: { value: PreferencesValue }) {
           {ride}
         </Text>
         <Text style={styles.summaryDetail} numberOfLines={2}>
-          {contact.length > 0 ? contact : 'No contact details yet.'}
+          {contact.length > 0 ? contact : "No contact details yet."}
         </Text>
       </View>
     </View>
   );
 }
 
-function describePhone(phone: PhoneValue, variant: 'us' | 'intl'): string {
-  if (phone.number.length === 0) return '';
+function describePhone(phone: PhoneValue, variant: "us" | "intl"): string {
+  if (phone.number.length === 0) return "";
 
   const country = findCountry(phone.country);
-  const dial = variant === 'us' ? '+1 ' : country ? `+${country.dial} ` : '';
-  const number = variant === 'us' ? formatUsPhone(phone.number) : formatIntlPhone(phone.number);
-  const ext = phone.ext.length > 0 ? ` ext ${phone.ext}` : '';
+  const dial = variant === "us" ? "+1 " : country ? `+${country.dial} ` : "";
+  const number =
+    variant === "us"
+      ? formatUsPhone(phone.number)
+      : formatIntlPhone(phone.number);
+  const ext = phone.ext.length > 0 ? ` ext ${phone.ext}` : "";
 
   return `${dial}${number}${ext}`;
 }
@@ -235,12 +238,12 @@ function describePhone(phone: PhoneValue, variant: 'us' | 'intl'): string {
 const styles = StyleSheet.create({
   root: { gap: space.lg },
   row: { gap: space.lg },
-  rowWide: { flexDirection: 'row' },
+  rowWide: { flexDirection: "row" },
   field: { flex: 1 },
 
   summary: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: space.md,
     backgroundColor: colors.infoBg,
     borderWidth: 1,
@@ -253,10 +256,15 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: radii.sm,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   summaryText: { flex: 1 },
-  summaryTitle: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
-  summaryDetail: { color: colors.textBody, fontSize: 13, lineHeight: 18, marginTop: 1 },
+  summaryTitle: { color: colors.textStrong, fontSize: 14, fontWeight: "700" },
+  summaryDetail: {
+    color: colors.textBody,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 1,
+  },
 });

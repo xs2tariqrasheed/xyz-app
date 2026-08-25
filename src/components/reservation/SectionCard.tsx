@@ -10,7 +10,6 @@ export type SectionCardProps = {
   /** 1-based position, shown in the leading circle. */
   step: number;
   title: string;
-  description: string;
   state: SectionState;
   /** Makes the header tappable — used to reopen a finished section. */
   onPress?: () => void;
@@ -23,11 +22,8 @@ const STATE_BADGE: Record<SectionState, { label: string; tone: 'primary' | 'succ
   upcoming: { label: 'UP NEXT', tone: 'muted' },
 };
 
-/**
- * One numbered block of the reservation form. Only the active section renders
- * its body; the rest stay collapsed so the flow reads as a checklist.
- */
-export function SectionCard({ step, title, description, state, onPress, children }: SectionCardProps) {
+/** One numbered block of the reservation form. */
+export function SectionCard({ step, title, state, onPress, children }: SectionCardProps) {
   const active = state === 'active';
   const badge = STATE_BADGE[state];
 
@@ -47,7 +43,6 @@ export function SectionCard({ step, title, description, state, onPress, children
 
             <View style={styles.headerText}>
               <Text style={[styles.title, active ? null : styles.titleIdle]}>{title}</Text>
-              <Text style={styles.description}>{description}</Text>
             </View>
 
             <Badge label={badge.label} tone={badge.tone} />
@@ -95,7 +90,6 @@ const styles = StyleSheet.create({
   headerText: { flex: 1, gap: 2 },
   title: { color: colors.textHeading, fontSize: 16, fontWeight: '700' },
   titleIdle: { color: colors.textBody },
-  description: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
 
   divider: { height: 1, backgroundColor: colors.border, marginTop: space.lg },
   body: { marginTop: space.lg, gap: space.lg },

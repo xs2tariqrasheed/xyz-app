@@ -1,14 +1,18 @@
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
-import { Badge } from '@/components/ui/Badge';
-import { CheckboxCard } from '@/components/ui/Checkbox';
-import { DateField } from '@/components/ui/DateField';
-import { CalendarGlyph, ClockGlyph } from '@/components/ui/Glyph';
-import { Reveal } from '@/components/ui/Reveal';
-import { TextField } from '@/components/ui/TextField';
-import { TimeField } from '@/components/ui/TimeField';
-import { breakpoints, colors, radii, space } from '@/theme';
-import { formatRelativeDate, formatTime, type TimeValue } from '@/utils/datetime';
+import { Badge } from "@/components/ui/Badge";
+import { CheckboxCard } from "@/components/ui/Checkbox";
+import { DateField } from "@/components/ui/DateField";
+import { CalendarGlyph, ClockGlyph } from "@/components/ui/Glyph";
+import { Reveal } from "@/components/ui/Reveal";
+import { TextField } from "@/components/ui/TextField";
+import { TimeField } from "@/components/ui/TimeField";
+import { breakpoints, colors, radii, space } from "@/theme";
+import {
+  formatRelativeDate,
+  formatTime,
+  type TimeValue,
+} from "@/utils/datetime";
 
 /** Everything section 1 collects. */
 export type PassengerRideInfoValue = {
@@ -27,11 +31,16 @@ export type PassengerRideInfoSectionProps = {
   today: Date;
 };
 
-export function PassengerRideInfoSection({ value, onChange, today }: PassengerRideInfoSectionProps) {
+export function PassengerRideInfoSection({
+  value,
+  onChange,
+  today,
+}: PassengerRideInfoSectionProps) {
   const { width } = useWindowDimensions();
   const twoUp = width >= breakpoints.sm;
 
-  const patch = (next: Partial<PassengerRideInfoValue>) => onChange({ ...value, ...next });
+  const patch = (next: Partial<PassengerRideInfoValue>) =>
+    onChange({ ...value, ...next });
 
   return (
     <View style={styles.root}>
@@ -67,7 +76,7 @@ export function PassengerRideInfoSection({ value, onChange, today }: PassengerRi
         checked={value.isLive}
         onChange={(isLive) => patch({ isLive })}
         label="I'm ready now"
-        description="Book this as a live call and we'll dispatch the nearest driver instead of scheduling ahead."
+        description=""
         badge={<Badge label="LIVE CALL" tone="accent" pulse={value.isLive} />}
       />
 
@@ -80,11 +89,14 @@ export function PassengerRideInfoSection({ value, onChange, today }: PassengerRi
             value={value.time}
             onChange={(time) => patch({ time })}
             caption="Today"
-            hint="Live calls are held for 10 minutes while we match a driver."
+            hint=""
           />
         </Reveal>
       ) : (
-        <Reveal key="scheduled" style={[styles.row, twoUp ? styles.rowWide : null, styles.branch]}>
+        <Reveal
+          key="scheduled"
+          style={[styles.row, twoUp ? styles.rowWide : null, styles.branch]}
+        >
           <DateField
             style={styles.field}
             label="Pickup date"
@@ -109,9 +121,17 @@ export function PassengerRideInfoSection({ value, onChange, today }: PassengerRi
 }
 
 /** Restates the choice in one line, so the ride reads back before booking. */
-function Summary({ value, today }: { value: PassengerRideInfoValue; today: Date }) {
-  const name = [value.firstName.trim(), value.lastName.trim()].filter(Boolean).join(' ');
-  const passenger = name.length > 0 ? name : 'Passenger';
+function Summary({
+  value,
+  today,
+}: {
+  value: PassengerRideInfoValue;
+  today: Date;
+}) {
+  const name = [value.firstName.trim(), value.lastName.trim()]
+    .filter(Boolean)
+    .join(" ");
+  const passenger = name.length > 0 ? name : "Passenger";
 
   const detail = value.isLive
     ? `Live call · ready now, pickup by ${formatTime(value.time)}`
@@ -119,7 +139,12 @@ function Summary({ value, today }: { value: PassengerRideInfoValue; today: Date 
 
   return (
     <View style={[styles.summary, value.isLive ? styles.summaryLive : null]}>
-      <View style={[styles.summaryIcon, value.isLive ? styles.summaryIconLive : null]}>
+      <View
+        style={[
+          styles.summaryIcon,
+          value.isLive ? styles.summaryIconLive : null,
+        ]}
+      >
         {value.isLive ? (
           <ClockGlyph color={colors.accent} size={16} />
         ) : (
@@ -141,13 +166,13 @@ function Summary({ value, today }: { value: PassengerRideInfoValue; today: Date 
 const styles = StyleSheet.create({
   root: { gap: space.lg },
   row: { gap: space.lg },
-  rowWide: { flexDirection: 'row' },
+  rowWide: { flexDirection: "row" },
   field: { flex: 1 },
   branch: { marginTop: -space.xs },
 
   summary: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: space.md,
     backgroundColor: colors.infoBg,
     borderWidth: 1,
@@ -155,17 +180,25 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     padding: space.md,
   },
-  summaryLive: { backgroundColor: colors.accentSubtle, borderColor: colors.warningBorder },
+  summaryLive: {
+    backgroundColor: colors.accentSubtle,
+    borderColor: colors.warningBorder,
+  },
   summaryIcon: {
     width: 30,
     height: 30,
     borderRadius: radii.sm,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   summaryIconLive: { backgroundColor: colors.surface },
   summaryText: { flex: 1 },
-  summaryTitle: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
-  summaryDetail: { color: colors.textBody, fontSize: 13, lineHeight: 18, marginTop: 1 },
+  summaryTitle: { color: colors.textStrong, fontSize: 14, fontWeight: "700" },
+  summaryDetail: {
+    color: colors.textBody,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 1,
+  },
 });

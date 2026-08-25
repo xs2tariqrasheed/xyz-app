@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import { useState } from "react";
+import type { StyleProp, ViewStyle } from "react-native";
 
-import { colors } from '@/theme';
-import { formatTime, type TimeValue } from '@/utils/datetime';
+import { colors } from "@/theme";
+import { formatTime, type TimeValue } from "@/utils/datetime";
 
-import { ClockGlyph } from './Glyph';
-import { PickerField } from './PickerField';
-import { Sheet } from './Sheet';
-import { TimeWheel } from './TimeWheel';
+import { ClockGlyph } from "./Glyph";
+import { PickerField } from "./PickerField";
+import { Sheet } from "./Sheet";
+import { TimeWheel } from "./TimeWheel";
 
 export type TimeFieldProps = {
   label: string;
@@ -16,7 +16,7 @@ export type TimeFieldProps = {
   caption?: string;
   required?: boolean;
   hint?: string;
-  tone?: 'primary' | 'accent';
+  tone?: "primary" | "accent";
   style?: StyleProp<ViewStyle>;
 };
 
@@ -28,7 +28,7 @@ export function TimeField({
   caption,
   required,
   hint,
-  tone = 'primary',
+  tone = "primary",
   style,
 }: TimeFieldProps) {
   const [open, setOpen] = useState(false);
@@ -44,7 +44,11 @@ export function TimeField({
         style={style}
         value={formatTime(value)}
         caption={caption}
-        icon={<ClockGlyph color={tone === 'accent' ? colors.accent : colors.primary[600]} />}
+        icon={
+          <ClockGlyph
+            color={tone === "accent" ? colors.accent : colors.primary[600]}
+          />
+        }
         onPress={() => {
           setDraft(value);
           setOpen(true);
@@ -53,11 +57,6 @@ export function TimeField({
       <Sheet
         visible={open}
         title="Pick a time"
-        subtitle={
-          tone === 'accent'
-            ? 'How soon should the driver arrive?'
-            : 'Choose the pickup time for this reservation.'
-        }
         footerHint={formatTime(draft)}
         confirmLabel="Set time"
         onClose={() => setOpen(false)}

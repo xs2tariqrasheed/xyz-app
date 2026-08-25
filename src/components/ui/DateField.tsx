@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import { useState } from "react";
+import type { StyleProp, ViewStyle } from "react-native";
 
-import { colors } from '@/theme';
-import { formatDayDistance, formatFullDate } from '@/utils/datetime';
+import { colors } from "@/theme";
+import { formatDayDistance, formatFullDate } from "@/utils/datetime";
 
-import { CalendarPicker, type QuickPick } from './CalendarPicker';
-import { CalendarGlyph } from './Glyph';
-import { PickerField } from './PickerField';
-import { Sheet } from './Sheet';
+import { CalendarPicker, type QuickPick } from "./CalendarPicker";
+import { CalendarGlyph } from "./Glyph";
+import { PickerField } from "./PickerField";
+import { Sheet } from "./Sheet";
 
 export type DateFieldProps = {
   label: string;
@@ -33,8 +33,8 @@ export function DateField({
   today,
   minDate,
   quickPicks,
-  sheetTitle = 'Pick a date',
-  sheetSubtitle = 'When should we collect the passenger?',
+  sheetTitle = "Pick a date",
+  sheetSubtitle = "",
   required,
   hint,
   style,

@@ -57,7 +57,6 @@ export function StepRail({ activeIndex, onSelect }: StepRailProps) {
               <Text style={[styles.railTitle, state === 'active' ? styles.railTitleActive : null]}>
                 {section.title}
               </Text>
-              <Text style={styles.railDescription}>{section.description}</Text>
             </View>
           </Pressable>
         );
@@ -158,7 +157,6 @@ const styles = StyleSheet.create({
   railText: { flex: 1, paddingBottom: space.lg },
   railTitle: { color: colors.textBody, fontSize: 14, fontWeight: '600' },
   railTitleActive: { color: colors.textHeading },
-  railDescription: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: 2 },
 
   progress: { gap: space.sm + 2 },
   progressHeader: { gap: 2 },

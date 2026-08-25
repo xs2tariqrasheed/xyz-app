@@ -33,7 +33,7 @@ import {
   makeReservationNumber,
   RideReceiptSection,
 } from '@/components/reservation/RideReceiptSection';
-import { SectionCard, type SectionState } from '@/components/reservation/SectionCard';
+import { SectionCard } from '@/components/reservation/SectionCard';
 import { DEFAULT_CAR_TYPE } from '@/components/reservation/carTypes';
 import { RESERVATION_SECTIONS } from '@/components/reservation/sections';
 import { StepProgress, StepRail } from '@/components/reservation/StepRail';
@@ -94,6 +94,7 @@ export default function MakeReservationScreen() {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
+  const section = RESERVATION_SECTIONS[activeIndex];
   const nextSection = RESERVATION_SECTIONS[activeIndex + 1];
 
   /**
@@ -141,39 +142,25 @@ export default function MakeReservationScreen() {
             <View style={styles.formColumn}>
               {wide ? null : <StepProgress activeIndex={activeIndex} onSelect={goToSection} />}
 
-              {RESERVATION_SECTIONS.map((section, index) => {
-                const state: SectionState =
-                  index === activeIndex ? 'active' : index < activeIndex ? 'complete' : 'upcoming';
-
-                return (
-                  <SectionCard
-                    key={section.id}
-                    step={index + 1}
-                    title={section.title}
-                    description={section.description}
-                    state={state}
-                    onPress={state === 'complete' ? () => goToSection(index) : undefined}
-                  >
-                    {section.id === 'passenger' ? (
-                      <PassengerRideInfoSection value={info} onChange={setInfo} today={today} />
-                    ) : section.id === 'address' ? (
-                      <RideAddressInfoSection value={addresses} onChange={setAddresses} />
-                    ) : section.id === 'billing' ? (
-                      <BillingMethodSection value={billing} onChange={setBilling} today={today} />
-                    ) : section.id === 'preferences' ? (
-                      <PreferencesSection value={preferences} onChange={setPreferences} />
-                    ) : section.id === 'receipt' ? (
-                      <RideReceiptSection
-                        reservationNumber={reservationNumber}
-                        onViewReservation={() => router.push('/receipts')}
-                        onBookAnotherLeg={bookAnotherLeg}
-                      />
-                    ) : (
-                      <NotBuiltYet title={section.title} />
-                    )}
-                  </SectionCard>
-                );
-              })}
+              <SectionCard step={activeIndex + 1} title={section.title} state="active">
+                {section.id === 'passenger' ? (
+                  <PassengerRideInfoSection value={info} onChange={setInfo} today={today} />
+                ) : section.id === 'address' ? (
+                  <RideAddressInfoSection value={addresses} onChange={setAddresses} />
+                ) : section.id === 'billing' ? (
+                  <BillingMethodSection value={billing} onChange={setBilling} today={today} />
+                ) : section.id === 'preferences' ? (
+                  <PreferencesSection value={preferences} onChange={setPreferences} />
+                ) : section.id === 'receipt' ? (
+                  <RideReceiptSection
+                    reservationNumber={reservationNumber}
+                    onViewReservation={() => router.push('/receipts')}
+                    onBookAnotherLeg={bookAnotherLeg}
+                  />
+                ) : (
+                  <NotBuiltYet title={section.title} />
+                )}
+              </SectionCard>
             </View>
           </View>
         </ScrollView>
