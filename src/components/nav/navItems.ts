@@ -19,6 +19,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Contacts', href: '/contacts', match: '/contacts' },
   { label: 'Preferences', href: '/preferences', match: '/preferences' },
   { label: 'Reservation', href: '/reserve', match: '/reserve' },
+  { label: 'Reservation 2', href: '/reserver-2', match: '/reserver-2' },
 ];
 
 export function isNavItemActive(item: NavItem, pathname: string): boolean {
