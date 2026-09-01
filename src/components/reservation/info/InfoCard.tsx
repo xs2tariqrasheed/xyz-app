@@ -1,4 +1,11 @@
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
@@ -7,13 +14,15 @@ export type InfoCardProps = {
   title: string;
   /** Renders the Edit action in the card footer. Omit to hide it. */
   onEdit?: () => void;
+  /** Lets a caller stretch the card — `flex: 1` inside a row of cards. */
+  style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 };
 
 /** A titled panel of read-only reservation details. */
-export function InfoCard({ title, onEdit, children }: InfoCardProps) {
+export function InfoCard({ title, onEdit, style, children }: InfoCardProps) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, style]}>
       <CardHeader title={title} />
       <View style={styles.body}>{children}</View>
       <EditFooter title={title} onEdit={onEdit} />
@@ -115,7 +124,9 @@ const styles = StyleSheet.create({
   headerHalf: { flex: 1 },
   headerRule: { alignSelf: 'stretch', width: 1, backgroundColor: colors.primary[600] },
 
-  body: { padding: space.lg },
+  // `flexGrow` only bites when a caller stretches the card; a card left at its
+  // natural height is unaffected.
+  body: { padding: space.lg, flexGrow: 1 },
 
   panes: { flexDirection: 'row', alignItems: 'stretch' },
   pane: { flex: 1, padding: space.lg },

@@ -1,16 +1,12 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import type { BillingMethodValue } from "@/components/reservation/BillingMethodSection";
 import type { PassengerRideInfoValue } from "@/components/reservation/PassengerRideInfoSection";
 import type { PreferencesValue } from "@/components/reservation/PreferencesSection";
 import type { RideAddressInfoValue } from "@/components/reservation/RideAddressInfoSection";
 import { findCarType } from "@/components/reservation/carTypes";
-import { InfoCard, SplitInfoCard } from "@/components/reservation/info/InfoCard";
-import {
-  InfoColumns,
-  InfoList,
-  InfoRow,
-} from "@/components/reservation/info/InfoRow";
+import { InfoCard } from "@/components/reservation/info/InfoCard";
+import { InfoList, InfoRow } from "@/components/reservation/info/InfoRow";
 import {
   RESERVATION_SECTIONS,
   sectionIndex,
@@ -25,7 +21,7 @@ import {
   orEmpty,
 } from "@/components/reservation/summaryFormat";
 import { CheckGlyph } from "@/components/ui/Glyph";
-import { colors, radii, space } from "@/theme";
+import { breakpoints, colors, radii, space } from "@/theme";
 import { formatFullDate, formatTime } from "@/utils/datetime";
 
 export type ReservationConfirmSectionProps = {
@@ -51,6 +47,9 @@ export function ReservationConfirmSection({
   preferences,
   onEdit,
 }: ReservationConfirmSectionProps) {
+  const { width } = useWindowDimensions();
+  const twoUp = width >= breakpoints.md;
+
   const car = findCarType(preferences.carType);
   const editStep = (id: ReservationSectionId) => () => onEdit(sectionIndex(id));
   const title = (id: ReservationSectionId) =>
@@ -59,6 +58,102 @@ export function ReservationConfirmSection({
   const paysByAccount = billing.method !== "card";
   const paysByCard = billing.method !== "corporate";
 
+  // Half-width panels, so each card keeps its values in a single column.
+  const cards = [
+    <InfoCard
+      key="passenger"
+      title={title("passenger")}
+      onEdit={editStep("passenger")}
+      style={twoUp ? styles.fill : null}
+    >
+      <InfoList>
+        <InfoRow label="First name" value={info.firstName} />
+        <InfoRow label="Last name" value={info.lastName} />
+        {info.isLive ? (
+          <InfoRow label="Pickup" value="Live call — ready now" />
+        ) : (
+          <>
+            <InfoRow label="Ride date" value={formatFullDate(info.date)} />
+            <InfoRow label="Ride time" value={formatTime(info.time)} />
+          </>
+        )}
+      </InfoList>
+    </InfoCard>,
+
+    <InfoCard
+      key="address"
+      title={title("address")}
+      onEdit={editStep("address")}
+      style={twoUp ? styles.fill : null}
+    >
+      <InfoList>
+        <InfoRow label="Pickup from" value={addressOnly(addresses.pickup)} />
+        <InfoRow label="Pickup directions" value={addresses.pickupNotes} />
+        <InfoRow label="Going to" value={addressOnly(addresses.destination)} />
+        <InfoRow
+          label="Drop-off directions"
+          value={addresses.destinationNotes}
+        />
+      </InfoList>
+    </InfoCard>,
+
+    <InfoCard
+      key="billing"
+      title={title("billing")}
+      onEdit={editStep("billing")}
+      style={twoUp ? styles.fill : null}
+    >
+      <InfoList>
+        <InfoRow label="Method" value={BILLING_LABELS[billing.method]} />
+        {paysByAccount ? (
+          <>
+            <InfoRow
+              label="Account number"
+              value={orEmpty(billing.accountNumber)}
+            />
+            <InfoRow label="VIP number" value={billing.vipNumber} />
+          </>
+        ) : null}
+        {paysByCard ? (
+          <>
+            <InfoRow label="Name on card" value={billing.card.holder} />
+            <InfoRow label="Card" value={formatCard(billing.card.number)} />
+            <InfoRow label="Expires" value={billing.card.expiry} />
+            <InfoRow label="Billing ZIP" value={billing.card.postalCode} />
+          </>
+        ) : (
+          <InfoRow label="Card" value={EMPTY} />
+        )}
+      </InfoList>
+    </InfoCard>,
+
+    <InfoCard
+      key="preferences"
+      title={title("preferences")}
+      onEdit={editStep("preferences")}
+      style={twoUp ? styles.fill : null}
+    >
+      <InfoList>
+        <InfoRow label="Car type" value={car.label} />
+        <InfoRow label="No. of passengers" value={preferences.passengers} />
+        <InfoRow label="No. of stops" value={preferences.stops} />
+        <InfoRow label="Email" value={preferences.email} />
+        <InfoRow
+          label="Confirmation by"
+          value={preferences.confirmByPhone ? "Phone" : "Email"}
+        />
+        <InfoRow
+          label="Callback (US)"
+          value={formatPhone(preferences.callbackUs)}
+        />
+        <InfoRow
+          label="Callback (intl.)"
+          value={formatPhone(preferences.callbackIntl)}
+        />
+      </InfoList>
+    </InfoCard>,
+  ];
+
   return (
     <View style={styles.root}>
       <Text style={styles.lede}>
@@ -66,122 +161,17 @@ export function ReservationConfirmSection({
         your receipt.
       </Text>
 
-      <InfoCard title={title("passenger")} onEdit={editStep("passenger")}>
-        <InfoColumns
-          left={
-            <InfoList>
-              <InfoRow label="First name" value={info.firstName} />
-              <InfoRow label="Last name" value={info.lastName} />
-            </InfoList>
-          }
-          right={
-            <InfoList>
-              {info.isLive ? (
-                <InfoRow label="Pickup" value="Live call — ready now" />
-              ) : (
-                <>
-                  <InfoRow label="Ride date" value={formatFullDate(info.date)} />
-                  <InfoRow label="Ride time" value={formatTime(info.time)} />
-                </>
-              )}
-            </InfoList>
-          }
-        />
-      </InfoCard>
-
-      <SplitInfoCard
-        onEdit={editStep("address")}
-        left={{
-          title: "Pickup From",
-          content: (
-            <InfoList>
-              <InfoRow label="Address" value={addressOnly(addresses.pickup)} />
-              <InfoRow label="Directions" value={addresses.pickupNotes} />
-            </InfoList>
-          ),
-        }}
-        right={{
-          title: "Going To",
-          content: (
-            <InfoList>
-              <InfoRow
-                label="Address"
-                value={addressOnly(addresses.destination)}
-              />
-              <InfoRow label="Directions" value={addresses.destinationNotes} />
-            </InfoList>
-          ),
-        }}
-      />
-
-      <InfoCard title={title("billing")} onEdit={editStep("billing")}>
-        <InfoColumns
-          divider
-          left={
-            <InfoList>
-              <InfoRow label="Method" value={BILLING_LABELS[billing.method]} />
-              {paysByAccount ? (
-                <InfoRow
-                  label="Account number"
-                  value={orEmpty(billing.accountNumber)}
-                />
-              ) : null}
-              {paysByAccount ? (
-                <InfoRow label="VIP number" value={billing.vipNumber} />
-              ) : null}
-            </InfoList>
-          }
-          right={
-            <InfoList>
-              {paysByCard ? (
-                <>
-                  <InfoRow label="Name on card" value={billing.card.holder} />
-                  <InfoRow
-                    label="Card"
-                    value={formatCard(billing.card.number)}
-                  />
-                  <InfoRow label="Expires" value={billing.card.expiry} />
-                  <InfoRow
-                    label="Billing ZIP"
-                    value={billing.card.postalCode}
-                  />
-                </>
-              ) : (
-                <InfoRow label="Card" value={EMPTY} />
-              )}
-            </InfoList>
-          }
-        />
-      </InfoCard>
-
-      <InfoCard title={title("preferences")} onEdit={editStep("preferences")}>
-        <InfoColumns
-          left={
-            <InfoList>
-              <InfoRow label="Car type" value={car.label} />
-              <InfoRow label="No. of passengers" value={preferences.passengers} />
-              <InfoRow label="No. of stops" value={preferences.stops} />
-            </InfoList>
-          }
-          right={
-            <InfoList>
-              <InfoRow label="Email" value={preferences.email} />
-              <InfoRow
-                label="Confirmation by"
-                value={preferences.confirmByPhone ? "Phone" : "Email"}
-              />
-              <InfoRow
-                label="Callback (US)"
-                value={formatPhone(preferences.callbackUs)}
-              />
-              <InfoRow
-                label="Callback (intl.)"
-                value={formatPhone(preferences.callbackIntl)}
-              />
-            </InfoList>
-          }
-        />
-      </InfoCard>
+      {twoUp ? (
+        pairs(cards).map((pair, index) => (
+          <View key={index} style={styles.row}>
+            {pair[0]}
+            {/* Keeps a lone last card at half width rather than stretching it. */}
+            {pair[1] ?? <View style={styles.fill} />}
+          </View>
+        ))
+      ) : (
+        <>{cards}</>
+      )}
 
       <View style={styles.note}>
         <View style={styles.noteIcon}>
@@ -197,9 +187,19 @@ export function ReservationConfirmSection({
   );
 }
 
+/** Splits the cards into rows of two, in order. */
+function pairs<T>(items: readonly T[]): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return rows;
+}
+
 const styles = StyleSheet.create({
   root: { gap: space.lg },
   lede: { color: colors.textBody, fontSize: 14, lineHeight: 20 },
+
+  row: { flexDirection: "row", alignItems: "stretch", gap: space.lg },
+  fill: { flex: 1 },
 
   note: {
     flexDirection: "row",
