@@ -26,6 +26,9 @@ export type AddressFieldProps = {
   markerColor: string;
   required?: boolean;
   hint?: string;
+  /** Fired when the text input takes focus — lets a parent highlight a group. */
+  onFocus?: () => void;
+  onBlur?: () => void;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -45,6 +48,8 @@ export function AddressField({
   markerColor,
   required,
   hint,
+  onFocus,
+  onBlur,
   style,
 }: AddressFieldProps) {
   const [query, setQuery] = useState(() => (value ? formatAddress(value) : ''));
@@ -94,12 +99,14 @@ export function AddressField({
             onFocus={() => {
               setFocused(true);
               setOpen(true);
+              onFocus?.();
             }}
             onBlur={() => {
               setFocused(false);
               setOpen(false);
               // Nothing was picked, so fall back to the committed address.
               setQuery(value ? formatAddress(value) : '');
+              onBlur?.();
             }}
             style={styles.input}
           />
