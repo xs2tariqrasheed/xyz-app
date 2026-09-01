@@ -29,6 +29,7 @@ import {
   RideAddressInfoSection,
   type RideAddressInfoValue,
 } from '@/components/reservation/RideAddressInfoSection';
+import { ReservationConfirmSection } from '@/components/reservation/ReservationConfirmSection';
 import {
   makeReservationNumber,
   RideReceiptSection,
@@ -97,6 +98,18 @@ export default function MakeReservationScreen() {
   const section = RESERVATION_SECTIONS[activeIndex];
   const nextSection = RESERVATION_SECTIONS[activeIndex + 1];
 
+  // Leaving the confirmation step is what books the ride, so its action says so.
+  const books = section.id === 'confirm';
+  const continueLabel = !nextSection
+    ? 'Book reservation'
+    : books
+      ? wide
+        ? `Book and Continue to ${nextSection.title}`
+        : 'Book and Continue'
+      : wide
+        ? `Continue to ${nextSection.title}`
+        : 'Continue';
+
   /**
    * The return leg reuses the passenger and flips the addresses, so the
    * customer only has to pick a new date and time.
@@ -118,7 +131,7 @@ export default function MakeReservationScreen() {
 
       <AppHeader
         title="Make a reservation"
-        subtitle="Five short steps. You can review everything before it is booked."
+        subtitle="Six short steps. You can review everything before it is booked."
         trailing={info.isLive ? <Badge label="LIVE CALL" tone="accent" pulse /> : null}
       />
 
@@ -151,6 +164,14 @@ export default function MakeReservationScreen() {
                   <BillingMethodSection value={billing} onChange={setBilling} today={today} />
                 ) : section.id === 'preferences' ? (
                   <PreferencesSection value={preferences} onChange={setPreferences} />
+                ) : section.id === 'confirm' ? (
+                  <ReservationConfirmSection
+                    info={info}
+                    addresses={addresses}
+                    billing={billing}
+                    preferences={preferences}
+                    onEdit={goToSection}
+                  />
                 ) : section.id === 'receipt' ? (
                   <RideReceiptSection
                     reservationNumber={reservationNumber}
@@ -169,9 +190,7 @@ export default function MakeReservationScreen() {
           <View style={[styles.actionInner, roomy ? styles.actionInnerWide : null]}>
             <Button label="Save draft" variant="outline" />
             <Button
-              label={
-                nextSection ? (wide ? `Continue to ${nextSection.title}` : 'Continue') : 'Book reservation'
-              }
+              label={continueLabel}
               size="lg"
               disabled={activeIndex === LAST_INDEX}
               onPress={() => goToSection(Math.min(activeIndex + 1, LAST_INDEX))}

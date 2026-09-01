@@ -5,8 +5,15 @@ import type { PassengerRideInfoValue } from '@/components/reservation/PassengerR
 import type { PreferencesValue } from '@/components/reservation/PreferencesSection';
 import type { RideAddressInfoValue } from '@/components/reservation/RideAddressInfoSection';
 import { findCarType } from '@/components/reservation/carTypes';
-import { RESERVATION_SECTIONS } from '@/components/reservation/sections';
-import type { PhoneValue } from '@/components/ui/PhoneField';
+import { RESERVATION_SECTIONS, sectionIndex } from '@/components/reservation/sections';
+import {
+  addressLine,
+  BILLING_LABELS,
+  EMPTY,
+  formatCard,
+  formatPhone,
+  orEmpty,
+} from '@/components/reservation/summaryFormat';
 import { colors, radii, shadowValues, space } from '@/theme';
 import { formatFullDate, formatTime } from '@/utils/datetime';
 
@@ -24,45 +31,8 @@ export type ReservationSummaryProps = {
 
 type Row = { label: string; value: string };
 
-const BILLING_LABELS: Record<BillingMethodValue['method'], string> = {
-  corporate: 'Corporate account',
-  'corporate-card': 'Credit card + corporate account',
-  card: 'Credit card',
-};
-
-/** Em dash stands in for anything the customer has not filled in yet. */
-const EMPTY = '—';
-
-function orEmpty(value: string): string {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : EMPTY;
-}
-
-function formatPhone(phone: PhoneValue): string {
-  if (!phone.number.trim()) return EMPTY;
-  const prefix = phone.country ? `${phone.country} ` : '';
-  const ext = phone.ext.trim() ? ` ext. ${phone.ext.trim()}` : '';
-  return `${prefix}${phone.number.trim()}${ext}`;
-}
-
-/** Last four digits only — the panel never repeats a full card number. */
-function formatCard(number: string): string {
-  const digits = number.replace(/\D/g, '');
-  return digits.length >= 4 ? `•••• ${digits.slice(-4)}` : EMPTY;
-}
-
-function addressLine(
-  place: RideAddressInfoValue['pickup'],
-  notes: string,
-): string {
-  if (!place) return EMPTY;
-  const base = [place.primary, place.secondary].filter(Boolean).join(', ');
-  const trimmed = notes.trim();
-  return trimmed ? `${base} (${trimmed})` : base;
-}
-
 /**
- * Read-only digest of everything the five form sections have collected so far.
+ * Read-only digest of everything the form sections have collected so far.
  *
  * It reads the same state the sections write, so it needs no changes inside the
  * section components themselves.
@@ -79,61 +49,47 @@ export function ReservationSummary({
   const car = findCarType(preferences.carType);
   const name = `${info.firstName} ${info.lastName}`.trim();
 
+  const group = (id: Parameters<typeof sectionIndex>[0], rows: Row[]) => {
+    const index = sectionIndex(id);
+    return { index, title: RESERVATION_SECTIONS[index].title, rows };
+  };
+
+  // The confirmation step has no answers of its own — it reads these back.
   const groups: { index: number; title: string; rows: Row[] }[] = [
-    {
-      index: 0,
-      title: RESERVATION_SECTIONS[0].title,
-      rows: [
-        { label: 'Passenger', value: name || EMPTY },
-        info.isLive
-          ? { label: 'Pickup', value: 'Live call — ready now' }
-          : { label: 'Date', value: formatFullDate(info.date) },
-        ...(info.isLive ? [] : [{ label: 'Time', value: formatTime(info.time) }]),
-      ],
-    },
-    {
-      index: 1,
-      title: RESERVATION_SECTIONS[1].title,
-      rows: [
-        { label: 'Pickup from', value: addressLine(addresses.pickup, addresses.pickupNotes) },
-        {
-          label: 'Drop off at',
-          value: addressLine(addresses.destination, addresses.destinationNotes),
-        },
-      ],
-    },
-    {
-      index: 2,
-      title: RESERVATION_SECTIONS[2].title,
-      rows: [
-        { label: 'Method', value: BILLING_LABELS[billing.method] },
-        ...(billing.method === 'corporate' || billing.method === 'corporate-card'
-          ? [{ label: 'Account', value: orEmpty(billing.accountNumber) }]
-          : []),
-        ...(billing.method === 'card' || billing.method === 'corporate-card'
-          ? [{ label: 'Card', value: formatCard(billing.card.number) }]
-          : []),
-        ...(billing.vipNumber.trim() ? [{ label: 'VIP', value: billing.vipNumber.trim() }] : []),
-      ],
-    },
-    {
-      index: 3,
-      title: RESERVATION_SECTIONS[3].title,
-      rows: [
-        { label: 'Vehicle', value: car.label },
-        { label: 'Passengers', value: String(preferences.passengers) },
-        { label: 'Extra stops', value: String(preferences.stops) },
-        { label: 'Email', value: orEmpty(preferences.email) },
-        ...(preferences.confirmByPhone
-          ? [{ label: 'Confirm by phone', value: formatPhone(preferences.callbackUs) }]
-          : []),
-      ],
-    },
-    {
-      index: 4,
-      title: RESERVATION_SECTIONS[4].title,
-      rows: [{ label: 'Reservation #', value: reservationNumber }],
-    },
+    group('passenger', [
+      { label: 'Passenger', value: name || EMPTY },
+      info.isLive
+        ? { label: 'Pickup', value: 'Live call — ready now' }
+        : { label: 'Date', value: formatFullDate(info.date) },
+      ...(info.isLive ? [] : [{ label: 'Time', value: formatTime(info.time) }]),
+    ]),
+    group('address', [
+      { label: 'Pickup from', value: addressLine(addresses.pickup, addresses.pickupNotes) },
+      {
+        label: 'Drop off at',
+        value: addressLine(addresses.destination, addresses.destinationNotes),
+      },
+    ]),
+    group('billing', [
+      { label: 'Method', value: BILLING_LABELS[billing.method] },
+      ...(billing.method === 'corporate' || billing.method === 'corporate-card'
+        ? [{ label: 'Account', value: orEmpty(billing.accountNumber) }]
+        : []),
+      ...(billing.method === 'card' || billing.method === 'corporate-card'
+        ? [{ label: 'Card', value: formatCard(billing.card.number) }]
+        : []),
+      ...(billing.vipNumber.trim() ? [{ label: 'VIP', value: billing.vipNumber.trim() }] : []),
+    ]),
+    group('preferences', [
+      { label: 'Vehicle', value: car.label },
+      { label: 'Passengers', value: String(preferences.passengers) },
+      { label: 'Extra stops', value: String(preferences.stops) },
+      { label: 'Email', value: orEmpty(preferences.email) },
+      ...(preferences.confirmByPhone
+        ? [{ label: 'Confirm by phone', value: formatPhone(preferences.callbackUs) }]
+        : []),
+    ]),
+    group('receipt', [{ label: 'Reservation #', value: reservationNumber }]),
   ];
 
   return (
