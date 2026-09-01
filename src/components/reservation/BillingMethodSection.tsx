@@ -7,12 +7,11 @@ import {
   View,
 } from "react-native";
 
-import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CheckboxCard } from "@/components/ui/Checkbox";
 import { Field } from "@/components/ui/Field";
 import { BuildingGlyph, CardGlyph } from "@/components/ui/Glyph";
-import { RadioCard } from "@/components/ui/Radio";
+import { OptionCards } from "@/components/ui/OptionCards";
 import { Reveal } from "@/components/ui/Reveal";
 import { TextField } from "@/components/ui/TextField";
 import {
@@ -73,30 +72,43 @@ export const emptyCardDetails: CardDetails = {
 
 type MethodOption = {
   id: BillingMethodId;
+  /** Kept short — a tile gives it two lines at phone width. */
   label: string;
-  description?: string;
-  badge: string;
-  tone: BadgeTone;
+  caption: string;
+  renderIcon: (selected: boolean) => React.ReactNode;
 };
+
+/** Brand when the tile is chosen, muted otherwise — matches the car tiles. */
+const iconColor = (selected: boolean) =>
+  selected ? colors.primary[600] : colors.textMuted;
 
 const BILLING_METHODS: readonly MethodOption[] = [
   {
     id: "corporate",
-    label: "Bill my corporate account",
-    badge: "INVOICED",
-    tone: "primary",
+    label: "Corporate account",
+    caption: "Invoiced to the company",
+    renderIcon: (selected) => (
+      <BuildingGlyph color={iconColor(selected)} size={28} />
+    ),
   },
   {
     id: "corporate-card",
-    label: "Bill credit card with corporate account",
-    badge: "ACCOUNT + CARD",
-    tone: "info",
+    label: "Card + corporate account",
+    caption: "Billed to a card against the account",
+    renderIcon: (selected) => (
+      <View style={styles.iconPair}>
+        <BuildingGlyph color={iconColor(selected)} size={28} />
+        <CardGlyph color={iconColor(selected)} size={28} />
+      </View>
+    ),
   },
   {
     id: "card",
-    label: "Bill my credit card",
-    badge: "CARD",
-    tone: "muted",
+    label: "Credit card",
+    caption: "Billed straight to your card",
+    renderIcon: (selected) => (
+      <CardGlyph color={iconColor(selected)} size={28} />
+    ),
   },
 ];
 
@@ -128,22 +140,19 @@ export function BillingMethodSection({
 
   return (
     <View style={styles.root}>
-      <View
-        accessibilityRole="radiogroup"
-        accessibilityLabel="Billing method"
-        style={styles.options}
-      >
-        {BILLING_METHODS.map((option) => (
-          <RadioCard
-            key={option.id}
-            selected={value.method === option.id}
-            onSelect={() => patch({ method: option.id })}
-            label={option.label}
-            description={option.description}
-            badge={<Badge label={option.badge} tone={option.tone} />}
-          />
-        ))}
-      </View>
+      <OptionCards
+        label="Billing method"
+        required
+        options={BILLING_METHODS.map((option) => ({
+          value: option.id,
+          label: option.label,
+          caption: option.caption,
+          renderIcon: option.renderIcon,
+        }))}
+        value={value.method}
+        onChange={(method) => patch({ method })}
+        labelLines={2}
+      />
 
       {/* Keyed on the method so switching replays the entrance. */}
       <Reveal key={value.method} style={styles.branch}>
@@ -461,8 +470,8 @@ function Summary({
 
 const styles = StyleSheet.create({
   root: { gap: space.lg },
-  options: { gap: space.md },
   branch: { gap: space.lg },
+  iconPair: { flexDirection: "row", alignItems: "center", gap: space.sm },
   row: { gap: space.lg },
   rowWide: { flexDirection: "row" },
   field: { flex: 1 },

@@ -18,6 +18,8 @@ export type OptionCardsProps<T extends string> = {
   options: readonly OptionCard<T>[];
   value: T;
   onChange: (next: T) => void;
+  /** Lines a label may run to before it is ellipsised. One-word labels want 1. */
+  labelLines?: number;
   required?: boolean;
   hint?: string;
   error?: string;
@@ -35,6 +37,7 @@ export function OptionCards<T extends string>({
   options,
   value,
   onChange,
+  labelLines = 1,
   required,
   hint,
   error,
@@ -71,7 +74,10 @@ export function OptionCards<T extends string>({
                 <View style={styles.icon}>{option.renderIcon(selected)}</View>
               ) : null}
 
-              <Text style={[styles.label, selected ? styles.labelSelected : null]} numberOfLines={1}>
+              <Text
+                style={[styles.label, selected ? styles.labelSelected : null]}
+                numberOfLines={labelLines}
+              >
                 {option.label}
               </Text>
               {option.caption ? (
@@ -125,7 +131,7 @@ const styles = StyleSheet.create({
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary[600] },
 
   icon: { height: 34, justifyContent: 'center', marginTop: space.sm - 2, marginBottom: space.sm - 2 },
-  label: { color: colors.textStrong, fontSize: 14, fontWeight: '600' },
+  label: { color: colors.textStrong, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   labelSelected: { color: colors.primary[600] },
   caption: { color: colors.textMuted, fontSize: 12, lineHeight: 16, textAlign: 'center' },
 });
