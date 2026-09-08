@@ -34,14 +34,7 @@ export function AddressForm({ draft, errors, editing, onChange, onSubmit, onCanc
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>{editing ? 'Edit this location' : 'Add a location'}</Text>
-          <Text style={styles.subtitle}>
-            {editing
-              ? 'Change any detail and save — the saved list updates in place.'
-              : 'Saved locations show up as one-tap pickup and drop-off choices when you book.'}
-          </Text>
-        </View>
+        <Text style={styles.title}>{editing ? 'Edit this location' : 'Add a location'}</Text>
         <Badge label={editing ? 'EDITING' : 'NEW'} tone={editing ? 'accent' : 'primary'} />
       </View>
 
@@ -140,7 +133,6 @@ export function AddressForm({ draft, errors, editing, onChange, onSubmit, onCanc
           value={draft.pickupPoint}
           onChangeText={(pickupPoint) => patch({ pickupPoint })}
           placeholder="e.g. North entrance"
-          hint="Where the driver should wait."
           autoCapitalize="sentences"
         />
       </View>
@@ -211,7 +203,6 @@ export function AddressForm({ draft, errors, editing, onChange, onSubmit, onCanc
         value={draft.directions}
         onChangeText={(directions) => patch({ directions })}
         placeholder="Gate codes, which entrance to use, where to wait…"
-        hint="Shown to the driver on every ride from this location."
         multiline
         numberOfLines={4}
         autoCapitalize="sentences"
@@ -250,10 +241,9 @@ const styles = StyleSheet.create({
     boxShadow: shadowValues.sm,
   },
 
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
-  headerText: { flex: 1, gap: 3 },
-  title: { color: colors.textHeading, fontSize: 17, fontWeight: '700' },
-  subtitle: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  // Takes the slack so the badge stays pinned to the end of the row.
+  title: { flex: 1, color: colors.textHeading, fontSize: 17, fontWeight: '700' },
 
   group: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xs },
   groupText: { color: colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },

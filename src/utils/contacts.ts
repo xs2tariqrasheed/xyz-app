@@ -15,8 +15,6 @@ export type ContactType = {
   id: ContactTypeId;
   label: string;
   kind: ContactKind;
-  /** One-line explanation, shown under the option in the type picker. */
-  description: string;
   placeholder: string;
 };
 
@@ -26,35 +24,30 @@ export const CONTACT_TYPES: readonly ContactType[] = [
     id: 'home',
     label: 'Home Phone',
     kind: 'phone',
-    description: 'A landline we can call before pickup.',
     placeholder: '(555) 123-4567',
   },
   {
     id: 'mobile',
     label: 'Mobile Phone',
     kind: 'phone',
-    description: 'Texts and driver calls go here.',
     placeholder: '(555) 123-4567',
   },
   {
     id: 'work',
     label: 'Work Phone',
     kind: 'phone',
-    description: 'Used during business hours only.',
     placeholder: '(555) 123-4567',
   },
   {
     id: 'fax',
     label: 'Fax',
     kind: 'phone',
-    description: 'For invoices and paperwork.',
     placeholder: '(555) 123-4567',
   },
   {
     id: 'email',
     label: 'Email',
     kind: 'email',
-    description: 'Receipts and reservation confirmations.',
     placeholder: 'name@example.com',
   },
 ];

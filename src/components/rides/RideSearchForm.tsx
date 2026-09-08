@@ -47,12 +47,7 @@ export function RideSearchForm({
 
   return (
     <View style={styles.card}>
-      <View style={styles.heading}>
-        <Text style={styles.title}>Find a ride</Text>
-        <Text style={styles.description}>
-          Pick a date range and a payment method. Leave the method on “All” to see everything.
-        </Text>
-      </View>
+      <Text style={styles.title}>Find a ride</Text>
 
       <View style={[styles.fields, twoUp ? styles.fieldsRow : null]}>
         <DateField
@@ -64,7 +59,6 @@ export function RideSearchForm({
           minDate={earliest}
           quickPicks={HISTORY_QUICK_PICKS}
           sheetTitle="From date"
-          sheetSubtitle="The earliest pickup date to include."
         />
         <DateField
           style={fieldStyle}
@@ -75,7 +69,6 @@ export function RideSearchForm({
           minDate={earliest}
           quickPicks={HISTORY_QUICK_PICKS}
           sheetTitle="To date"
-          sheetSubtitle="The latest pickup date to include."
         />
         <SelectField
           style={fieldStyle}
@@ -85,7 +78,6 @@ export function RideSearchForm({
           onChange={(paymentMethod) => patch({ paymentMethod })}
           icon={<CardGlyph />}
           sheetTitle="Payment method"
-          sheetSubtitle="Narrow the results to one way of paying."
         />
       </View>
 
@@ -118,9 +110,7 @@ const styles = StyleSheet.create({
     gap: space.lg,
     boxShadow: shadowValues.sm,
   },
-  heading: { gap: 3 },
   title: { color: colors.textHeading, fontSize: 17, fontWeight: '700' },
-  description: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
 
   fields: { gap: space.md },
   // Wraps rather than squeezing: three controls sit inline on a desktop, the

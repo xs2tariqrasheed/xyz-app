@@ -30,19 +30,13 @@ export function SavedAddressList({ addresses, editingId, onEdit, onDelete }: Sav
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Saved locations</Text>
-          <Text style={styles.subtitle}>Tap a location to update it.</Text>
-        </View>
+        <Text style={styles.title}>Saved locations</Text>
         <Badge label={`${addresses.length} SAVED`} tone="muted" />
       </View>
 
       {addresses.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No saved locations yet</Text>
-          <Text style={styles.emptyBody}>
-            Add the places you travel from most and they will be one tap away next time you book.
-          </Text>
         </View>
       ) : (
         <View style={styles.list}>
@@ -149,10 +143,9 @@ const styles = StyleSheet.create({
     boxShadow: shadowValues.sm,
   },
 
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
-  headerText: { flex: 1, gap: 3 },
-  title: { color: colors.textHeading, fontSize: 17, fontWeight: '700' },
-  subtitle: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  // Takes the slack so the badge stays pinned to the end of the row.
+  title: { flex: 1, color: colors.textHeading, fontSize: 17, fontWeight: '700' },
 
   list: { gap: space.md },
   row: {
@@ -208,5 +201,4 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   emptyTitle: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
-  emptyBody: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
 });

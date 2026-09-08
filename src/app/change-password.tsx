@@ -7,7 +7,7 @@ import { formMaxWidth } from '@/theme';
 
 export default function ChangePasswordScreen() {
   return (
-    <Screen title="Change Password" subtitle="Update the password you use to sign in.">
+    <Screen title="Change Password">
       <Stack.Screen options={{ title: 'Change password' }} />
 
       {/* A three-field form reads badly at the full page width. */}

@@ -22,7 +22,6 @@ export function PreferencesForm({ value, onChange }: PreferencesFormProps) {
           checked={value.confirmByPhone}
           onChange={(confirmByPhone) => patch({ confirmByPhone })}
           label="Phone"
-          description="Call the number on your profile once a driver is assigned, as well as confirming in the app."
         />
       </Field>
 
@@ -31,7 +30,6 @@ export function PreferencesForm({ value, onChange }: PreferencesFormProps) {
           checked={value.subscribeSpecialOffers}
           onChange={(subscribeSpecialOffers) => patch({ subscribeSpecialOffers })}
           label="Send me special offers"
-          description="Occasional promotions and discounted fares. You can turn this off at any time."
         />
       </Field>
     </View>

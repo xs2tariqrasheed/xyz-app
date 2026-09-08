@@ -65,7 +65,6 @@ export default function ReservationInfoScreen() {
   return (
     <Screen
       title="Reservation info"
-      subtitle="Everything we hold for this ride."
       trailing={<Badge label={passenger.status.toUpperCase()} tone={STATUS_TONE[passenger.status]} />}
     >
       <Stack.Screen options={{ title: 'Reservation info' }} />
@@ -217,9 +216,6 @@ function AsDirected() {
   return (
     <View style={styles.asDirected}>
       <Text style={styles.asDirectedTitle}>As Directed</Text>
-      <Text style={styles.asDirectedBody}>
-        No drop-off was set — the driver follows the passenger&apos;s directions.
-      </Text>
     </View>
   );
 }
@@ -279,9 +275,8 @@ const styles = StyleSheet.create({
   accountValue: { color: colors.textStrong, fontSize: 14, fontWeight: '600' },
   accountVip: { color: colors.textMuted, fontSize: 13 },
 
-  asDirected: { gap: space.xs, alignItems: 'center', justifyContent: 'center', flex: 1 },
+  asDirected: { alignItems: 'center', justifyContent: 'center', flex: 1 },
   asDirectedTitle: { color: colors.textStrong, fontSize: 15, fontWeight: '700' },
-  asDirectedBody: { color: colors.textMuted, fontSize: 13, lineHeight: 18, textAlign: 'center' },
 
   email: { color: colors.textLink, fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' },
   emailPressed: { color: colors.textLinkHover },

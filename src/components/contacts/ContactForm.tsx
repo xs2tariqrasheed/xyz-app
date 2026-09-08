@@ -36,7 +36,6 @@ export type ContactFormProps = {
 const TYPE_OPTIONS: readonly SelectOption<ContactTypeId>[] = CONTACT_TYPES.map((type) => ({
   value: type.id,
   label: type.label,
-  description: type.description,
 }));
 
 /**
@@ -102,7 +101,6 @@ export function ContactForm({ mode, initial, onSubmit, onCancel }: ContactFormPr
           onChange={changeType}
           icon={<ContactTypeGlyph type={type} />}
           sheetTitle="Contact type"
-          sheetSubtitle="How should we reach you on this one?"
           confirmLabel="Use this type"
         />
 

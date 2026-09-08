@@ -82,10 +82,7 @@ export default function RideSearchScreen() {
   }, [startSearch, today]);
 
   return (
-    <Screen
-      title="Search rides"
-      subtitle="Look up past and upcoming rides by date and payment method."
-    >
+    <Screen title="Search rides">
       <Stack.Screen options={{ title: 'Search rides' }} />
 
       <RideSearchForm

@@ -2,7 +2,6 @@ import { Link, Stack } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { ComingSoon } from '@/components/layout/ComingSoon';
 import { Screen } from '@/components/layout/Screen';
 import { PanelCard } from '@/components/profile/PanelCard';
 import {
@@ -33,8 +32,8 @@ const SAVED_PROFILE: PersonalInfoValue = {
 
 /** Destinations not covered by the panel above, or by the primary nav. */
 const ACCOUNT_ROWS = [
-  { label: 'Update mailing address', detail: 'Where statements and account mail are sent.', href: '/mailing-address' as const },
-  { label: 'Change password', detail: 'Update the password you use to sign in.', href: '/change-password' as const },
+  { label: 'Update mailing address', href: '/mailing-address' as const },
+  { label: 'Change password', href: '/change-password' as const },
 ];
 
 export default function ProfileScreen() {
@@ -83,12 +82,11 @@ export default function ProfileScreen() {
   const errorCount = Object.keys(errors).length;
 
   return (
-    <Screen title="Profile" subtitle="Your details, addresses and saved contacts.">
+    <Screen title="Profile">
       <Stack.Screen options={{ title: 'Profile' }} />
 
       <PanelCard
         title="Personal Info"
-        subtitle="How we address you, and how a driver reaches you."
         trailing={dirty ? <Badge label="UNSAVED" tone="accent" /> : null}
         footer={
           <View style={styles.footer}>
@@ -101,9 +99,7 @@ export default function ProfileScreen() {
                 <Reveal>
                   <Text style={styles.savedNote}>Personal information updated.</Text>
                 </Reveal>
-              ) : (
-                <Text style={styles.hintNote}>* Required</Text>
-              )}
+              ) : null}
             </View>
 
             <View style={[styles.actions, roomy ? null : styles.actionsStacked]}>
@@ -127,21 +123,13 @@ export default function ProfileScreen() {
           <Pressable accessibilityRole="link" accessibilityLabel={row.label}>
             {({ pressed }) => (
               <View style={[styles.row, pressed ? styles.rowPressed : null]}>
-                <View style={styles.rowText}>
-                  <Text style={styles.rowTitle}>{row.label}</Text>
-                  <Text style={styles.rowDetail}>{row.detail}</Text>
-                </View>
+                <Text style={styles.rowTitle}>{row.label}</Text>
                 <ChevronGlyph direction="right" color={colors.textMuted} size={8} />
               </View>
             )}
           </Pressable>
         </Link>
       ))}
-
-      <ComingSoon
-        blurb="Still to come in the account area: saved pickup and drop-off addresses, and the contacts a ride can be booked for."
-        points={['Saved addresses', 'Contacts', 'Payment methods']}
-      />
     </Screen>
   );
 }
@@ -149,7 +137,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   footer: { gap: space.md },
   footerNote: { minHeight: 18, justifyContent: 'center' },
-  hintNote: { color: colors.textMuted, fontSize: 12 },
   errorNote: { color: colors.danger, fontSize: 12, fontWeight: '600' },
   savedNote: {
     alignSelf: 'flex-start',
@@ -179,7 +166,5 @@ const styles = StyleSheet.create({
     boxShadow: shadowValues.sm,
   },
   rowPressed: { backgroundColor: colors.surfaceSelected, borderColor: colors.primary[200] },
-  rowText: { flex: 1, gap: 2 },
-  rowTitle: { color: colors.textHeading, fontSize: 16, fontWeight: '700' },
-  rowDetail: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
+  rowTitle: { flex: 1, color: colors.textHeading, fontSize: 16, fontWeight: '700' },
 });

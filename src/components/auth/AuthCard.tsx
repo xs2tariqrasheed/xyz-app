@@ -3,21 +3,24 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors, formMaxWidth, radii, shadowValues, space } from '@/theme';
 
 export type AuthCardProps = {
-  /** Copy for the navy bar across the top of the card. */
-  title: string;
+  /** Copy for the navy bar across the top of the card. Omitted when the page
+   *  heading already names the form. */
+  title?: string;
   children: React.ReactNode;
 };
 
 /**
- * The framed panel the auth screens sit in: a navy caption bar over a white
- * body, capped at `formMaxWidth` and centred in the page column.
+ * The framed panel the auth screens sit in: a white body capped at
+ * `formMaxWidth` and centred in the page column, under an optional navy bar.
  */
 export function AuthCard({ title, children }: AuthCardProps) {
   return (
     <View style={styles.card}>
-      <View style={styles.titleBar}>
-        <Text style={styles.title}>{title}</Text>
-      </View>
+      {title ? (
+        <View style={styles.titleBar}>
+          <Text style={styles.title}>{title}</Text>
+        </View>
+      ) : null}
       <View style={styles.body}>{children}</View>
     </View>
   );

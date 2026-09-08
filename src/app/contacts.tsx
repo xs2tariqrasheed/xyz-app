@@ -96,10 +96,7 @@ export default function ContactManagementScreen() {
   };
 
   return (
-    <Screen
-      title="Contact Management"
-      subtitle="The numbers and addresses we use to confirm a ride."
-    >
+    <Screen title="Contact Management">
       <Stack.Screen options={{ title: 'Contact Management' }} />
 
       <ContactPanel
@@ -149,12 +146,6 @@ export default function ContactManagementScreen() {
             announce(`${contactType(contact.type).label} is now your primary contact.`);
           }}
         />
-
-        {contacts.length > 0 ? (
-          <Text style={styles.footnote}>
-            Your primary contact is called first when a driver is on the way.
-          </Text>
-        ) : null}
       </ContactPanel>
 
       <Sheet
@@ -188,8 +179,6 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm + 2,
   },
   noticeText: { color: colors.success, fontSize: 13, fontWeight: '600' },
-
-  footnote: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
 
   confirm: {
     borderWidth: 1,

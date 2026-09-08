@@ -5,7 +5,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -25,7 +24,7 @@ import { AppHeader } from '@/components/nav/AppHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Notice } from '@/components/ui/Notice';
-import { breakpoints, colors, contentMaxWidth, formMaxWidth, radii, space } from '@/theme';
+import { breakpoints, colors, formMaxWidth, space } from '@/theme';
 
 export default function MailingAddressScreen() {
   const { width } = useWindowDimensions();
@@ -87,7 +86,6 @@ export default function MailingAddressScreen() {
 
       <AppHeader
         title="Update Mailing Address"
-        subtitle="Where your statements, receipts and account mail are sent."
         trailing={dirty ? <Badge label="UNSAVED" tone="accent" pulse /> : null}
       />
 
@@ -114,7 +112,6 @@ export default function MailingAddressScreen() {
               <Notice
                 tone="danger"
                 title={errorCount === 1 ? 'One field needs a look' : `${errorCount} fields need a look`}
-                message="The highlighted fields below are missing or incomplete."
               />
             ) : null}
 
@@ -142,13 +139,6 @@ export default function MailingAddressScreen() {
             >
               <MailingAddressForm value={draft} onChange={edit} errors={errors} />
             </AccountPanel>
-
-            <View style={styles.note}>
-              <Text style={styles.noteText}>
-                Changing this address does not change your billing address or your saved pickup
-                addresses.
-              </Text>
-            </View>
 
             <Button
               label="Back to profile"
@@ -180,14 +170,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   actionsWide: { justifyContent: 'flex-end' },
   action: { flex: 1 },
-
-  note: {
-    backgroundColor: colors.surfaceSunken,
-    borderRadius: radii.md,
-    padding: space.md,
-    maxWidth: contentMaxWidth,
-  },
-  noteText: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
 
   back: { alignSelf: 'flex-start' },
 });

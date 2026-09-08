@@ -86,8 +86,8 @@ export default function LoginScreen() {
   const indent = inline ? { paddingLeft: INLINE_LABEL_WIDTH + space.lg } : null;
 
   return (
-    <Screen title="Log in" subtitle="Reach your profile, reservations and receipts.">
-      <AuthCard title="Your profile, your reservations — online with XYZ">
+    <Screen title="Log in">
+      <AuthCard>
         {formError ? <Alert tone="danger" title="Sign-in failed" message={formError} /> : null}
 
         <TextField

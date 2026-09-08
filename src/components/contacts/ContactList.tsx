@@ -32,10 +32,6 @@ export function ContactList({
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyTitle}>No contacts saved yet</Text>
-        <Text style={styles.emptyBody}>
-          Add a number above and we will use it to confirm pickups and reach you if a driver is
-          held up.
-        </Text>
       </View>
     );
   }
@@ -193,5 +189,4 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   emptyTitle: { color: colors.textStrong, fontSize: 15, fontWeight: '700' },
-  emptyBody: { color: colors.textBody, fontSize: 13, lineHeight: 19 },
 });

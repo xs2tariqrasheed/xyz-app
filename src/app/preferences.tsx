@@ -40,10 +40,7 @@ export default function PreferencesScreen() {
   };
 
   return (
-    <Screen
-      title="Update Preferences"
-      subtitle="Choose how we confirm your reservations and whether we send you offers."
-    >
+    <Screen title="Update Preferences">
       <View style={styles.column}>
         <Panel
           title="Preferences"

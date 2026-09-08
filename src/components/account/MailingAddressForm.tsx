@@ -24,8 +24,8 @@ export type MailingAddressFormProps = {
 };
 
 const ADDRESS_TYPES: readonly RadioOption<AddressType>[] = [
-  { value: 'home', label: 'This is my home address', description: 'Residential delivery.' },
-  { value: 'office', label: 'This is my office address', description: 'Business hours delivery.' },
+  { value: 'home', label: 'This is my home address' },
+  { value: 'office', label: 'This is my office address' },
 ];
 
 export function MailingAddressForm({ value, onChange, errors }: MailingAddressFormProps) {
@@ -68,7 +68,6 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           icon={<GlobeGlyph color={colors.primary[600]} />}
           placeholder="Select a country"
           sheetTitle="Country"
-          sheetSubtitle="Where should we send your mail?"
           searchPlaceholder="Search countries"
           error={errors.country}
         />
@@ -84,7 +83,6 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
             icon={<PinGlyph color={colors.primary[600]} />}
             placeholder="Select a state"
             sheetTitle="State"
-            sheetSubtitle="States, DC and US territories."
             searchPlaceholder="Search states"
             error={errors.state}
           />
@@ -129,7 +127,6 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           keyboardType={domestic ? 'number-pad' : 'default'}
           autoComplete="postal-code"
           textContentType="postalCode"
-          hint={domestic ? '5 digits, or 9 for ZIP+4.' : undefined}
           error={errors.postalCode}
         />
       </View>
@@ -168,7 +165,6 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           placeholder="53 St"
           autoCapitalize="words"
           autoComplete="address-line2"
-          hint="Optional — helps the driver find the door."
         />
         <TextField
           style={styles.field}
@@ -191,7 +187,6 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
         keyboardType="phone-pad"
         autoComplete="tel"
         textContentType="telephoneNumber"
-        hint="Optional. We only call about a delivery."
         error={errors.phone}
       />
 

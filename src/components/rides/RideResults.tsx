@@ -58,26 +58,18 @@ export function RideResults({
         <Placeholder>
           <ActivityIndicator color={colors.primary[600]} />
           <Text style={styles.placeholderTitle}>Looking up your rides</Text>
-          <Text style={styles.placeholderBody}>This only takes a moment.</Text>
         </Placeholder>
       ) : failed ? (
         <Placeholder>
           <SearchGlyph color={colors.danger} size={26} />
           <Text style={styles.placeholderTitle}>We could not load your rides</Text>
-          <Text style={styles.placeholderBody}>
-            Something went wrong on the way to dispatch. Tap Search to try again.
-          </Text>
+          <Text style={styles.placeholderBody}>Tap Search to try again.</Text>
         </Placeholder>
       ) : rides.length === 0 ? (
         <Placeholder>
           <SearchGlyph color={colors.textMuted} size={26} />
           <Text style={styles.placeholderTitle}>
             {searched ? 'No rides in this range' : 'No search run yet'}
-          </Text>
-          <Text style={styles.placeholderBody}>
-            {searched
-              ? 'Try widening the dates, or set the payment method back to “All”.'
-              : 'Choose a date range above and tap Search.'}
           </Text>
         </Placeholder>
       ) : tabular ? (

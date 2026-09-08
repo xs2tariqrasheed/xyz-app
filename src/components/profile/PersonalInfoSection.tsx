@@ -130,7 +130,6 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
         variant="us"
         value={value.usPhone}
         onChange={(usPhone) => patch({ usPhone })}
-        hint="The number a driver rings on the day of the ride."
         error={errors.usPhone}
       />
 
@@ -147,7 +146,6 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
         variant="international"
         value={value.fax}
         onChange={(fax) => patch({ fax })}
-        hint="Optional. Used for corporate ride confirmations."
         error={errors.fax}
       />
     </View>

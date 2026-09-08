@@ -32,13 +32,12 @@ export type PaymentMethodFilter = PaymentMethod | 'all';
 export const PAYMENT_METHOD_FILTERS: readonly {
   value: PaymentMethodFilter;
   label: string;
-  description: string;
 }[] = [
-  { value: 'all', label: 'All', description: 'Every payment method' },
-  { value: 'voucher', label: 'Voucher', description: 'Rides billed to a voucher' },
-  { value: 'credit-card', label: 'Credit card', description: 'Card on file' },
-  { value: 'cash', label: 'Cash', description: 'Paid to the driver' },
-  { value: 'account', label: 'Corporate account', description: 'Invoiced monthly' },
+  { value: 'all', label: 'All' },
+  { value: 'voucher', label: 'Voucher' },
+  { value: 'credit-card', label: 'Credit card' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'account', label: 'Corporate account' },
 ];
 
 export type Ride = {

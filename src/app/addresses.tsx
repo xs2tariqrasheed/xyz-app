@@ -98,10 +98,7 @@ export default function AddressesScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ title: 'Addresses' }} />
 
-      <AppHeader
-        title="Addresses"
-        subtitle="Save the places you travel from, with the directions a driver needs."
-      />
+      <AppHeader title="Addresses" />
 
       <KeyboardAvoidingView
         style={styles.flex}
