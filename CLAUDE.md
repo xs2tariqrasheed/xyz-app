@@ -47,3 +47,7 @@ npm run lint     # expo lint
 - Check https://docs.expo.dev/versions/v57.0.0/ before using any Expo API (see AGENTS.md).
 - There should not be hard coded color values in the codebase. Use the theme colors defined in `src/theme/colors.ts` instead.
 - UI should be consistent across platforms. Use the same components and styles for web, iOS, and Android unless there is a good reason to do otherwise.
+
+### Important Notes:
+
+- Don't put extra information (noise) to user while making the UI/UX. Only show the information which is necessary for the user to complete the task. Avoid showing hints or descriptions that are not essential for the user to understand the functionality. Reference: reservation forms.

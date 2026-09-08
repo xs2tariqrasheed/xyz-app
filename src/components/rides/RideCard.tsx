@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { PinGlyph } from '@/components/ui/Glyph';
 import {
   canLeaveFeedback,
   canModifyRide,
@@ -11,6 +10,7 @@ import { colors, radii, shadowValues, space } from '@/theme';
 import { formatClockTime, formatSlashDate } from '@/utils/datetime';
 
 import { RideActionLink, type RideActionHandler } from './RideActionLink';
+import { RideRoute } from './RideRoute';
 import { RideStatusBadge } from './RideStatusBadge';
 
 export type RideCardProps = {
@@ -39,11 +39,7 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
         <Text style={styles.pickupTime}>{formatClockTime(ride.pickupAt)}</Text>
       </View>
 
-      <View style={styles.route}>
-        <Leg label="Pickup" value={ride.pickupLocation} tone="primary" />
-        <View style={styles.legLine} />
-        <Leg label="Destination" value={ride.destination} tone="accent" />
-      </View>
+      <RideRoute pickup={ride.pickupLocation} destination={ride.destination} />
 
       <View style={styles.meta}>
         <Meta label="Payment" value={PAYMENT_METHOD_LABELS[ride.paymentMethod]} />
@@ -67,20 +63,6 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
           ) : null}
         </View>
       ) : null}
-    </View>
-  );
-}
-
-function Leg({ label, value, tone }: { label: string; value: string; tone: 'primary' | 'accent' }) {
-  return (
-    <View style={styles.leg}>
-      <View style={[styles.legPin, tone === 'accent' ? styles.legPinAccent : null]}>
-        <PinGlyph color={tone === 'accent' ? colors.accent : colors.primary[600]} size={14} />
-      </View>
-      <View style={styles.legText}>
-        <Text style={styles.legLabel}>{label}</Text>
-        <Text style={styles.legValue}>{value}</Text>
-      </View>
     </View>
   );
 }
@@ -121,33 +103,6 @@ const styles = StyleSheet.create({
   },
   pickupDate: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
   pickupTime: { color: colors.textBody, fontSize: 13 },
-
-  route: { gap: 2 },
-  leg: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
-  legPin: {
-    width: 26,
-    height: 26,
-    borderRadius: radii.sm,
-    backgroundColor: colors.surfaceSelected,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  legPinAccent: { backgroundColor: colors.accentSubtle },
-  legText: { flex: 1, gap: 1 },
-  legLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  legValue: { color: colors.textStrong, fontSize: 14, lineHeight: 19 },
-  legLine: {
-    width: 1,
-    height: space.md,
-    marginLeft: 13,
-    backgroundColor: colors.borderStrong,
-  },
 
   meta: {
     flexDirection: 'row',

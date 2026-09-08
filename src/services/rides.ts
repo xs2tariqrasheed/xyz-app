@@ -72,13 +72,19 @@ export function canLeaveFeedback(ride: Ride): boolean {
 }
 
 /**
+ * Stands in for the network round trip, so every screen's loading state is
+ * exercised in development exactly as it will be against the real API.
+ */
+function pause(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 350));
+}
+
+/**
  * Ride history for the signed-in customer, narrowed by date range and payment
  * method and sorted newest first.
  */
 export async function searchRides(filters: RideSearchFilters): Promise<Ride[]> {
-  // Stands in for the network round trip, so the screen's loading state is
-  // exercised in development exactly as it will be against the real API.
-  await new Promise((resolve) => setTimeout(resolve, 350));
+  await pause();
 
   const from = startOfDay(filters.from).getTime();
   const to = endOfDay(filters.to).getTime();
@@ -249,3 +255,59 @@ export const SAMPLE_RIDES: readonly Ride[] = RIDE_SEEDS.map((seed, index) => {
     feedbackLeft: seed.feedbackLeft ?? false,
   };
 });
+
+/** Sorts by pickup time — ascending for what is coming, descending for history. */
+const byPickupAsc = (a: Ride, b: Ride) => a.pickupAt.getTime() - b.pickupAt.getTime();
+const byPickupDesc = (a: Ride, b: Ride) => b.pickupAt.getTime() - a.pickupAt.getTime();
+
+/** The home dashboard in one shape: the headline counts and the short lists. */
+export type RideOverview = {
+  counts: {
+    /** Booked, still ahead of now. */
+    upcoming: number;
+    /** Cars on the road right now. */
+    inProgress: number;
+    completed: number;
+    canceled: number;
+    /** Every ride on the account, however it ended. */
+    total: number;
+  };
+  /** Rides running right now, soonest pickup first. */
+  active: readonly Ride[];
+  /** Booked pickups still to come, soonest first. */
+  upcoming: readonly Ride[];
+  /** Finished and called-off rides, newest first. */
+  past: readonly Ride[];
+};
+
+/**
+ * Everything the home dashboard needs, in one round trip.
+ *
+ * Bucketed here rather than on the screen so the counts and the lists cannot
+ * disagree about what "upcoming" means once the dispatch API replaces the
+ * sample book.
+ */
+export async function loadRideOverview(now: Date): Promise<RideOverview> {
+  await pause();
+
+  const active = SAMPLE_RIDES.filter((ride) => ride.status === 'in-progress').sort(byPickupAsc);
+  const upcoming = SAMPLE_RIDES.filter(
+    (ride) => ride.status === 'confirmed' && ride.pickupAt.getTime() > now.getTime(),
+  ).sort(byPickupAsc);
+  const past = SAMPLE_RIDES.filter(
+    (ride) => ride.status === 'completed' || ride.status === 'canceled',
+  ).sort(byPickupDesc);
+
+  return {
+    counts: {
+      upcoming: upcoming.length,
+      inProgress: active.length,
+      completed: past.filter((ride) => ride.status === 'completed').length,
+      canceled: past.filter((ride) => ride.status === 'canceled').length,
+      total: SAMPLE_RIDES.length,
+    },
+    active,
+    upcoming,
+    past,
+  };
+}
