@@ -58,10 +58,15 @@ export function ReservationSummary({
   const groups: { index: number; title: string; rows: Row[] }[] = [
     group('passenger', [
       { label: 'Passenger', value: name || EMPTY },
-      info.isLive
-        ? { label: 'Pickup', value: 'Live call — ready now' }
-        : { label: 'Date', value: formatFullDate(info.date) },
-      ...(info.isLive ? [] : [{ label: 'Time', value: formatTime(info.time) }]),
+      ...(info.isLive
+        ? [
+            { label: 'Pickup', value: 'Live call — ready now' },
+            { label: 'Est. pickup', value: `Today, ${formatTime(info.estimatedTime)}` },
+          ]
+        : [
+            { label: 'Date', value: formatFullDate(info.date) },
+            { label: 'Time', value: formatTime(info.time) },
+          ]),
     ]),
     group('address', [
       { label: 'Pickup from', value: addressLine(addresses.pickup, addresses.pickupNotes) },

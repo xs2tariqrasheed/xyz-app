@@ -71,6 +71,7 @@ export default function MakeReservationTopStepsScreen() {
     isLive: false,
     date: startOfDay(today),
     time: nextSlot(today),
+    estimatedTime: nextSlot(today),
   }));
   const [addresses, setAddresses] = useState<RideAddressInfoValue>({
     pickup: null,

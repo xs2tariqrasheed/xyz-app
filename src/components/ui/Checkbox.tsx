@@ -53,6 +53,8 @@ export type CheckboxCardProps = {
   description?: string;
   /** Rendered to the right of the label — used for the LIVE pill. */
   badge?: React.ReactNode;
+  /** Rendered at the far right of the row, vertically centred. */
+  trailing?: React.ReactNode;
   tone?: 'primary' | 'accent';
   style?: StyleProp<ViewStyle>;
 };
@@ -67,6 +69,7 @@ export function CheckboxCard({
   label,
   description,
   badge,
+  trailing,
   tone = 'primary',
   style,
 }: CheckboxCardProps) {
@@ -98,6 +101,7 @@ export function CheckboxCard({
         </View>
         {description ? <Text style={styles.cardDescription}>{description}</Text> : null}
       </View>
+      {trailing ? <View style={styles.cardTrailing}>{trailing}</View> : null}
     </Pressable>
   );
 }
@@ -138,4 +142,5 @@ const styles = StyleSheet.create({
   cardHeading: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
   cardLabel: { color: colors.textStrong, fontSize: 15, fontWeight: '600' },
   cardDescription: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
+  cardTrailing: { alignSelf: 'center' },
 });

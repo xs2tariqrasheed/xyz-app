@@ -70,7 +70,13 @@ export function ReservationConfirmSection({
         <InfoRow label="First name" value={info.firstName} />
         <InfoRow label="Last name" value={info.lastName} />
         {info.isLive ? (
-          <InfoRow label="Pickup" value="Live call — ready now" />
+          <>
+            <InfoRow label="Pickup" value="Live call — ready now" />
+            <InfoRow
+              label="Est. pickup"
+              value={`Today, ${formatTime(info.estimatedTime)}`}
+            />
+          </>
         ) : (
           <>
             <InfoRow label="Ride date" value={formatFullDate(info.date)} />

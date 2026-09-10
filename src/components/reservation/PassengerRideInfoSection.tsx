@@ -1,13 +1,14 @@
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Badge } from "@/components/ui/Badge";
 import { CheckboxCard } from "@/components/ui/Checkbox";
 import { DateField } from "@/components/ui/DateField";
+import { ClockGlyph } from "@/components/ui/Glyph";
 import { Reveal } from "@/components/ui/Reveal";
 import { TextField } from "@/components/ui/TextField";
 import { TimeField } from "@/components/ui/TimeField";
-import { breakpoints, space } from "@/theme";
-import { type TimeValue } from "@/utils/datetime";
+import { breakpoints, colors, space } from "@/theme";
+import { formatFullDate, formatTime, type TimeValue } from "@/utils/datetime";
 
 /** Everything section 1 collects. */
 export type PassengerRideInfoValue = {
@@ -18,6 +19,8 @@ export type PassengerRideInfoValue = {
   /** Only meaningful for a future reservation. */
   date: Date;
   time: TimeValue;
+  /** Only meaningful for a live call — always today. */
+  estimatedTime: TimeValue;
 };
 
 export type PassengerRideInfoSectionProps = {
@@ -73,6 +76,21 @@ export function PassengerRideInfoSection({
         label="I'm ready now"
         description=""
         badge={<Badge label="LIVE CALL" tone="accent" pulse={value.isLive} />}
+        trailing={
+          value.isLive ? (
+            <View
+              style={styles.eta}
+              accessible
+              accessibilityLabel={`Estimated pickup time: ${formatTime(value.estimatedTime)}, today`}
+            >
+              <View style={styles.etaTime}>
+                <ClockGlyph color={colors.accent} />
+                <Text style={styles.etaValue}>{formatTime(value.estimatedTime)}</Text>
+              </View>
+              <Text style={styles.etaCaption}>Today · {formatFullDate(today)}</Text>
+            </View>
+          ) : null
+        }
       />
 
       {value.isLive ? null : (
@@ -107,4 +125,8 @@ const styles = StyleSheet.create({
   rowWide: { flexDirection: "row" },
   field: { flex: 1 },
   branch: { marginTop: -space.xs },
+  eta: { alignItems: "flex-end", gap: 2 },
+  etaTime: { flexDirection: "row", alignItems: "center", gap: space.xs },
+  etaValue: { color: colors.textStrong, fontSize: 15, fontWeight: "600" },
+  etaCaption: { color: colors.textMuted, fontSize: 12 },
 });
