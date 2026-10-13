@@ -10,6 +10,8 @@ export const ACTION_CODES = {
   CHECK_LOGIN_CREDENTIALS: 'PROF.S.CHECK_LOGIN_CREDENTIALS',
   /** P_LOGIN_ID → one row: login_id, first_name, last_name, …, last_login. */
   LOAD_PROFILE: 'PROF.S.LOAD_PROFILE',
+  /** P_LOGIN_ID → sends the password-recovery email; o_code / o_message when returned. */
+  PASSWORD_RECOVERY: 'PROF.S.PASSWORD',
 } as const;
 
 export type ActionCode = (typeof ACTION_CODES)[keyof typeof ACTION_CODES];

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Checkbox } from '@/components/ui/Checkbox';
+import { CAPTCHA_MESSAGES } from '@/constants/messages';
 import { ShieldGlyph } from '@/components/ui/Glyph';
 import { colors, radii, space } from '@/theme';
 
@@ -56,8 +57,8 @@ export function HumanCheck({ checked, onChange }: HumanCheckProps) {
       accessibilityState={{ checked, busy: verifying }}
       // react-native-web no longer derives aria-checked from accessibilityState.
       aria-checked={checked}
-      accessibilityLabel="I'm not a robot"
-      accessibilityHint="Confirms you are a person before signing in"
+      accessibilityLabel={CAPTCHA_MESSAGES.CHECKBOX_LABEL}
+      accessibilityHint={CAPTCHA_MESSAGES.CHECKBOX_HINT}
       onPress={press}
       style={({ pressed }) => [styles.box, pressed ? styles.boxPressed : null]}
     >
@@ -69,12 +70,12 @@ export function HumanCheck({ checked, onChange }: HumanCheckProps) {
         ) : (
           <Checkbox checked={checked} />
         )}
-        <Text style={styles.label}>{verifying ? 'Verifying…' : "I'm not a robot"}</Text>
+        <Text style={styles.label}>{verifying ? CAPTCHA_MESSAGES.VERIFYING : CAPTCHA_MESSAGES.CHECKBOX_LABEL}</Text>
       </View>
 
       <View style={styles.mark}>
         <ShieldGlyph color={colors.primary[400]} size={20} />
-        <Text style={styles.markLabel}>Verification</Text>
+        <Text style={styles.markLabel}>{CAPTCHA_MESSAGES.BADGE}</Text>
       </View>
     </Pressable>
   );

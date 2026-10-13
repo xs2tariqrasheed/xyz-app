@@ -5,6 +5,7 @@ import {
   GATEWAY_SUCCESS_CODE,
   GATEWAY_VIEW_NAME,
 } from '@/constants/actionCodes';
+import { COMMON_MESSAGES } from '@/constants/messages';
 import { collectRequestContext, type RequestContext } from '@/services/requestContext';
 
 /**
@@ -114,18 +115,22 @@ export type ErrorDisplay = {
  */
 export function getErrorDisplay(error: unknown): ErrorDisplay {
   if (error instanceof GatewayError && error.kind === 'api') {
-    return { title: 'Request not completed', customDescription: error.message, errorType: 'api' };
+    return {
+      title: COMMON_MESSAGES.REQUEST_NOT_COMPLETED_TITLE,
+      customDescription: error.message,
+      errorType: 'api',
+    };
   }
   if (error instanceof GatewayError && error.kind === 'parsing') {
     return {
-      title: 'Something went wrong',
-      customDescription: 'Something went wrong. Please try again.',
+      title: COMMON_MESSAGES.SOMETHING_WENT_WRONG_TITLE,
+      customDescription: COMMON_MESSAGES.PARSING_ERROR,
       errorType: 'parsing',
     };
   }
   return {
-    title: 'Connection problem',
-    customDescription: "We couldn't reach the server. Check your connection and try again.",
+    title: COMMON_MESSAGES.CONNECTION_PROBLEM_TITLE,
+    customDescription: COMMON_MESSAGES.NETWORK_ERROR,
     errorType: 'network',
   };
 }
@@ -177,7 +182,7 @@ async function send(body: string, signal?: AbortSignal): Promise<GatewayResponse
 
   const parsed = parseBody(text);
   if (Number(parsed.JHeader.ActionCode) !== GATEWAY_SUCCESS_CODE) {
-    throw new GatewayError('api', parsed.JHeader.Message?.trim() || 'The request was not accepted.');
+    throw new GatewayError('api', parsed.JHeader.Message?.trim() || COMMON_MESSAGES.REQUEST_NOT_ACCEPTED);
   }
   return parsed;
 }

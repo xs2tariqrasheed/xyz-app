@@ -189,7 +189,7 @@ const profile = toCustomerProfile(profileRequest.parsedData);
 | `parsing` | "Something went wrong. Please try again." |
 | `network` / anything else | "We couldn't reach the server. Check your connection and try again." |
 
-Never show raw technical text (DB codes, stack traces). There is no global error sheet — each screen renders its own error, from `errorDisplay` or a screen-specific mapping (e.g. `AuthError` vs `GatewayError` in `login.tsx`). Show one message per problem, and keep it short (see the "no noise" rule in CLAUDE.md).
+User-facing copy (titles, validation, success and error text) lives in [src/constants/messages.ts](../src/constants/messages.ts) — screens and services import it, never spell it inline. Never show raw technical text (DB codes, stack traces). There is no global error sheet — each screen renders its own error, from `errorDisplay` or a screen-specific mapping (e.g. `AuthError` vs `GatewayError` in `login.tsx`). Show one message per problem, and keep it short (see the "no noise" rule in CLAUDE.md).
 
 ---
 
@@ -219,6 +219,8 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 **Routing.** `Stack.Protected guard={signedIn}` wraps `(app)`; `login` and `forgot-password` are guarded by `!signedIn`. Navigation follows the status — no manual redirects.
 
 **Identify the user in later calls** by sending `P_LOGIN_ID: session.loginId` in `JData` (e.g. `PROF.S.LOAD_PROFILE`).
+
+**Password recovery** (`forgot-password.tsx`): `PROF.S.PASSWORD` with `{ P_LOGIN_ID }` (normalised like login) via `usePostData`. A returned `o_code` other than `"0"` → `AuthError(o_message)`; no `o_code` → sent. On success the screen shows "check your email".
 
 **Logout** (`signOut`): clear stored session, set `signedOut`. Local only, no gateway call.
 

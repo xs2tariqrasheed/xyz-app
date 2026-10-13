@@ -52,6 +52,7 @@ npm run lint     # expo lint
 - TypeScript everywhere; `strict` is on — no `any` escapes.
 - Prefer the Expo SDK 57 packages already in `package.json` over adding new dependencies.
 - Check https://docs.expo.dev/versions/v57.0.0/ before using any Expo API (see AGENTS.md).
+- User-facing text (labels, validation, success and error messages) lives in `src/constants/messages.ts`; screens import it rather than hardcoding strings.
 - There should not be hard coded color values in the codebase. Use the theme colors defined in `src/theme/colors.ts` instead.
 - UI should be consistent across platforms. Use the same components and styles for web, iOS, and Android unless there is a good reason to do otherwise.
 

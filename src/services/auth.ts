@@ -1,5 +1,6 @@
 import { sessionMaxAgeMs } from '@/config/gateway';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
+import { FORGOT_PASSWORD_MESSAGES, LOGIN_MESSAGES } from '@/constants/messages';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
 import { isValidEmail } from '@/utils/validation';
 
@@ -25,7 +26,7 @@ export type Credentials = {
 
 /** Thrown when the server rejects the credentials, as opposed to failing. */
 export class AuthError extends Error {
-  constructor(message = 'Those credentials were not recognised.') {
+  constructor(message: string = LOGIN_MESSAGES.CREDENTIALS_NOT_RECOGNISED) {
     super(message);
     this.name = 'AuthError';
   }
@@ -67,6 +68,23 @@ export function sessionFromLoginResponse(
     throw new AuthError(result.o_message || undefined);
   }
   return createSession(loginId, at);
+}
+
+/** `JData` for {@link ACTION_CODES.PASSWORD_RECOVERY}. */
+export function passwordRecoveryJData(loginId: string): GatewayJData {
+  return { P_LOGIN_ID: loginId };
+}
+
+/**
+ * Throws when the procedure refused to send the recovery email. The contract
+ * lists no outputs for this code, so a response without `o_code` counts as
+ * sent — the gateway itself already accepted the call.
+ */
+export function assertPasswordRecoverySent(response: GatewayResponse): void {
+  const result = mapRows(response)[0];
+  if (result && 'o_code' in result && result.o_code !== DB_SUCCESS_CODE) {
+    throw new AuthError(result.o_message || FORGOT_PASSWORD_MESSAGES.REQUEST_REJECTED);
+  }
 }
 
 export function createSession(loginId: string, at: Date): AuthSession {
