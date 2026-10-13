@@ -24,6 +24,13 @@ A reservation app. Customers book services either for a future date/time or righ
 - **Targets:** web, iOS, and Android from a single codebase. Every feature must work on all three — no platform-only assumptions unless guarded with `Platform.select` / `.native.tsx` / `.web.tsx`.
 - **Design:** mobile first. Build the phone layout first, then scale up.
 - **Responsive:** must work on mobile, tablet, and desktop. Use `useWindowDimensions` / breakpoints rather than fixed pixel layouts; avoid hardcoded widths.
+- **State management:** React Context for state shared across screens; single-screen state stays local, and single-screen server data uses `useFetchData`. Each context lives in `src/context/` together with its `use<Name>` hook (the context itself is not exported); the provider is mounted in `src/app/_layout.tsx`.
+  - `AuthContext` — session, `signIn` / `signOut`, route guard. *(exists)*
+  - `ProfileContext` — customer profile (`PROF.S.LOAD_PROFILE`), loaded after login. *(planned)*
+  - `ReservationContext` — reservation draft across create, preview, update and cancel. *(planned)*
+  - `SavedPlacesContext` — saved addresses and contacts. *(planned)*
+- **API gateway:** call it through `usePostData` / `useFetchData`, never `fetch`. Action codes are constants in `src/constants/actionCodes.ts` — never hardcoded strings. Mark each wired code `— ✅ Implemented` in `docs/XYZ Action Codes.md`.
+- **Environment config:** gateway settings come from env vars, never hardcoded. Keep `.env.example` in sync.
 
 ### Layout
 

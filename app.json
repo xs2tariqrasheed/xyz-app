@@ -13,7 +13,14 @@
       "output": "static"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location so your requests include where you are."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

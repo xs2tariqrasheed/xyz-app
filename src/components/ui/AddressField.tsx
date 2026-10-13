@@ -33,6 +33,15 @@ export type AddressFieldProps = {
 };
 
 /**
+ * react-native-web holds `onPressIn` back 50 ms by default. A mouse press moves
+ * focus off the input at once, its blur closes the list, and the unmounting
+ * option drops the pending press — so on web a click never selected anything.
+ * Native names the same setting `unstable_pressDelay`; web reads
+ * `delayPressIn`, which React Native's types do not declare.
+ */
+const PRESS_IN_WITHOUT_DELAY = { unstable_pressDelay: 0, delayPressIn: 0 };
+
+/**
  * Address input with Places autocomplete.
  *
  * A combobox, not a free-text field: typing only drives the search, and the
@@ -142,6 +151,7 @@ export function AddressField({
               // Press-in beats the input's blur, which would otherwise close
               // the list before the tap lands.
               onPressIn={() => select(suggestion)}
+              {...PRESS_IN_WITHOUT_DELAY}
               style={({ pressed }) => [
                 styles.option,
                 index > 0 ? styles.optionDivided : null,

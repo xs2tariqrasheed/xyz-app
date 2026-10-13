@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Field, INLINE_LABEL_WIDTH } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
-import { AuthError, signIn } from '@/services/auth';
+import { useAuth } from '@/context/AuthContext';
+import { AuthError } from '@/services/auth';
+import { GatewayError } from '@/services/gateway';
 import { breakpoints, colors, space } from '@/theme';
 import { isValidEmail } from '@/utils/validation';
 
@@ -38,8 +40,18 @@ function validate({ email, password, human }: LoginValue): LoginErrors {
   return errors;
 }
 
+function describeSignInError(error: unknown): string {
+  if (error instanceof AuthError) return error.message;
+  if (error instanceof GatewayError) {
+    if (error.kind === 'api') return error.message;
+    if (error.kind === 'parsing') return 'Something went wrong. Please try again.';
+  }
+  return "We couldn't reach the server. Check your connection and try again.";
+}
+
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const { width } = useWindowDimensions();
   const inline = width >= breakpoints.md;
 
@@ -66,14 +78,10 @@ export default function LoginScreen() {
 
     setSubmitting(true);
     try {
-      await signIn({ email: email.trim(), password, remember });
+      await signIn({ email, password, remember });
       router.replace('/');
     } catch (error) {
-      setFormError(
-        error instanceof AuthError
-          ? error.message
-          : "We couldn't reach the server. Check your connection and try again.",
-      );
+      setFormError(describeSignInError(error));
       // A rejected sign-in invalidates the challenge, same as a real CAPTCHA.
       setHuman(false);
     } finally {

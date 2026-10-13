@@ -1,22 +1,25 @@
-/**
- * Authentication.
- *
- * There is no auth backend yet, so {@link signIn} is a STUB: it waits, then
- * reports success for any credentials. Nothing is persisted and no session
- * exists — the app has no logged-in state to write to.
- *
- * Replacing it: keep the signature, POST the credentials, store the returned
- * token, and throw {@link AuthError} on a rejected sign-in so the login screen
- * shows its error banner without any change of its own.
- */
+import { sessionMaxAgeMs } from '@/config/gateway';
+import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
+import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
+import { isValidEmail } from '@/utils/validation';
 
-/** How long the stub pretends to talk to a server. */
-const STUB_LATENCY_MS = 600;
+/**
+ * Authentication against the API gateway.
+ *
+ * A login succeeds only when BOTH levels agree: the gateway executed the call
+ * (`JHeader.ActionCode` 0, checked in `callGateway`) AND the procedure
+ * accepted the credentials (`o_code` "0" in the first row). Anything missing
+ * fails closed.
+ *
+ * The backend issues no token and no profile, so the session is only a record
+ * that this device completed that check for a login ID, and when. It is never
+ * re-verified on restore — that needs a server-issued credential.
+ */
 
 export type Credentials = {
   email: string;
   password: string;
-  /** Ask the server for a long-lived session rather than a per-tab one. */
+  /** Keep the session across app restarts rather than for this run/tab only. */
   remember: boolean;
 };
 
@@ -28,7 +31,73 @@ export class AuthError extends Error {
   }
 }
 
-export async function signIn(_credentials: Credentials): Promise<void> {
-  // TODO: replace with the real sign-in request.
-  await new Promise((resolve) => setTimeout(resolve, STUB_LATENCY_MS));
+const SESSION_VERSION = 1;
+
+export type AuthSession = {
+  version: typeof SESSION_VERSION;
+  /** Login ID the credentials were checked for (the normalised email). */
+  loginId: string;
+  /** ISO timestamp of the successful credential check. */
+  authenticatedAt: string;
+};
+
+export function normalizeLoginId(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/** `JData` for {@link ACTION_CODES.CHECK_LOGIN_CREDENTIALS}. */
+export function loginJData(loginId: string, password: string): GatewayJData {
+  return { P_LOGIN_ID: loginId, P_PASSWORD: password };
+}
+
+/**
+ * Turns a login response the gateway accepted into a session, or throws.
+ * The procedure's own verdict (`o_code`) decides; a missing one fails closed.
+ */
+export function sessionFromLoginResponse(
+  response: GatewayResponse,
+  loginId: string,
+  at: Date,
+): AuthSession {
+  const result = mapRows(response)[0];
+  if (!result || !('o_code' in result)) {
+    throw new GatewayError('parsing', 'The login response has no result code.');
+  }
+  if (result.o_code !== DB_SUCCESS_CODE) {
+    throw new AuthError(result.o_message || undefined);
+  }
+  return createSession(loginId, at);
+}
+
+export function createSession(loginId: string, at: Date): AuthSession {
+  return { version: SESSION_VERSION, loginId, authenticatedAt: at.toISOString() };
+}
+
+/**
+ * Turns a stored value back into a session, or `null` when it is malformed,
+ * from another schema version, dated in the future, or past its max age.
+ */
+export function parseStoredSession(raw: string | null, now: Date): AuthSession | null {
+  if (!raw) return null;
+
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof data !== 'object' || data === null) return null;
+
+  const { version, loginId, authenticatedAt } = data as Record<string, unknown>;
+  if (version !== SESSION_VERSION) return null;
+  if (typeof loginId !== 'string' || !isValidEmail(loginId)) return null;
+  if (typeof authenticatedAt !== 'string') return null;
+
+  const at = Date.parse(authenticatedAt);
+  if (Number.isNaN(at)) return null;
+
+  const age = now.getTime() - at;
+  if (age < 0 || age > sessionMaxAgeMs) return null;
+
+  return { version, loginId, authenticatedAt };
 }
