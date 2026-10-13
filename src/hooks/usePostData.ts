@@ -12,7 +12,7 @@ import {
 
 /**
  * Sends a gateway action on demand — logins, bookings, updates, deletes
- * (docs/HOOKS.md). Nothing runs until `mutate` / `mutateAsync` is called.
+ * (docs/XYZ_INTEGRATION_GUIDE.md §5). Nothing runs until `mutate` / `mutateAsync` is called.
  *
  * `isSuccess` means the gateway executed the action (`JHeader.ActionCode` 0);
  * callers still check any `o_code` in `parsedData` themselves. One instance

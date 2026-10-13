@@ -14,11 +14,11 @@ import { getDevicePosition, isValidFix } from '@/services/location';
 
 /**
  * Everything the gateway envelope needs that is not the call itself
- * (docs/DM.md §4): client IP, device identity, app version and GPS.
+ * (docs/XYZ_INTEGRATION_GUIDE.md §3): client IP, device identity, app version and GPS.
  * Device id, IP and the device position are each resolved once and reused.
  */
 
-/** Sent when the public IP is unknown (docs/DM.md §4). */
+/** Sent when the public IP is unknown (docs/XYZ_INTEGRATION_GUIDE.md §3). */
 const CLIENT_IP_FALLBACK = '0.0.0.0';
 const IP_LOOKUP_TIMEOUT_MS = 5_000;
 
@@ -46,7 +46,7 @@ export async function collectRequestContext(jData: JDataValues): Promise<Request
   return {
     clientIp,
     deviceId,
-    // DM.md only knows iOS ("Apple") and Android; web reports itself honestly.
+    // The gateway contract only knows iOS ("Apple") and Android; web reports itself honestly.
     deviceType: Platform.select({ ios: 'Apple', android: 'Android', default: 'Web' }),
     deviceInfo: deviceInfo(),
     clientVersion: jHeaderConfig.clientVersion || (Constants.expoConfig?.version ?? ''),

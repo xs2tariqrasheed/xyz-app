@@ -4,7 +4,7 @@ import { STORAGE_KEYS } from '@/constants/storage';
 import { readDeviceValue, writeDeviceValue } from '@/services/deviceStore';
 
 /**
- * Device position for the gateway's JHeader GPS fields (docs/DM.md §4, steps
+ * Device position for the gateway's JHeader GPS fields (docs/XYZ_INTEGRATION_GUIDE.md §3, steps
  * 2–3 of the GPS rule): the last known position cached on the device, else
  * one fresh device read per app session.
  *

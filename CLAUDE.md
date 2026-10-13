@@ -29,7 +29,7 @@ A reservation app. Customers book services either for a future date/time or righ
   - `ProfileContext` — customer profile (`PROF.S.LOAD_PROFILE`), loaded after login. *(planned)*
   - `ReservationContext` — reservation draft across create, preview, update and cancel. *(planned)*
   - `SavedPlacesContext` — saved addresses and contacts. *(planned)*
-- **API gateway:** call it through `usePostData` / `useFetchData`, never `fetch`. Action codes are constants in `src/constants/actionCodes.ts` — never hardcoded strings. Mark each wired code `— ✅ Implemented` in `docs/XYZ Action Codes.md`.
+- **API gateway:** read `docs/XYZ_INTEGRATION_GUIDE.md` before wiring any action code (envelope, hooks, errors, auth, checklist). Call it through `usePostData` / `useFetchData`, never `fetch`. Action codes are constants in `src/constants/actionCodes.ts` — never hardcoded strings. Mark each wired code `— ✅ Implemented` in `docs/XYZ Action Codes.md`.
 - **Environment config:** gateway settings come from env vars, never hardcoded. Keep `.env.example` in sync.
 
 ### Layout

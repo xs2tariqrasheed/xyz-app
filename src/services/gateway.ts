@@ -8,7 +8,7 @@ import {
 import { collectRequestContext, type RequestContext } from '@/services/requestContext';
 
 /**
- * The one place that talks to the API gateway (docs/DM.md).
+ * The one place that talks to the API gateway (docs/XYZ_INTEGRATION_GUIDE.md).
  *
  * Builds the envelope, POSTs it, normalises the body and decides the outcome
  * from `JHeader.ActionCode`. Callers map `JData` themselves with
@@ -66,7 +66,7 @@ export async function callGateway(
     throw new Error(`API gateway is not configured. Missing: ${missingGatewayEnv.join(', ')}`);
   }
 
-  // Built once per call; retries resend the same envelope (docs/DM.md §5).
+  // Built once per call; retries resend the same envelope (docs/XYZ_INTEGRATION_GUIDE.md §4).
   const context = await collectRequestContext(jData);
   const body = JSON.stringify(buildEnvelope(actionCode, viewName, jData, context));
 
@@ -100,7 +100,7 @@ export function mapRows(response: GatewayResponse): Record<string, string>[] {
     );
 }
 
-/** Ready-made copy for showing a failed gateway call (docs/HOOKS.md). */
+/** Ready-made copy for showing a failed gateway call (docs/XYZ_INTEGRATION_GUIDE.md §6). */
 export type ErrorDisplay = {
   title: string;
   customDescription: string;
@@ -198,7 +198,7 @@ function parseBody(text: string): GatewayResponse {
   return data as GatewayResponse;
 }
 
-/** The request body, every JHeader field as a string (docs/DM.md §4). */
+/** The request body, every JHeader field as a string (docs/XYZ_INTEGRATION_GUIDE.md §3). */
 function buildEnvelope(
   actionCode: ActionCode,
   viewName: string,

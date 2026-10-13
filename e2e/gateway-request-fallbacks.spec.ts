@@ -6,7 +6,7 @@ import { fillLoginForm } from './support/login';
 
 /**
  * With no location permission and the IP service down, the JHeader still
- * carries the documented fallbacks (docs/DM.md §4) and login still works.
+ * carries the documented fallbacks (docs/XYZ_INTEGRATION_GUIDE.md §3) and login still works.
  */
 
 test.use({ permissions: [] });

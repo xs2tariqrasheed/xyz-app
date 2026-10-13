@@ -11,7 +11,7 @@ import {
 } from '@/services/gateway';
 
 /**
- * Reads from the gateway — dropdowns, lists, profile data (docs/HOOKS.md).
+ * Reads from the gateway — dropdowns, lists, profile data (docs/XYZ_INTEGRATION_GUIDE.md §5).
  *
  * Runs on mount and again whenever any input changes. Inputs are compared by
  * value, so an inline `jData` literal is fine, but keep values that change on

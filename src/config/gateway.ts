@@ -35,7 +35,7 @@ export const gatewayConfig = {
 };
 
 /**
- * Optional JHeader values (docs/DM.md §4). Unset ones are sent as empty
+ * Optional JHeader values (docs/XYZ_INTEGRATION_GUIDE.md §3). Unset ones are sent as empty
  * strings; ClientVersion falls back to the app version from app.json.
  */
 export const jHeaderConfig = {
@@ -43,7 +43,7 @@ export const jHeaderConfig = {
   clientVersion: process.env.EXPO_PUBLIC_DBAPI_CLIENT_VERSION?.trim() ?? '',
   apiVersion: process.env.EXPO_PUBLIC_DBAPI_API_VERSION?.trim() ?? '',
   requestedUrl: process.env.EXPO_PUBLIC_DBAPI_REQUESTED_URL?.trim() ?? '',
-  /** Sent when no real position is known; DM.md defaults both to "0". */
+  /** Sent when no real position is known; XYZ_INTEGRATION_GUIDE.md §3 defaults both to "0". */
   fallbackLatitude: process.env.EXPO_PUBLIC_JHEADER_FALLBACK_LAT?.trim() || '0',
   fallbackLongitude: process.env.EXPO_PUBLIC_JHEADER_FALLBACK_LNG?.trim() || '0',
   /**

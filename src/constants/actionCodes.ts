@@ -28,7 +28,7 @@ export const DB_SUCCESS_CODE = '0';
 
 /**
  * JData coordinate pairs the JHeader GPS fields are taken from, in priority
- * order, when the request itself carries a location (docs/DM.md §4).
+ * order, when the request itself carries a location (docs/XYZ_INTEGRATION_GUIDE.md §3).
  */
 export const JDATA_GPS_KEYS: readonly { latitude: string; longitude: string }[] = [
   { latitude: 'P_PICKUP_LAT', longitude: 'P_PICKUP_LON' },
