@@ -78,6 +78,22 @@ export function findCountry(code: string | null): Country | undefined {
   return code === null ? undefined : COUNTRIES.find((country) => country.code === code);
 }
 
+/**
+ * The picker row for a calling code such as `44` or `+44`. Codes shared by
+ * several countries (+1, +7) resolve to the first one listed — the saved
+ * number only keeps the code, so any of them round-trips the same digits.
+ */
+export function findCountryByDial(dial: string): Country | undefined {
+  const digits = dial.replace(/\D/g, '');
+  return digits ? COUNTRIES.find((country) => country.dial === digits) : undefined;
+}
+
+/** Calling code + number as one run of digits, or '' when there is no number. */
+export function toIntlDigits(phone: { country: string | null; number: string }): string {
+  if (!phone.number) return '';
+  return `${findCountry(phone.country)?.dial ?? ''}${phone.number}`;
+}
+
 /** Case-insensitive match on country name, ISO code or dialling code. */
 export function searchCountries(query: string): readonly Country[] {
   const needle = query.trim().toLowerCase().replace(/^\+/, '');

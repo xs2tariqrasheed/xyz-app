@@ -8,8 +8,10 @@
 export const ACTION_CODES = {
   /** P_LOGIN_ID, P_PASSWORD → o_code / o_message. */
   CHECK_LOGIN_CREDENTIALS: 'PROF.S.CHECK_LOGIN_CREDENTIALS',
-  /** P_LOGIN_ID → one row: login_id, first_name, last_name, …, last_login. */
+  /** P_LOGIN_ID → one row: login_id, first_name, last_name, phones (US / intl), fax, …, last_login. */
   LOAD_PROFILE: 'PROF.S.LOAD_PROFILE',
+  /** The whole profile (38 P_* parameters: name, phones, fax, address, card, prefs) → o_code / o_message. */
+  UPDATE_PROFILE: 'PROF.U.PROFILE',
   /** P_LOGIN_ID → sends the password-recovery email; o_code / o_message when returned. */
   PASSWORD_RECOVERY: 'PROF.S.PASSWORD',
   /** P_LOGIN_ID, P_OLD_PASSWORD, P_NEW_PASSWORD → changes the password; o_code / o_message when returned. */

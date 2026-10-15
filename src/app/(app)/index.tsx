@@ -10,10 +10,7 @@ import { RideStatTiles } from '@/components/home/RideStatTiles';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Notice } from '@/components/ui/Notice';
-import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { useAuth } from '@/context/AuthContext';
-import { useFetchData } from '@/hooks/useFetchData';
-import { toCustomerProfile } from '@/services/profile';
+import { useProfile } from '@/context/ProfileContext';
 import { loadRideOverview, type RideOverview } from '@/services/rides';
 import { breakpoints, space } from '@/theme';
 import { formatClockTime, formatFullDate } from '@/utils/datetime';
@@ -24,7 +21,6 @@ const LIST_LIMIT = 3;
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const router = useRouter();
-  const { session } = useAuth();
   // Two columns only once the ride column and the express panel both stay
   // readable side by side.
   const twoUp = width >= breakpoints.lg;
@@ -52,11 +48,7 @@ export default function HomeScreen() {
     };
   }, [now]);
 
-  // Protected screen: a session always exists here.
-  const profileRequest = useFetchData(ACTION_CODES.LOAD_PROFILE, GATEWAY_VIEW_NAME, {
-    P_LOGIN_ID: session?.loginId ?? '',
-  });
-  const profile = toCustomerProfile(profileRequest.parsedData);
+  const { profile } = useProfile();
   const lastLoginAt = profile?.lastLoginAt ?? null;
   // A car already on the road is what the customer is watching; only with none
   // does the next booking take the featured slot.

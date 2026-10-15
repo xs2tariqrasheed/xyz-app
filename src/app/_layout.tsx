@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { ProfileProvider } from '@/context/ProfileContext';
 import { colors } from '@/theme';
 
 // Hold the native splash until the stored session has been checked, so no
@@ -14,7 +15,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <RootNavigator />
+        <ProfileProvider>
+          <RootNavigator />
+        </ProfileProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

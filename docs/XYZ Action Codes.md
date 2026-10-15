@@ -473,7 +473,7 @@
 | P\_SMOKING\_CAR | ‘N’ |
 | P\_IVR\_PIN | ‘4521’ |
 
-### **Action Code: PROF.U.PROFILE**
+### **Action Code: PROF.U.PROFILE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |

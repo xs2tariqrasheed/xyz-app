@@ -88,6 +88,50 @@ export const CHANGE_PASSWORD_MESSAGES = {
   SUCCESS_MESSAGE: 'Password updated. Use your new password the next time you sign in.',
 } as const;
 
+/**
+ * Profile screen and the personal info panel it shares with registration
+ * (reverse-engineer-guide/07-profile-personal-info.md).
+ */
+export const PROFILE_MESSAGES = {
+  SCREEN_TITLE: 'Profile',
+  PANEL_TITLE: 'Personal Info',
+  UNSAVED_BADGE: 'UNSAVED',
+  FIRST_NAME_LABEL: 'First name',
+  FIRST_NAME_PLACEHOLDER: 'e.g. Amara',
+  LAST_NAME_LABEL: 'Last name',
+  LAST_NAME_PLACEHOLDER: 'e.g. Okafor',
+  US_PHONE_LABEL: 'Callback phone (US)',
+  INTL_PHONE_LABEL: 'Callback phone (international)',
+  FAX_LABEL: 'Fax',
+  FIRST_NAME_REQUIRED: 'Enter your first name.',
+  FIRST_NAME_TOO_LONG: 'First name can be at most 15 characters.',
+  FIRST_NAME_INVALID: 'First name cannot contain digits or quotation marks.',
+  LAST_NAME_REQUIRED: 'Enter your last name.',
+  LAST_NAME_LENGTH: 'Last name must be 2 to 20 characters.',
+  LAST_NAME_INVALID: 'Last name cannot contain digits or quotation marks.',
+  US_PHONE_INVALID: 'A US number needs 10 digits, area code first, not starting with 0 or 1.',
+  CALLBACK_REQUIRED: 'Add a callback number — US or international.',
+  INTL_COUNTRY_REQUIRED: 'Choose the country for the international number.',
+  INTL_NUMBER_INCOMPLETE: 'Add the full international number.',
+  FAX_COUNTRY_REQUIRED: 'Choose the country for the fax number.',
+  FAX_NUMBER_INCOMPLETE: 'Add the full fax number.',
+  EXT_TOO_LONG: 'An extension can be at most 5 digits.',
+  ONE_FIELD_NEEDS_ATTENTION: '1 field needs a look.',
+  /** Follows the count: "3 fields need a look." */
+  FIELDS_NEED_ATTENTION: 'fields need a look.',
+  DISCARD: 'Discard changes',
+  UPDATE: 'Update',
+  UPDATING: 'Updating…',
+  UPDATE_FAILED_TITLE: 'Personal info not updated',
+  /** Server refused the update without saying why. */
+  UPDATE_REJECTED: "We couldn't update your personal information.",
+  UPDATE_SUCCESS: 'Personal information updated.',
+  LOAD_FAILED_TITLE: 'Your profile could not be loaded',
+  RETRY: 'Try again',
+  MAILING_ADDRESS_LINK: 'Update mailing address',
+  CHANGE_PASSWORD_LINK: 'Change password',
+} as const;
+
 /** Card inputs, shared by registration and the reservation billing step. */
 export const CARD_MESSAGES = {
   HOLDER_LABEL: 'Name on card',

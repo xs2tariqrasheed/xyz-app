@@ -1,4 +1,3 @@
-import type { PhoneValue } from '@/components/ui/PhoneField';
 import {
   MAX_ACCOUNT_REQUIREMENTS,
   type RegistrationDraft,
@@ -7,7 +6,7 @@ import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { normalizeLoginId } from '@/services/auth';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
 import { detectBrand, digitsOnly, type CardBrand } from '@/utils/payment';
-import { COUNTRIES, findCountry } from '@/utils/phone';
+import { COUNTRIES, toIntlDigits } from '@/utils/phone';
 
 /**
  * New-account registration against the API gateway
@@ -151,12 +150,6 @@ function countryCode(name: string): string {
   return COUNTRIES.find((country) => country.name === name)?.code ?? name.trim();
 }
 
-/** Calling code + number as one run of digits, or '' when there is no number. */
-function intlDigits(phone: PhoneValue): string {
-  if (!phone.number) return '';
-  return `${findCountry(phone.country)?.dial ?? ''}${phone.number}`;
-}
-
 /** `MM/YY` → ['MM', 'YYYY'], or blanks while incomplete. */
 function splitExpiry(expiry: string): [string, string] {
   const digits = digitsOnly(expiry);
@@ -183,11 +176,11 @@ export function createProfileJData(draft: RegistrationDraft, requirementCount: n
     P_CONFIRM_PASSWORD: account.confirmPassword,
     P_FIRST_NAME: personal.firstName.trim(),
     P_LAST_NAME: personal.lastName.trim(),
-    P_PHONE_NUMBER: intlDigits(personal.intlPhone),
+    P_PHONE_NUMBER: toIntlDigits(personal.intlPhone),
     P_PHONE_EXT: personal.intlPhone.number ? personal.intlPhone.ext : '',
     P_PHONE_NUMBER_US: personal.usPhone.number,
     P_PHONE_EXT_US: personal.usPhone.number ? personal.usPhone.ext : '',
-    P_FAX: intlDigits(personal.fax),
+    P_FAX: toIntlDigits(personal.fax),
     P_COUNTRY: countryCode(address.country),
     P_STATE: address.state.trim(),
     P_CITY: address.city.trim(),
