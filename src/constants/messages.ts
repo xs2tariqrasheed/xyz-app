@@ -38,6 +38,7 @@ export const LOGIN_MESSAGES = {
   REMEMBER_ME: 'Remember me',
   REMEMBER_ME_HINT: 'Keeps you signed in on this device',
   FORGOT_PASSWORD_LINK: 'Forgot your password?',
+  REGISTER_LINK: 'Create an account',
   SUBMIT: 'Log In',
   SUBMITTING: 'Logging in…',
   SIGN_IN_FAILED_TITLE: 'Sign-in failed',
@@ -59,4 +60,97 @@ export const FORGOT_PASSWORD_MESSAGES = {
   SUCCESS_TITLE: 'Email sent',
   SUCCESS_MESSAGE: 'Check your email for instructions to reset your password.',
   BACK_TO_LOGIN: 'Back to log in',
+} as const;
+
+/** Card inputs, shared by registration and the reservation billing step. */
+export const CARD_MESSAGES = {
+  HOLDER_LABEL: 'Name on card',
+  HOLDER_PLACEHOLDER: 'e.g. Amara Okafor',
+  NUMBER_LABEL: 'Card number',
+  EXPIRY_LABEL: 'Expiry',
+  EXPIRY_PLACEHOLDER: 'MM/YY',
+  CVV_LABEL: 'Security code',
+  CVV_PLACEHOLDER_AMEX: '4 digits',
+  CVV_PLACEHOLDER: '3 digits',
+  NUMBER_CHECKSUM: 'Check this number — the digits do not add up.',
+  EXPIRY_PAST: 'Enter a future MM/YY.',
+} as const;
+
+export const REGISTER_MESSAGES = {
+  SCREEN_TITLE: 'Create an account',
+
+  STEP_ACCOUNT_TITLE: 'Account & Personal Info',
+  STEP_ACCOUNT_SHORT: 'Account',
+  STEP_ADDRESS_TITLE: 'Mailing Address',
+  STEP_ADDRESS_SHORT: 'Address',
+  STEP_BILLING_TITLE: 'Billing Info',
+  STEP_BILLING_SHORT: 'Billing',
+
+  EMAIL_LABEL: 'Email address',
+  EMAIL_PLACEHOLDER: 'you@example.com',
+  CONFIRM_EMAIL_LABEL: 'Confirm email',
+  PASSWORD_LABEL: 'Password',
+  CONFIRM_PASSWORD_LABEL: 'Confirm password',
+  EMAIL_REQUIRED: 'Enter your email address.',
+  EMAIL_INVALID: "That doesn't look like an email address.",
+  CONFIRM_EMAIL_MISMATCH: "The email addresses don't match.",
+  PASSWORD_REQUIRED: 'Choose a password.',
+  PASSWORD_TOO_SHORT: 'Use at least 8 characters.',
+  CONFIRM_PASSWORD_MISMATCH: "The passwords don't match.",
+  /** Server refused the email without saying why. */
+  EMAIL_TAKEN: 'An account already uses this email address.',
+
+  BILLING_METHOD_LABEL: 'How would you pay for your rides?',
+  BILLING_CORPORATE: 'Corporate account',
+  BILLING_CORPORATE_CAPTION: 'Invoiced to the company',
+  BILLING_CARD: 'Credit card',
+  BILLING_CARD_CAPTION: 'Billed straight to your card',
+  ACCOUNT_NUMBER_LABEL: 'Account number',
+  ACCOUNT_NUMBER_PLACEHOLDER: 'e.g. CORP-48213',
+  COMPANY_NAME_LABEL: 'Account name',
+  COMPANY_NAME_PLACEHOLDER: 'e.g. Acme Corp',
+  VIP_NUMBER_LABEL: 'VIP number',
+  VIP_NUMBER_PLACEHOLDER: 'e.g. VIP-204',
+  ACCOUNT_NUMBER_REQUIRED: 'Enter the account number.',
+  COMPANY_NAME_REQUIRED: 'Enter the account name.',
+  /** Server refused the account / name pair without saying why. */
+  COMPANY_INVALID: "That account number and name don't match.",
+  /** Server refused the VIP number without saying why. */
+  VIP_INVALID: "That VIP number isn't on this account.",
+  /** Server refused the account's requirements lookup without saying why. */
+  ACCOUNT_NOT_AVAILABLE: "This account can't be used for registration.",
+  CARD_HOLDER_REQUIRED: 'Enter the name on the card.',
+  CARD_NUMBER_REQUIRED: 'Enter the card number.',
+  CARD_NUMBER_INVALID: 'Check the card number.',
+  CARD_BRAND_UNSUPPORTED: 'We accept Visa, Mastercard, Amex and Discover.',
+  CARD_EXPIRY_INVALID: 'Enter a future MM/YY.',
+  CARD_CVV_INVALID: 'Enter the security code.',
+  /** An account requirement field the account asks for, left empty. */
+  REQUIREMENT_REQUIRED: 'Fill this in for your account.',
+
+  CAR_PREFERENCES_TITLE: 'Car preferences',
+  PREFERRED_FLEET_LABEL: 'Preferred fleet',
+  PREFERRED_FLEET_PLACEHOLDER: 'e.g. ABC Fleet',
+  CAR_YEAR_LABEL: 'Car year',
+  CAR_YEAR_PLACEHOLDER: 'e.g. 2023',
+  CAR_PHONE_LABEL: 'Car phone',
+  IVR_PIN_LABEL: 'IVR PIN',
+  IVR_PIN_PLACEHOLDER: '4 digits',
+  SMOKING_CAR_LABEL: 'Smoking car',
+  CAR_YEAR_INVALID: 'Enter a 4-digit year.',
+  CAR_PHONE_INVALID: 'A US number needs 10 digits.',
+  IVR_PIN_INVALID: 'Use 4 digits.',
+
+  BACK: 'Back',
+  NEXT: 'Next',
+  CHECKING: 'Checking…',
+  SUBMIT: 'Create account',
+  SUBMITTING: 'Creating account…',
+  FAILED_TITLE: 'Registration not completed',
+  /** Server refused the profile without saying why. */
+  PROFILE_REJECTED: "We couldn't create your account.",
+  SUCCESS_TITLE: 'Registration complete',
+  SUCCESS_MESSAGE: 'Your account is ready. Log in to make a reservation.',
+  BACK_TO_LOGIN: 'Go to log in',
+  HAVE_ACCOUNT_LINK: 'Already have an account? Log in',
 } as const;

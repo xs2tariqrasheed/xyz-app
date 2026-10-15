@@ -86,9 +86,16 @@ export type PersonalInfoSectionProps = {
   value: PersonalInfoValue;
   onChange: (next: PersonalInfoValue) => void;
   errors?: PersonalInfoErrors;
+  /** Off where the fax is saved without an extension. Defaults to on. */
+  faxExtension?: boolean;
 };
 
-export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalInfoSectionProps) {
+export function PersonalInfoSection({
+  value,
+  onChange,
+  errors = {},
+  faxExtension = true,
+}: PersonalInfoSectionProps) {
   const { width } = useWindowDimensions();
   const twoUp = width >= breakpoints.sm;
 
@@ -147,6 +154,7 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
         value={value.fax}
         onChange={(fax) => patch({ fax })}
         error={errors.fax}
+        withExtension={faxExtension}
       />
     </View>
   );

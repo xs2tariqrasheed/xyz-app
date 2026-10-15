@@ -12,6 +12,18 @@ export const ACTION_CODES = {
   LOAD_PROFILE: 'PROF.S.LOAD_PROFILE',
   /** P_LOGIN_ID → sends the password-recovery email; o_code / o_message when returned. */
   PASSWORD_RECOVERY: 'PROF.S.PASSWORD',
+  /** P_LOGIN_ID → o_code / o_message; o_code "0" when no profile uses that login yet. */
+  IS_UNIQUE_EMAIL: 'PROF.S.IS_UNIQUE_EMAIL',
+  /** P_ACCOUNT_NUM, P_COMPANY_NAME → o_code / o_message; "0" when the name matches the account. */
+  IS_VALID_COMPANY_NAME: 'PROF.S.IS_VALID_COMPANY_NAME',
+  /** P_ACCOUNT_NUM, P_VIP_NUM → o_code / o_message; "0" when the VIP number belongs to the account. */
+  IS_VALID_VIP: 'PROF.S.IS_VALID_VIP',
+  /** P_ACCOUNT_NUM → o_code / o_message (+ undocumented columns): does the account need requirement fields? */
+  ACCOUNT_REQUIREMENTS: 'PROF.S.ACCOUNT_REQUIREMENTS',
+  /** P_ACCOUNT_NUM → one row per requirement field (columns undocumented), o_code / o_message when returned. */
+  ACCOUNT_REQUIREMENTS_RS: 'PROF.S.ACCOUNT_REQUIREMENTS_RS',
+  /** The whole new profile (41 P_* parameters) → o_code / o_message. */
+  CREATE_PROFILE: 'PROF.I.PROFILE',
 } as const;
 
 export type ActionCode = (typeof ACTION_CODES)[keyof typeof ACTION_CODES];

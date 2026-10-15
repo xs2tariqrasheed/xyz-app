@@ -216,11 +216,33 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 
 **Restore on launch.** `AuthContext` starts in `restoring`; the root layout renders nothing and holds the splash. A stored session is accepted only if it parses, is version 1, has a valid email, isn't dated in the future and is younger than `EXPO_PUBLIC_AUTH_SESSION_MAX_AGE_HOURS`. Otherwise it is wiped → `signedOut`. Sessions are never re-verified with the server.
 
-**Routing.** `Stack.Protected guard={signedIn}` wraps `(app)`; `login` and `forgot-password` are guarded by `!signedIn`. Navigation follows the status — no manual redirects.
+**Routing.** `Stack.Protected guard={signedIn}` wraps `(app)`; `login`, `forgot-password` and `register` are guarded by `!signedIn`. Navigation follows the status — no manual redirects.
 
 **Identify the user in later calls** by sending `P_LOGIN_ID: session.loginId` in `JData` (e.g. `PROF.S.LOAD_PROFILE`).
 
 **Password recovery** (`forgot-password.tsx`): `PROF.S.PASSWORD` with `{ P_LOGIN_ID }` (normalised like login) via `usePostData`. A returned `o_code` other than `"0"` → `AuthError(o_message)`; no `o_code` → sent. On success the screen shows "check your email".
+
+**Registration** (`register.tsx`, services in `src/services/registration.ts`): a three-step wizard — Account & Personal Info → Mailing Address → Billing Info. Every lookup answers `o_code` / `o_message`; anything but `"0"` → `RegistrationError(o_message)`, no `o_code` → `GatewayError('parsing')`.
+
+| Step | Action code | JData |
+|---|---|---|
+| 1 → Next | `PROF.S.IS_UNIQUE_EMAIL` | `P_LOGIN_ID` (normalised email) |
+| 3, VIP field left / Create account | `PROF.S.IS_VALID_VIP` | `P_ACCOUNT_NUM`, `P_VIP_NUM` |
+| 3 → Create account (corporate) | `PROF.S.IS_VALID_COMPANY_NAME` | `P_ACCOUNT_NUM`, `P_COMPANY_NAME` |
+| 3, account number left / Create account (corporate) | `PROF.S.ACCOUNT_REQUIREMENTS` | `P_ACCOUNT_NUM` |
+| …only when that says the account has requirements | `PROF.S.ACCOUNT_REQUIREMENTS_RS` | `P_ACCOUNT_NUM` |
+| 3 → Create account | `PROF.I.PROFILE` | all 41 parameters, built by `createProfileJData` |
+
+`PROF.I.PROFILE` always sends every parameter. Mapping notes:
+
+- **Apt # / Mail stop** has no parameter of its own and goes in `P_CROSS_STREET2`.
+- **Fax** has no extension parameter, so registration hides the fax extension box.
+- **Car preferences** (optional, Billing step): `P_PREFERRED_FLEET`, `P_CAR_YEAR` (4 digits), `P_CAR_PHONE` (US, 10 digits), `P_SMOKING_CAR` (`Y`/`N`), `P_IVR_PIN` (4 digits).
+- **Account requirements** (two calls, as on the old site): `ACCOUNT_REQUIREMENTS` decides *whether* the account has requirement fields; only then does `ACCOUNT_REQUIREMENTS_RS` list them, one row per field (up to 4), each shown as a required field whose answer goes in `P_ACCOUNT_REQ1–4`. The answer is cached per account number, so leaving the field and then pressing Create account asks once; a new account number clears the answers. A refusal (`o_code` ≠ `"0"`) shows on the Account number field, and again above the form on Create account.
+  Neither code's outputs are documented and the gateway stub returns only `o_code` / `o_message` (and placeholders for `_RS`), so `registration.ts` reads them defensively: `accountHasRequirements` treats any extra column that is not a "no" (`N`, `0`, empty) as yes; `accountRequirementLabels` takes each row's label from the first of `REQUIREMENT_LABEL_COLUMNS`, else its first non-numeric value, and checks `o_code` only when the record set carries one. Against today's stub the account has no requirements, so `_RS` is never called.
+- **Unconfirmed codes**, each set in one place in the service: `P_PAYMENT_TYPE` corporate = `CA` (only `CC` is documented) and `P_ADDRESS_TYPE` office = `O` (only `H` is documented).
+
+On success the screen links back to login; the user is not signed in automatically.
 
 **Logout** (`signOut`): clear stored session, set `signedOut`. Local only, no gateway call.
 

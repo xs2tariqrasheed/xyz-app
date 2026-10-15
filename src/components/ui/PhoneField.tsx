@@ -42,6 +42,8 @@ export type PhoneFieldProps = {
   error?: string;
   /** Fires when the number input loses focus, for touch-then-validate. */
   onBlur?: () => void;
+  /** Off where the number is saved without one. Defaults to on. */
+  withExtension?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -60,6 +62,7 @@ export function PhoneField({
   hint,
   error,
   onBlur,
+  withExtension = true,
   style,
 }: PhoneFieldProps) {
   const { width } = useWindowDimensions();
@@ -113,29 +116,31 @@ export function PhoneField({
           />
         </View>
 
-        <View
-          style={[
-            styles.shell,
-            inline ? styles.extShellInline : null,
-            extFocused ? styles.shellFocused : null,
-          ]}
-        >
-          <View style={styles.extLabel}>
-            <Text style={styles.extLabelText}>Ext</Text>
+        {withExtension ? (
+          <View
+            style={[
+              styles.shell,
+              inline ? styles.extShellInline : null,
+              extFocused ? styles.shellFocused : null,
+            ]}
+          >
+            <View style={styles.extLabel}>
+              <Text style={styles.extLabelText}>Ext</Text>
+            </View>
+            <TextInput
+              value={value.ext}
+              onChangeText={(text) => onChange({ ...value, ext: toExtension(text) })}
+              onFocus={() => setExtFocused(true)}
+              onBlur={() => setExtFocused(false)}
+              placeholder="000"
+              placeholderTextColor={colors.textDisabled}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              accessibilityLabel={`${label} extension`}
+              style={styles.input}
+            />
           </View>
-          <TextInput
-            value={value.ext}
-            onChangeText={(text) => onChange({ ...value, ext: toExtension(text) })}
-            onFocus={() => setExtFocused(true)}
-            onBlur={() => setExtFocused(false)}
-            placeholder="000"
-            placeholderTextColor={colors.textDisabled}
-            keyboardType="number-pad"
-            inputMode="numeric"
-            accessibilityLabel={`${label} extension`}
-            style={styles.input}
-          />
-        </View>
+        ) : null}
       </View>
     </Field>
   );

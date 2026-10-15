@@ -179,6 +179,12 @@ export default function LoginScreen() {
             style={inline ? styles.submitInline : undefined}
           />
         </View>
+
+        <View style={inline ? styles.actionsInline : null}>
+          <Link href="/register" style={styles.link}>
+            {LOGIN_MESSAGES.REGISTER_LINK}
+          </Link>
+        </View>
       </AuthCard>
     </Screen>
   );

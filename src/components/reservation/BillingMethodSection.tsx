@@ -3,10 +3,10 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from "react-native";
 
+import { CardDetailsFields } from "@/components/payment/CardDetailsFields";
 import { Button } from "@/components/ui/Button";
 import { CheckboxCard } from "@/components/ui/Checkbox";
 import { Field } from "@/components/ui/Field";
@@ -15,7 +15,6 @@ import { OptionCards } from "@/components/ui/OptionCards";
 import { Reveal } from "@/components/ui/Reveal";
 import { TextField } from "@/components/ui/TextField";
 import {
-  breakpoints,
   colors,
   focusedFieldStyle,
   nativeFocusRingReset,
@@ -24,17 +23,11 @@ import {
 } from "@/theme";
 import {
   BRAND_LABEL,
-  cardNumberLength,
-  cvvLength,
   detectBrand,
-  digitsOnly,
-  formatCardNumber,
-  formatExpiry,
   isCompleteCardNumber,
   isCompleteCvv,
   isValidExpiry,
   maskCardNumber,
-  passesLuhn,
   type CardBrand,
 } from "@/utils/payment";
 
@@ -128,9 +121,6 @@ export function BillingMethodSection({
   onChange,
   today,
 }: BillingMethodSectionProps) {
-  const { width } = useWindowDimensions();
-  const twoUp = width >= breakpoints.sm;
-
   const patch = (next: Partial<BillingMethodValue>) =>
     onChange({ ...value, ...next });
   const patchCard = (next: Partial<CardDetails>) =>
@@ -185,11 +175,9 @@ export function BillingMethodSection({
         {needsCard(value.method) ? (
           <CardFields
             card={value.card}
-            brand={brand}
             onChange={patchCard}
             saveCard={value.saveCard}
             onSaveCardChange={(saveCard) => patch({ saveCard })}
-            twoUp={twoUp}
             today={today}
           />
         ) : null}
@@ -291,97 +279,20 @@ function AccountNumberField({
 
 function CardFields({
   card,
-  brand,
   onChange,
   saveCard,
   onSaveCardChange,
-  twoUp,
   today,
 }: {
   card: CardDetails;
-  brand: CardBrand;
   onChange: (next: Partial<CardDetails>) => void;
   saveCard: boolean;
   onSaveCardChange: (next: boolean) => void;
-  twoUp: boolean;
   today: Date;
 }) {
-  const digits = digitsOnly(card.number);
-  // Only complain once there is a whole number to judge — not mid-typing.
-  const numberError =
-    digits.length === cardNumberLength(brand) && !passesLuhn(card.number)
-      ? "Check this number — the digits do not add up."
-      : undefined;
-  const expiryError =
-    digitsOnly(card.expiry).length === 4 && !isValidExpiry(card.expiry, today)
-      ? "Enter a future MM/YY."
-      : undefined;
-
   return (
     <>
-      <TextField
-        label="Name on card"
-        required
-        value={card.holder}
-        onChangeText={(holder) => onChange({ holder })}
-        placeholder="e.g. Amara Okafor"
-        autoComplete="cc-name"
-        textContentType="creditCardName"
-        autoCapitalize="words"
-        autoCorrect={false}
-        returnKeyType="next"
-      />
-
-      <TextField
-        label="Card number"
-        required
-        value={card.number}
-        onChangeText={(next) => onChange({ number: formatCardNumber(next) })}
-        placeholder={
-          brand === "amex" ? "3782 822463 10005" : "4242 4242 4242 4242"
-        }
-        keyboardType="number-pad"
-        inputMode="numeric"
-        autoComplete="cc-number"
-        textContentType="creditCardNumber"
-        maxLength={brand === "amex" ? 17 : 19}
-        returnKeyType="next"
-        error={numberError}
-      />
-
-      <View style={[styles.row, twoUp ? styles.rowWide : null]}>
-        <TextField
-          style={styles.field}
-          label="Expiry"
-          required
-          value={card.expiry}
-          onChangeText={(next) => onChange({ expiry: formatExpiry(next) })}
-          placeholder="MM/YY"
-          keyboardType="number-pad"
-          inputMode="numeric"
-          autoComplete="cc-exp"
-          textContentType="creditCardExpiration"
-          maxLength={5}
-          returnKeyType="next"
-          error={expiryError}
-        />
-        <TextField
-          style={styles.field}
-          label="Security code"
-          required
-          value={card.cvv}
-          onChangeText={(next) =>
-            onChange({ cvv: digitsOnly(next).slice(0, cvvLength(brand)) })
-          }
-          placeholder={brand === "amex" ? "4 digits" : "3 digits"}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          autoComplete="cc-csc"
-          textContentType="creditCardSecurityCode"
-          maxLength={cvvLength(brand)}
-          returnKeyType="next"
-        />
-      </View>
+      <CardDetailsFields value={card} onChange={onChange} today={today} />
 
       <TextField
         label="Billing ZIP / postal code"
@@ -472,9 +383,6 @@ const styles = StyleSheet.create({
   root: { gap: space.lg },
   branch: { gap: space.lg },
   iconPair: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  row: { gap: space.lg },
-  rowWide: { flexDirection: "row" },
-  field: { flex: 1 },
 
   input: {
     ...nativeFocusRingReset,

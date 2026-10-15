@@ -400,13 +400,13 @@
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 | P\_PASSWORD | ‘P@ssw0rd\!’ |
 
-### **Action Code: PROF.S.IS\_UNIQUE\_EMAIL**
+### **Action Code: PROF.S.IS\_UNIQUE\_EMAIL** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 
-### **Action Code: PROF.S.IS\_VALID\_COMPANY\_NAME**
+### **Action Code: PROF.S.IS\_VALID\_COMPANY\_NAME** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -427,7 +427,7 @@
 | P\_OLD\_PASSWORD | ‘OldP@ss1’ |
 | P\_NEW\_PASSWORD | ‘NewP@ss2’ |
 
-### **Action Code: PROF.I.PROFILE**
+### **Action Code: PROF.I.PROFILE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -522,13 +522,13 @@
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 
-### **Action Code: PROF.S.ACCOUNT\_REQUIREMENTS**
+### **Action Code: PROF.S.ACCOUNT\_REQUIREMENTS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_ACCOUNT\_NUM | ‘ACCT10023’ |
 
-### **Action Code: PROF.S.ACCOUNT\_REQUIREMENTS\_RS**
+### **Action Code: PROF.S.ACCOUNT\_REQUIREMENTS\_RS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -612,7 +612,7 @@
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 | P\_PICKUP\_COUNT | ‘1’ |
 
-### **Action Code: PROF.S.IS\_VALID\_VIP**
+### **Action Code: PROF.S.IS\_VALID\_VIP** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |

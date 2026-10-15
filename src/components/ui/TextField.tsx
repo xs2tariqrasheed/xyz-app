@@ -49,6 +49,8 @@ export function TextField({
   return (
     <Field label={label} required={required} hint={hint} error={error} inline={inline} style={style}>
       <TextInput
+        // The visible label is a separate Text, so name the input explicitly.
+        accessibilityLabel={label}
         {...inputProps}
         placeholderTextColor={colors.textDisabled}
         onFocus={(event) => {
