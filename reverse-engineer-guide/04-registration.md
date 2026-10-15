@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 04 — Registration (New Member Profile)
 
 ## 1. Purpose

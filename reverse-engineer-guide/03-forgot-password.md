@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 03 — Forgot Password
 
 ## 1. Purpose

@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 02 — Authentication (Login, Logout, Lockout, Session)
 
 ## 1. Purpose
