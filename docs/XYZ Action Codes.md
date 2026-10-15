@@ -419,7 +419,7 @@
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 
-### **Action Code: PROF.U.PASSWORD**
+### **Action Code: PROF.U.PASSWORD** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |

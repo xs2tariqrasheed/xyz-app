@@ -1,6 +1,10 @@
 import { sessionMaxAgeMs } from '@/config/gateway';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
-import { FORGOT_PASSWORD_MESSAGES, LOGIN_MESSAGES } from '@/constants/messages';
+import {
+  CHANGE_PASSWORD_MESSAGES,
+  FORGOT_PASSWORD_MESSAGES,
+  LOGIN_MESSAGES,
+} from '@/constants/messages';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
 import { isValidEmail } from '@/utils/validation';
 
@@ -84,6 +88,27 @@ export function assertPasswordRecoverySent(response: GatewayResponse): void {
   const result = mapRows(response)[0];
   if (result && 'o_code' in result && result.o_code !== DB_SUCCESS_CODE) {
     throw new AuthError(result.o_message || FORGOT_PASSWORD_MESSAGES.REQUEST_REJECTED);
+  }
+}
+
+/** `JData` for {@link ACTION_CODES.CHANGE_PASSWORD}. */
+export function changePasswordJData(
+  loginId: string,
+  oldPassword: string,
+  newPassword: string,
+): GatewayJData {
+  return { P_LOGIN_ID: loginId, P_OLD_PASSWORD: oldPassword, P_NEW_PASSWORD: newPassword };
+}
+
+/**
+ * Throws when the procedure refused the change (e.g. a wrong old password).
+ * The contract lists no outputs for this code, so a response without
+ * `o_code` counts as changed — the gateway itself already accepted the call.
+ */
+export function assertPasswordChanged(response: GatewayResponse): void {
+  const result = mapRows(response)[0];
+  if (result && 'o_code' in result && result.o_code !== DB_SUCCESS_CODE) {
+    throw new AuthError(result.o_message || CHANGE_PASSWORD_MESSAGES.REJECTED);
   }
 }
 

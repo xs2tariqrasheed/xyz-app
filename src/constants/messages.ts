@@ -62,6 +62,32 @@ export const FORGOT_PASSWORD_MESSAGES = {
   BACK_TO_LOGIN: 'Back to log in',
 } as const;
 
+export const CHANGE_PASSWORD_MESSAGES = {
+  SCREEN_TITLE: 'Change password',
+  FORM_TITLE: 'Please enter your old and new password',
+  OLD_PASSWORD_LABEL: 'Old password',
+  OLD_PASSWORD_PLACEHOLDER: 'Your current password',
+  NEW_PASSWORD_LABEL: 'New password',
+  NEW_PASSWORD_PLACEHOLDER: 'At least 8 characters',
+  CONFIRM_PASSWORD_LABEL: 'Confirm new password',
+  CONFIRM_PASSWORD_PLACEHOLDER: 'Re-type the new password',
+  RULE_LENGTH: 'At least 8 characters',
+  RULE_CASE: 'An upper and a lower case letter',
+  RULE_NUMBER: 'At least one number',
+  OLD_PASSWORD_REQUIRED: 'Enter your current password.',
+  NEW_PASSWORD_REQUIRED: 'Choose a new password.',
+  NEW_PASSWORD_WEAK: 'This password does not meet the requirements below yet.',
+  NEW_PASSWORD_UNCHANGED: 'Your new password must be different from your current one.',
+  CONFIRM_PASSWORD_REQUIRED: 'Re-type your new password.',
+  CONFIRM_PASSWORD_MISMATCH: 'The two passwords do not match.',
+  SUBMIT: 'Update',
+  SUBMITTING: 'Updating…',
+  FAILED_TITLE: 'Password not changed',
+  /** Server refused the change without saying why. */
+  REJECTED: "We couldn't change your password.",
+  SUCCESS_MESSAGE: 'Password updated. Use your new password the next time you sign in.',
+} as const;
+
 /** Card inputs, shared by registration and the reservation billing step. */
 export const CARD_MESSAGES = {
   HOLDER_LABEL: 'Name on card',

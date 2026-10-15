@@ -12,6 +12,8 @@ export const ACTION_CODES = {
   LOAD_PROFILE: 'PROF.S.LOAD_PROFILE',
   /** P_LOGIN_ID → sends the password-recovery email; o_code / o_message when returned. */
   PASSWORD_RECOVERY: 'PROF.S.PASSWORD',
+  /** P_LOGIN_ID, P_OLD_PASSWORD, P_NEW_PASSWORD → changes the password; o_code / o_message when returned. */
+  CHANGE_PASSWORD: 'PROF.U.PASSWORD',
   /** P_LOGIN_ID → o_code / o_message; o_code "0" when no profile uses that login yet. */
   IS_UNIQUE_EMAIL: 'PROF.S.IS_UNIQUE_EMAIL',
   /** P_ACCOUNT_NUM, P_COMPANY_NAME → o_code / o_message; "0" when the name matches the account. */

@@ -98,13 +98,13 @@ Every `JHeader` value is a **string**.
 
 ## 4. Sending, response and mapping
 
-The envelope is built **once** per call; retries resend the same body.
+The envelope is built **once** per call; retries resend the same body. A write that must not run twice (e.g. a password change, where the resend would carry an old password that no longer matches) passes `{ retry: false }`.
 
 | Situation | Error kind | Retried? |
 |---|---|---|
 | `JHeader.ActionCode == 0` | — (success) | — |
 | `JHeader.ActionCode != 0` | `api` (message = `JHeader.Message`) | **No** |
-| Timeout, no connection, HTTP error | `network` | Yes, 3 attempts, back-off 500 ms × attempt |
+| Timeout, no connection, HTTP error | `network` | Yes, 3 attempts, back-off 500 ms × attempt — unless the caller passes `retry: false` |
 | HTTP `401` | `network` | No (until the service token in §8 exists) |
 | Body not JSON / no `JHeader` | `parsing` | No |
 | Caller's `AbortSignal` fired | the abort error | No |
@@ -144,6 +144,7 @@ const save = usePostData();
 
 save.mutate(ACTION_CODES.X, GATEWAY_VIEW_NAME, jData);                     // outcome lands in state
 const res = await save.mutateAsync(ACTION_CODES.X, GATEWAY_VIEW_NAME, jData); // resolves or throws
+await save.mutateAsync(ACTION_CODES.X, GATEWAY_VIEW_NAME, jData, { retry: false }); // never resent
 save.reset();
 ```
 
@@ -221,6 +222,8 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 **Identify the user in later calls** by sending `P_LOGIN_ID: session.loginId` in `JData` (e.g. `PROF.S.LOAD_PROFILE`).
 
 **Password recovery** (`forgot-password.tsx`): `PROF.S.PASSWORD` with `{ P_LOGIN_ID }` (normalised like login) via `usePostData`. A returned `o_code` other than `"0"` → `AuthError(o_message)`; no `o_code` → sent. On success the screen shows "check your email".
+
+**Change password** (`change-password.tsx`, form in `src/components/account/ChangePasswordForm.tsx`): `PROF.U.PASSWORD` with `{ P_LOGIN_ID: session.loginId, P_OLD_PASSWORD, P_NEW_PASSWORD }` via `usePostData`, sent with `retry: false`. The confirm field is checked on the client only — the contract has no parameter for it. A returned `o_code` other than `"0"` (e.g. a wrong old password) → `AuthError(o_message)`; no `o_code` → changed. The session holds no password, so the user stays signed in.
 
 **Registration** (`register.tsx`, services in `src/services/registration.ts`): a three-step wizard — Account & Personal Info → Mailing Address → Billing Info. Every lookup answers `o_code` / `o_message`; anything but `"0"` → `RegistrationError(o_message)`, no `o_code` → `GatewayError('parsing')`.
 

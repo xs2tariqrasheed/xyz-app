@@ -3,12 +3,13 @@ import { StyleSheet, View } from 'react-native';
 
 import { ChangePasswordForm } from '@/components/account/ChangePasswordForm';
 import { Screen } from '@/components/layout/Screen';
+import { CHANGE_PASSWORD_MESSAGES } from '@/constants/messages';
 import { formMaxWidth } from '@/theme';
 
 export default function ChangePasswordScreen() {
   return (
-    <Screen title="Change Password">
-      <Stack.Screen options={{ title: 'Change password' }} />
+    <Screen title={CHANGE_PASSWORD_MESSAGES.SCREEN_TITLE}>
+      <Stack.Screen options={{ title: CHANGE_PASSWORD_MESSAGES.SCREEN_TITLE }} />
 
       {/* A three-field form reads badly at the full page width. */}
       <View style={styles.column}>

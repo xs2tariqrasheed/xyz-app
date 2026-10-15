@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import type { ActionCode } from '@/constants/actionCodes';
 import {
   callGateway,
+  type CallGatewayOptions,
   type ErrorDisplay,
   getErrorDisplay,
   type GatewayJData,
@@ -25,14 +26,23 @@ type PostState =
   | { status: 'success'; data: GatewayResponse }
   | { status: 'error'; error: unknown };
 
+/** Per-call options; `retry: false` for a write that must not be sent twice. */
+export type PostOptions = Pick<CallGatewayOptions, 'retry'>;
+
 export type PostDataResult = {
   /** Fire and forget; the outcome lands in the returned state. */
-  mutate: (actionCode: ActionCode, viewName: string, jData: GatewayJData) => void;
+  mutate: (
+    actionCode: ActionCode,
+    viewName: string,
+    jData: GatewayJData,
+    options?: PostOptions,
+  ) => void;
   /** Same call, but resolves with the response or throws the error. */
   mutateAsync: (
     actionCode: ActionCode,
     viewName: string,
     jData: GatewayJData,
+    options?: PostOptions,
   ) => Promise<GatewayResponse>;
   reset: () => void;
   isLoading: boolean;
@@ -51,11 +61,16 @@ export function usePostData(): PostDataResult {
   // not overwrite a newer result.
   const latestCall = useRef(0);
 
-  const mutateAsync = async (actionCode: ActionCode, viewName: string, jData: GatewayJData) => {
+  const mutateAsync = async (
+    actionCode: ActionCode,
+    viewName: string,
+    jData: GatewayJData,
+    options: PostOptions = {},
+  ) => {
     const call = ++latestCall.current;
     setState({ status: 'loading' });
     try {
-      const data = await callGateway(actionCode, jData, { viewName });
+      const data = await callGateway(actionCode, jData, { ...options, viewName });
       if (call === latestCall.current) setState({ status: 'success', data });
       return data;
     } catch (error) {
@@ -64,9 +79,14 @@ export function usePostData(): PostDataResult {
     }
   };
 
-  const mutate = (actionCode: ActionCode, viewName: string, jData: GatewayJData) => {
+  const mutate = (
+    actionCode: ActionCode,
+    viewName: string,
+    jData: GatewayJData,
+    options?: PostOptions,
+  ) => {
     // The error is already in state; swallowing it here keeps it unhandled-free.
-    mutateAsync(actionCode, viewName, jData).catch(() => undefined);
+    mutateAsync(actionCode, viewName, jData, options).catch(() => undefined);
   };
 
   const reset = () => {

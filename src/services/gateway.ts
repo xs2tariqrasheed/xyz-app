@@ -56,12 +56,17 @@ export type CallGatewayOptions = {
   /** Defaults to the view every current action code is sent under. */
   viewName?: string;
   signal?: AbortSignal;
+  /**
+   * Retry network failures (the default). Pass `false` for a write that must
+   * not run twice — a lost response would otherwise resend it.
+   */
+  retry?: boolean;
 };
 
 export async function callGateway(
   actionCode: ActionCode,
   jData: GatewayJData,
-  { viewName = GATEWAY_VIEW_NAME, signal }: CallGatewayOptions = {},
+  { viewName = GATEWAY_VIEW_NAME, signal, retry = true }: CallGatewayOptions = {},
 ): Promise<GatewayResponse> {
   if (missingGatewayEnv.length > 0) {
     throw new Error(`API gateway is not configured. Missing: ${missingGatewayEnv.join(', ')}`);
@@ -76,7 +81,7 @@ export async function callGateway(
       return await send(body, signal);
     } catch (error) {
       const retryable =
-        error instanceof GatewayError && error.kind === 'network' && error.status !== 401;
+        retry && error instanceof GatewayError && error.kind === 'network' && error.status !== 401;
       if (!retryable || signal?.aborted || attempt >= MAX_ATTEMPTS) throw error;
       await delay(BACKOFF_STEP_MS * attempt);
     }
