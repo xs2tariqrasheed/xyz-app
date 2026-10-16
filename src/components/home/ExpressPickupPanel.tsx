@@ -82,9 +82,13 @@ export function ExpressPickupPanel({ style }: ExpressPickupPanelProps) {
 
           <View style={styles.note}>
             <Text style={styles.noteText}>
-              With express checkout a car is{' '}
-              <Text style={styles.noteStrong}>dispatched</Text> to your location{' '}
-              <Text style={styles.noteStrong}>in {EXPRESS_DISPATCH_MINUTES} minutes</Text> from now.
+              {RESERVATION_MESSAGES.EXPRESS_NOTE_LEAD}{' '}
+              <Text style={styles.noteStrong}>{RESERVATION_MESSAGES.EXPRESS_NOTE_DISPATCHED}</Text>{' '}
+              {RESERVATION_MESSAGES.EXPRESS_NOTE_DESTINATION}{' '}
+              <Text style={styles.noteStrong}>
+                {RESERVATION_MESSAGES.EXPRESS_NOTE_WITHIN(EXPRESS_DISPATCH_MINUTES)}
+              </Text>{' '}
+              {RESERVATION_MESSAGES.EXPRESS_NOTE_TAIL}
             </Text>
           </View>
         </>

@@ -373,6 +373,12 @@ export const RESERVATION_MESSAGES = {
   EXPRESS_BUTTON: 'Express Checkout',
   EXPRESS_EMPTY: 'Save an address under My Addresses to use express checkout.',
   EXPRESS_FAILED: 'Your saved addresses could not be loaded.',
+  // Dispatch note under the button; the bold spans are separate keys.
+  EXPRESS_NOTE_LEAD: 'With express checkout a car is',
+  EXPRESS_NOTE_DISPATCHED: 'dispatched',
+  EXPRESS_NOTE_DESTINATION: 'to your location',
+  EXPRESS_NOTE_WITHIN: (minutes: number) => `in ${minutes} minutes`,
+  EXPRESS_NOTE_TAIL: 'from now.',
 } as const;
 
 /** Ride history, open reservations and their row actions (guides 18–19, 24). */
@@ -400,6 +406,57 @@ export const RIDES_MESSAGES = {
   CANCEL_REJECTED: 'The reservation could not be cancelled.',
   HOME_RIDES_FAILED_TITLE: 'Your rides could not be loaded',
   HOME_RIDES_FAILED: 'The dispatch service did not answer. Booking still works.',
+} as const;
+
+/** Home dashboard: greeting, stat tiles, next-ride card, ride lists and quick links. */
+export const HOME_MESSAGES = {
+  WELCOME: 'Welcome back',
+  WELCOME_NAMED: (firstName: string) => `Welcome back, ${firstName}`,
+  LAST_LOGIN: (date: string, time: string) => `Last login ${date} · ${time}`,
+  BOOK_RIDE: 'Book a ride',
+  LOADING: 'Loading…',
+
+  // Stat tiles
+  TILE_UPCOMING: 'Upcoming',
+  TILE_UPCOMING_NEXT: (when: string) => `Next ${when}`,
+  TILE_UPCOMING_NONE: 'Nothing booked',
+  TILE_IN_PROGRESS: 'In progress',
+  TILE_IN_PROGRESS_ACTIVE: 'Car on the road',
+  TILE_IN_PROGRESS_NONE: 'No car out now',
+  TILE_COMPLETED: 'Completed',
+  TILE_COMPLETED_CAPTION: 'Rides finished',
+  TILE_TOTAL: 'Total rides',
+  TILE_TOTAL_CAPTION: 'On this account',
+  /** Screen-reader label for a tile. */
+  TILE_A11Y: (label: string, value: number | null) => `${label}: ${value ?? 'loading'}`,
+
+  // Next ride card
+  NEXT_LOADING: 'Loading your next ride',
+  NEXT_EMPTY_TITLE: 'No rides booked',
+  NEXT_EMPTY_BODY: 'Book ahead for a set date and time, or have a car sent to you now.',
+  NEXT_LIVE: 'Ride in progress',
+  NEXT_UPCOMING: 'Next ride',
+  RIDE_NO: 'Ride no.',
+  PAYMENT: 'Payment',
+  VOUCHER: 'Voucher',
+  VIEW_DETAILS: 'View details',
+  ALL_RIDES: 'All rides',
+
+  // Ride lists
+  UPCOMING_TITLE: 'Upcoming rides',
+  UPCOMING_EMPTY: 'Nothing booked yet.',
+  PAST_TITLE: 'Past rides',
+  PAST_EMPTY: 'No rides on this account yet.',
+  VIEW_ALL: 'View all',
+  VIEW_ALL_COUNT: (total: number) => `View all ${total}`,
+  RIDE_FROM: (time: string, pickup: string) => `${time} · from ${pickup}`,
+
+  // Quick links
+  QUICK_LINKS_TITLE: 'Quick links',
+  LINK_REVIEW_RIDE: 'Review a booked ride',
+  LINK_RECEIPTS: 'Receipts & invoices',
+  LINK_ADDRESSES: 'Saved addresses',
+  LINK_THEME: 'Color theme',
 } as const;
 
 /** Reservation details, voucher and route tracking (guides 20, 21, 23). */

@@ -2,6 +2,7 @@ import { Link, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ChevronGlyph } from '@/components/ui/Glyph';
+import { HOME_MESSAGES } from '@/constants/messages';
 import { colors, radii, shadowValues, space } from '@/theme';
 
 type QuickLink = { label: string; href: Href };
@@ -11,16 +12,16 @@ type QuickLink = { label: string; href: Href };
  * including `/reservation-info` and `/theme`, which nothing else links to.
  */
 const LINKS: readonly QuickLink[] = [
-  { label: 'Review a booked ride', href: '/rides' },
-  { label: 'Receipts & invoices', href: '/receipts' },
-  { label: 'Saved addresses', href: '/addresses' },
-  { label: 'Color theme', href: '/theme' },
+  { label: HOME_MESSAGES.LINK_REVIEW_RIDE, href: '/rides' },
+  { label: HOME_MESSAGES.LINK_RECEIPTS, href: '/receipts' },
+  { label: HOME_MESSAGES.LINK_ADDRESSES, href: '/addresses' },
+  { label: HOME_MESSAGES.LINK_THEME, href: '/theme' },
 ];
 
 export function QuickLinks({ style }: { style?: StyleProp<ViewStyle> }) {
   return (
     <View style={[styles.card, style]}>
-      <Text style={styles.title}>Quick links</Text>
+      <Text style={styles.title}>{HOME_MESSAGES.QUICK_LINKS_TITLE}</Text>
 
       {LINKS.map((link, index) => (
         <Link key={link.label} href={link.href} asChild>

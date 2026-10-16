@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 
 import { CarGlyph } from '@/components/ui/CarGlyph';
 import { CalendarGlyph, CheckGlyph, ClockGlyph } from '@/components/ui/Glyph';
+import { HOME_MESSAGES } from '@/constants/messages';
 import type { RideOverview } from '@/services/rides';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 import { formatDayDistance } from '@/utils/datetime';
@@ -48,33 +49,35 @@ export function RideStatTiles({ overview, now, loading }: RideStatTilesProps) {
   const tiles: readonly Tile[] = [
     {
       key: 'upcoming',
-      label: 'Upcoming',
+      label: HOME_MESSAGES.TILE_UPCOMING,
       value: counts?.upcoming ?? 0,
-      caption: nextRide ? `Next ${formatDayDistance(nextRide.pickupAt, now).toLowerCase()}` : 'Nothing booked',
+      caption: nextRide
+        ? HOME_MESSAGES.TILE_UPCOMING_NEXT(formatDayDistance(nextRide.pickupAt, now).toLowerCase())
+        : HOME_MESSAGES.TILE_UPCOMING_NONE,
       tone: 'primary',
       icon: <CalendarGlyph color={TONES.primary.fg} size={17} />,
     },
     {
       key: 'in-progress',
-      label: 'In progress',
+      label: HOME_MESSAGES.TILE_IN_PROGRESS,
       value: counts?.inProgress ?? 0,
-      caption: counts?.inProgress ? 'Car on the road' : 'No car out now',
+      caption: counts?.inProgress ? HOME_MESSAGES.TILE_IN_PROGRESS_ACTIVE : HOME_MESSAGES.TILE_IN_PROGRESS_NONE,
       tone: 'accent',
       icon: <CarGlyph variant="sedan" color={TONES.accent.fg} size={22} />,
     },
     {
       key: 'completed',
-      label: 'Completed',
+      label: HOME_MESSAGES.TILE_COMPLETED,
       value: counts?.completed ?? 0,
-      caption: 'Rides finished',
+      caption: HOME_MESSAGES.TILE_COMPLETED_CAPTION,
       tone: 'success',
       icon: <CheckGlyph color={TONES.success.fg} size={14} />,
     },
     {
       key: 'total',
-      label: 'Total rides',
+      label: HOME_MESSAGES.TILE_TOTAL,
       value: counts?.total ?? 0,
-      caption: 'On this account',
+      caption: HOME_MESSAGES.TILE_TOTAL_CAPTION,
       tone: 'neutral',
       icon: <ClockGlyph color={TONES.neutral.fg} size={17} />,
     },
@@ -89,7 +92,7 @@ export function RideStatTiles({ overview, now, loading }: RideStatTilesProps) {
           <Pressable
             key={tile.key}
             accessibilityRole="link"
-            accessibilityLabel={`${tile.label}: ${loading ? 'loading' : tile.value}`}
+            accessibilityLabel={HOME_MESSAGES.TILE_A11Y(tile.label, loading ? null : tile.value)}
             onPress={() => router.navigate('/rides')}
             // Two per row on a phone, one row of four from tablet up.
             style={({ pressed }) => [
@@ -107,7 +110,7 @@ export function RideStatTiles({ overview, now, loading }: RideStatTilesProps) {
               {loading ? '—' : tile.value}
             </Text>
             <Text numberOfLines={1} style={styles.caption}>
-              {loading ? 'Loading…' : tile.caption}
+              {loading ? HOME_MESSAGES.LOADING : tile.caption}
             </Text>
           </Pressable>
         );

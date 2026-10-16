@@ -11,7 +11,7 @@ import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Notice } from '@/components/ui/Notice';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { RIDES_MESSAGES } from '@/constants/messages';
+import { HOME_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useReservation } from '@/context/ReservationContext';
@@ -68,13 +68,13 @@ export default function HomeScreen() {
 
   return (
     <Screen
-      title={profile?.firstName ? `Welcome back, ${profile.firstName}` : 'Welcome back'}
+      title={profile?.firstName ? HOME_MESSAGES.WELCOME_NAMED(profile.firstName) : HOME_MESSAGES.WELCOME}
       subtitle={
         lastLoginAt
-          ? `Last login ${formatFullDate(lastLoginAt)} · ${formatClockTime(lastLoginAt)}`
+          ? HOME_MESSAGES.LAST_LOGIN(formatFullDate(lastLoginAt), formatClockTime(lastLoginAt))
           : undefined
       }
-      trailing={<Button label="Book a ride" onPress={bookRide} />}
+      trailing={<Button label={HOME_MESSAGES.BOOK_RIDE} onPress={bookRide} />}
     >
       {failed ? (
         <Notice
@@ -91,18 +91,18 @@ export default function HomeScreen() {
           <NextRideCard ride={featured} now={now} loading={loading} onBook={bookRide} />
 
           <RideListPanel
-            title="Upcoming rides"
+            title={HOME_MESSAGES.UPCOMING_TITLE}
             rides={(overview?.upcoming ?? []).slice(0, LIST_LIMIT)}
             total={overview?.counts.upcoming}
-            emptyText="Nothing booked yet."
+            emptyText={HOME_MESSAGES.UPCOMING_EMPTY}
             loading={loading}
           />
 
           <RideListPanel
-            title="Past rides"
+            title={HOME_MESSAGES.PAST_TITLE}
             rides={(overview?.past ?? []).slice(0, LIST_LIMIT)}
             total={overview ? overview.counts.completed + overview.counts.canceled : undefined}
-            emptyText="No rides on this account yet."
+            emptyText={HOME_MESSAGES.PAST_EMPTY}
             loading={loading}
           />
         </View>

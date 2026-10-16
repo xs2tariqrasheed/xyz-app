@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from '
 import { RideRoute } from '@/components/rides/RideRoute';
 import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
 import { Button } from '@/components/ui/Button';
+import { HOME_MESSAGES } from '@/constants/messages';
 import { PAYMENT_METHOD_LABELS, type Ride } from '@/services/rides';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 import { formatClockTime, formatDayDistance, formatFullDate } from '@/utils/datetime';
@@ -34,7 +35,7 @@ export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) 
     return (
       <View style={[styles.card, styles.placeholder]}>
         <ActivityIndicator color={colors.primary[600]} />
-        <Text style={styles.placeholderText}>Loading your next ride</Text>
+        <Text style={styles.placeholderText}>{HOME_MESSAGES.NEXT_LOADING}</Text>
       </View>
     );
   }
@@ -43,11 +44,9 @@ export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) 
     return (
       <View style={[styles.card, styles.empty]}>
         <SedanIllustration style={styles.emptyArt} />
-        <Text style={styles.emptyTitle}>No rides booked</Text>
-        <Text style={styles.emptyBody}>
-          Book ahead for a set date and time, or have a car sent to you now.
-        </Text>
-        <Button label="Book a ride" size="lg" onPress={onBook} />
+        <Text style={styles.emptyTitle}>{HOME_MESSAGES.NEXT_EMPTY_TITLE}</Text>
+        <Text style={styles.emptyBody}>{HOME_MESSAGES.NEXT_EMPTY_BODY}</Text>
+        <Button label={HOME_MESSAGES.BOOK_RIDE} size="lg" onPress={onBook} />
       </View>
     );
   }
@@ -57,7 +56,7 @@ export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) 
   return (
     <View style={styles.card}>
       <View style={styles.band}>
-        <Text style={styles.eyebrow}>{live ? 'Ride in progress' : 'Next ride'}</Text>
+        <Text style={styles.eyebrow}>{live ? HOME_MESSAGES.NEXT_LIVE : HOME_MESSAGES.NEXT_UPCOMING}</Text>
         <RideStatusBadge status={ride.status} />
       </View>
 
@@ -72,17 +71,17 @@ export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) 
         <RideRoute pickup={ride.pickupLocation} destination={ride.destination} />
 
         <View style={styles.meta}>
-          <Meta label="Ride no." value={ride.id} />
-          <Meta label="Payment" value={PAYMENT_METHOD_LABELS[ride.paymentMethod]} />
-          {ride.voucherNo ? <Meta label="Voucher" value={ride.voucherNo} /> : null}
+          <Meta label={HOME_MESSAGES.RIDE_NO} value={ride.id} />
+          <Meta label={HOME_MESSAGES.PAYMENT} value={PAYMENT_METHOD_LABELS[ride.paymentMethod]} />
+          {ride.voucherNo ? <Meta label={HOME_MESSAGES.VOUCHER} value={ride.voucherNo} /> : null}
         </View>
 
         <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
           <Button
-            label="View details"
+            label={HOME_MESSAGES.VIEW_DETAILS}
             onPress={() => router.navigate({ pathname: '/reservation-info', params: { rideno: ride.id } })}
           />
-          <Button label="All rides" variant="outline" onPress={() => router.navigate('/rides')} />
+          <Button label={HOME_MESSAGES.ALL_RIDES} variant="outline" onPress={() => router.navigate('/rides')} />
         </View>
       </View>
     </View>
