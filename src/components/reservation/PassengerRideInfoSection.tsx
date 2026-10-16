@@ -2,6 +2,8 @@ import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Badge } from "@/components/ui/Badge";
 import { CheckboxCard } from "@/components/ui/Checkbox";
+import { SelectField, type SelectOption } from "@/components/ui/SelectField";
+import { RESERVATION_MESSAGES } from "@/constants/messages";
 import { DateField } from "@/components/ui/DateField";
 import { ClockGlyph } from "@/components/ui/Glyph";
 import { Reveal } from "@/components/ui/Reveal";
@@ -21,18 +23,34 @@ export type PassengerRideInfoValue = {
   time: TimeValue;
   /** Only meaningful for a live call — always today. */
   estimatedTime: TimeValue;
+  /**
+   * Login of the profile this ride is booked for, '' for the signed-in
+   * customer themselves (`P_LOGIN_ID_RESERVATION_MAKE_FOR`).
+   */
+  bookingFor: string;
 };
+
+export type PassengerRideInfoField = "firstName" | "lastName" | "date" | "time";
+export type PassengerRideInfoErrors = Partial<Record<PassengerRideInfoField, string>>;
 
 export type PassengerRideInfoSectionProps = {
   value: PassengerRideInfoValue;
   onChange: (next: PassengerRideInfoValue) => void;
   today: Date;
+  /**
+   * Profiles that let this customer book on their behalf. The picker only
+   * appears when there is someone to choose — otherwise it is noise.
+   */
+  bookingForOptions?: readonly SelectOption<string>[];
+  errors?: PassengerRideInfoErrors;
 };
 
 export function PassengerRideInfoSection({
   value,
   onChange,
   today,
+  bookingForOptions = [],
+  errors = {},
 }: PassengerRideInfoSectionProps) {
   const { width } = useWindowDimensions();
   const twoUp = width >= breakpoints.sm;
@@ -42,11 +60,21 @@ export function PassengerRideInfoSection({
 
   return (
     <View style={styles.root}>
+      {bookingForOptions.length > 0 ? (
+        <SelectField
+          label={RESERVATION_MESSAGES.BOOKING_FOR_LABEL}
+          value={value.bookingFor}
+          options={[{ value: "", label: RESERVATION_MESSAGES.BOOKING_FOR_SELF }, ...bookingForOptions]}
+          onChange={(bookingFor) => patch({ bookingFor })}
+        />
+      ) : null}
+
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
         <TextField
           style={styles.field}
           label="First name"
-          required
+          error={errors.firstName}
+          maxLength={15}
           value={value.firstName}
           onChangeText={(firstName) => patch({ firstName })}
           placeholder="e.g. Amara"
@@ -59,6 +87,8 @@ export function PassengerRideInfoSection({
           style={styles.field}
           label="Last name"
           required
+          error={errors.lastName}
+          maxLength={20}
           value={value.lastName}
           onChangeText={(lastName) => patch({ lastName })}
           placeholder="e.g. Okafor"
@@ -75,7 +105,7 @@ export function PassengerRideInfoSection({
         onChange={(isLive) => patch({ isLive })}
         label="I'm ready now"
         description=""
-        badge={<Badge label="LIVE CALL" tone="accent" pulse={value.isLive} />}
+        badge={<Badge label={RESERVATION_MESSAGES.LIVE_BADGE} tone="accent" pulse={value.isLive} />}
         trailing={
           value.isLive ? (
             <View
@@ -105,6 +135,7 @@ export function PassengerRideInfoSection({
             value={value.date}
             onChange={(date) => patch({ date })}
             today={today}
+            error={errors.date}
           />
           <TimeField
             style={styles.field}
@@ -112,6 +143,7 @@ export function PassengerRideInfoSection({
             required
             value={value.time}
             onChange={(time) => patch({ time })}
+            error={errors.time}
           />
         </Reveal>
       )}

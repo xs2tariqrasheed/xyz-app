@@ -28,7 +28,7 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.rideNo}>{ride.id}</Text>
+          <RideActionLink label={ride.id} onPress={() => onAction('view', ride)} />
           <Text style={styles.passenger}>{ride.passengerName}</Text>
         </View>
         <RideStatusBadge status={ride.status} />
@@ -43,7 +43,14 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
 
       <View style={styles.meta}>
         <Meta label="Payment" value={PAYMENT_METHOD_LABELS[ride.paymentMethod]} />
-        <Meta label="Voucher" value={ride.voucherNo ?? '—'} />
+        <View style={styles.metaItem}>
+          <Text style={styles.metaLabel}>Voucher</Text>
+          {ride.voucherNo ? (
+            <RideActionLink label={ride.voucherNo} onPress={() => onAction('voucher', ride)} />
+          ) : (
+            <Text style={styles.metaValue}>—</Text>
+          )}
+        </View>
       </View>
 
       {modifiable || feedback ? (
@@ -89,7 +96,6 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
   headerText: { flex: 1, gap: 2 },
-  rideNo: { color: colors.textLink, fontSize: 15, fontWeight: '700' },
   passenger: { color: colors.textMuted, fontSize: 13 },
 
   pickupRow: {

@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 14 — Booking Step 1: Passenger, "Reservation For", Ride Date & Time
 
 Part of the booking wizard (module 13). Submitted with `hfactive=0`.

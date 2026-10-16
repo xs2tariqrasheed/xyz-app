@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 20 — Reservation / Ride Details
 
 ## 1. Purpose

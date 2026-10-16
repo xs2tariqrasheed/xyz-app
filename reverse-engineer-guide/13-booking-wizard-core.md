@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 13 — Booking Wizard Core (Reservation Flow & Step API)
 
 Step-specific details: module 14 (passenger/time), 15 (locations), 16 (billing), 17 (preferences/contact).

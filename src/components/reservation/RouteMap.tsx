@@ -1,12 +1,12 @@
-import { Image } from 'expo-image';
-import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { RouteMapView } from '@/components/reservation/RouteMapView';
 import { hasGoogleMapsKey } from '@/config/maps';
 import type { AddressSuggestion } from '@/services/places';
 import { formatDistance, formatDuration, type RouteSummary } from '@/services/routes';
-import { buildStaticMapUrl } from '@/services/staticMap';
-import { colors, radii, space } from '@/theme';
+import { breakpoints, colors, radii, space } from '@/theme';
+import { decodePolyline } from '@/utils/polyline';
 
 export type RouteMapProps = {
   origin: AddressSuggestion | null;
@@ -17,30 +17,26 @@ export type RouteMapProps = {
 };
 
 /**
- * The pickup-to-drop-off leg, drawn on a Maps Static API image.
- *
- * A static image rather than an interactive map: it renders identically on
- * web, iOS and Android with no extra dependency. Swapping in `expo-maps` on
- * native (plus the Maps JavaScript API on web) only touches this file.
+ * The pickup-to-drop-off leg on an interactive map the customer can zoom and
+ * pan (`RouteMapView`: react-native-maps on iOS / Android, the Maps
+ * JavaScript API on web), with the distance and drive time under it.
  */
 export function RouteMap({ origin, destination, route, loading, error }: RouteMapProps) {
-  const [width, setWidth] = useState(0);
-
-  const height = Math.round((width * 9) / 16);
-  const mapUrl = route && width > 0 ? buildStaticMapUrl({ route, width, height }) : null;
+  const path = useMemo(() => (route ? decodePolyline(route.encodedPolyline) : []), [route]);
+  // A taller frame on phones leaves room to pinch and drag.
+  const { width } = useWindowDimensions();
+  const narrow = width < breakpoints.sm;
 
   return (
     <View style={styles.root}>
-      <View
-        style={styles.frame}
-        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-      >
-        {mapUrl ? (
-          <Image
-            source={{ uri: mapUrl }}
-            style={styles.image}
-            contentFit="cover"
-            transition={200}
+      <View style={[styles.frame, narrow ? styles.frameNarrow : null]}>
+        {route ? (
+          <RouteMapView
+            start={route.start}
+            end={route.end}
+            path={path}
+            startTitle={origin?.primary ?? ''}
+            endTitle={destination?.primary ?? ''}
             accessibilityLabel={`Route from ${origin?.primary} to ${destination?.primary}`}
           />
         ) : (
@@ -130,7 +126,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSunken,
     overflow: 'hidden',
   },
-  image: { width: '100%', height: '100%' },
+  frameNarrow: { aspectRatio: 4 / 3 },
 
   loading: {
     position: 'absolute',

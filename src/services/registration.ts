@@ -36,7 +36,7 @@ export const PAYMENT_TYPE_CODES = { corporate: 'CA', card: 'CC' } as const;
 export const ADDRESS_TYPE_CODES = { home: 'H', office: 'O' } as const;
 
 /** `P_CC_TYPE` per detected brand, in the old site's spelling. */
-const CARD_TYPE_CODES: Record<CardBrand, string> = {
+export const CARD_TYPE_CODES: Record<CardBrand, string> = {
   visa: 'VISA',
   mastercard: 'MASTER',
   amex: 'AMEX',

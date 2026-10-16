@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 06 — Member Home & Express Ride ("I am ready for pickup")
 
 ## 1. Purpose

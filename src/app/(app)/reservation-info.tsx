@@ -1,101 +1,158 @@
-import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
-import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
 import { InfoCard, SplitInfoCard } from '@/components/reservation/info/InfoCard';
 import { InfoColumns, InfoList, InfoRow } from '@/components/reservation/info/InfoRow';
-import {
-  SAMPLE_RESERVATION,
-  type RideAddress,
-  type Reservation,
-  type ReservationStatus,
-} from '@/components/reservation/info/reservation';
-import { Badge, type BadgeTone } from '@/components/ui/Badge';
+import { CancelReservationSheet } from '@/components/rides/CancelReservationSheet';
+import { RideQuestionSheet } from '@/components/rides/RideQuestionSheet';
+import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
+import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
-import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
+import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
+import { RESERVATION_INFO_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
+import { useAuth } from '@/context/AuthContext';
+import { useFetchData } from '@/hooks/useFetchData';
+import { actionErrorMessage, useOpenReservation } from '@/hooks/useReservationActions';
+import { getErrorDisplay } from '@/services/gateway';
+import { placeLocalityLine } from '@/services/places';
+import {
+  AIRPORT_PICKUP_OPTIONS,
+  columnReadJData,
+  communicationLogJData,
+  loadReservationJData,
+  type RecordStop,
+  type ReservationRecord,
+  RESERVATION_COLUMN_IDS,
+  toCommunicationLog,
+  toReservationRecord,
+  toSingleColumnValue,
+} from '@/services/reservation';
+import { PAYMENT_METHOD_LABELS } from '@/services/rides';
+import { carJData, toCarInfo } from '@/services/tracking';
+import { breakpoints, colors, radii, space } from '@/theme';
+import { formatClockTime, formatSlashDate } from '@/utils/datetime';
+import { formatIntlPhone, formatUsPhone } from '@/utils/phone';
 
-const STATUS_TONE: Record<ReservationStatus, BadgeTone> = {
-  Open: 'info',
-  Confirmed: 'success',
-  Completed: 'muted',
-  Cancelled: 'accent',
-};
+type Notice = { tone: 'success' | 'danger'; message: string } | null;
 
+/**
+ * One reservation in full (reverse-engineer-guide/20): `RES.S.LOAD_RESERVATION`
+ * for the record, `PROF.S.CAR_INFO` for the car and driver,
+ * `RES.S.COMMUNICATION_LOG` for the messages sent, and the extra contact
+ * stored on it (`RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE`).
+ */
 export default function ReservationInfoScreen() {
-  const { width } = useWindowDimensions();
+  const { rideno } = useLocalSearchParams<{ rideno?: string }>();
+  const reservationNumber = typeof rideno === 'string' ? rideno.trim() : '';
   const router = useRouter();
-  const roomy = width >= breakpoints.sm;
-
-  const [reservation, setReservation] = useState<Reservation>(SAMPLE_RESERVATION);
-  const [confirmingCancel, setConfirmingCancel] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const { passenger, pickup, destination, billing, preferences } = reservation;
-  const cancelled = passenger.status === 'Cancelled';
-
-  // A cancelled ride is a record, not a draft — its sections stop offering Edit.
-  const editSection = cancelled ? undefined : () => router.navigate('/reserve');
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
-    else router.navigate('/');
-  };
-
-  const cancelRide = () => {
-    setConfirmingCancel(false);
-    setReservation((current) => ({
-      ...current,
-      passenger: { ...current.passenger, status: 'Cancelled' },
-    }));
-    setNotice(`Reservation ${reservation.reservationNumber} has been cancelled.`);
-  };
-
-  const printVoucher = () => {
-    // `print` only exists on web; the same notice strip carries the news elsewhere.
-    const host = globalThis as { print?: () => void };
-    if (Platform.OS === 'web' && typeof host.print === 'function') {
-      host.print();
-      return;
-    }
-    setNotice('Printing a voucher is only available in the web app for now.');
+    else router.navigate('/rides');
   };
 
   return (
-    <Screen
-      title="Reservation info"
-      trailing={<Badge label={passenger.status.toUpperCase()} tone={STATUS_TONE[passenger.status]} />}
-    >
-      <Stack.Screen options={{ title: 'Reservation info' }} />
+    <Screen title={RESERVATION_INFO_MESSAGES.SCREEN_TITLE}>
+      <Stack.Screen options={{ title: RESERVATION_INFO_MESSAGES.SCREEN_TITLE }} />
+      {reservationNumber ? (
+        <LoadedReservation key={reservationNumber} reservationNumber={reservationNumber} onBack={goBack} />
+      ) : (
+        <>
+          <Alert tone="info" message={RESERVATION_INFO_MESSAGES.NOT_FOUND} />
+          <Button label={RESERVATION_INFO_MESSAGES.BACK} variant="outline" onPress={goBack} style={styles.back} />
+        </>
+      )}
+    </Screen>
+  );
+}
 
-      <View style={[styles.refs, roomy ? styles.refsWide : null]}>
-        <Reference label="Reservation#" value={reservation.reservationNumber} />
-        <Reference label="Voucher#" value={reservation.voucherNumber} />
+function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: string; onBack: () => void }) {
+  const { session } = useAuth();
+  const loginId = session?.loginId ?? '';
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+  const roomy = width >= breakpoints.sm;
+
+  const [now] = useState(() => new Date());
+  const [notice, setNotice] = useState<Notice>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const opener = useOpenReservation();
+
+  const { data, isLoading, isError, error, refetch } = useFetchData(
+    ACTION_CODES.LOAD_RESERVATION,
+    GATEWAY_VIEW_NAME,
+    loadReservationJData(loginId, reservationNumber),
+  );
+  const loaded = useMemo((): { record: ReservationRecord | null; failure: string | null } => {
+    if (!data) return { record: null, failure: null };
+    try {
+      return { record: toReservationRecord(data), failure: null };
+    } catch (failure) {
+      return { record: null, failure: actionErrorMessage(failure) };
+    }
+  }, [data]);
+
+  if (isLoading && !data) {
+    return (
+      <View style={styles.state}>
+        <ActivityIndicator color={colors.primary[600]} />
       </View>
+    );
+  }
+
+  if (isError || loaded.failure || !loaded.record) {
+    const message = loaded.failure ?? (isError ? getErrorDisplay(error).customDescription : RIDES_MESSAGES.LOAD_RESERVATION_FAILED);
+    return (
+      <>
+        <Alert tone="danger" title={RESERVATION_INFO_MESSAGES.LOAD_FAILED_TITLE} message={message} />
+        <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
+          <Button label={RESERVATION_INFO_MESSAGES.BACK} variant="outline" onPress={onBack} />
+          <Button label={RESERVATION_INFO_MESSAGES.RETRY} onPress={refetch} />
+        </View>
+      </>
+    );
+  }
+
+  const record = loaded.record;
+  const cancelled = record.status === 'canceled';
+  const upcoming = record.status === 'confirmed' && (record.rideAt?.getTime() ?? 0) > now.getTime();
+  const finished = record.status === 'completed';
+  const trackable = record.status === 'in-progress' || finished || record.driver.carNumber.length > 0;
+  const hasVoucher = finished || record.voucherNumber.length > 0;
+  const editSection = upcoming ? () => void opener.open(record.reservationNumber, 'edit') : undefined;
+  const { preferences, billing } = record;
+
+  return (
+    <>
+      <View style={[styles.refs, roomy ? styles.refsWide : null]}>
+        <Reference label="Reservation#" value={record.reservationNumber} />
+        <Reference label="Voucher#" value={record.voucherNumber} />
+        <RideStatusBadge status={record.status} />
+      </View>
+
+      {notice ? <Alert tone={notice.tone} message={notice.message} /> : null}
+      {opener.error ? <Alert tone="danger" message={opener.error} /> : null}
 
       <InfoCard title="Passenger Name & Ride Info" onEdit={editSection}>
         <InfoColumns
           left={
             <InfoList>
-              <InfoRow label="First Name" value={passenger.firstName} />
-              <InfoRow label="Last Name" value={passenger.lastName} />
-              <InfoRow label="Ride Date" value={passenger.rideDate} />
-              <InfoRow label="Ride Time" value={passenger.rideTime} />
+              <InfoRow label="First Name" value={record.firstName} />
+              <InfoRow label="Last Name" value={record.lastName} />
+              <InfoRow label="Ride Date" value={record.rideAt ? formatSlashDate(record.rideAt) : ''} />
+              <InfoRow label="Ride Time" value={record.rideAt ? formatClockTime(record.rideAt) : ''} />
             </InfoList>
           }
           right={
             <InfoList>
-              <InfoRow label="Originate Date" value={passenger.originateDate} />
-              <InfoRow label="Originate Time" value={passenger.originateTime} />
-              <InfoRow label="Operator Name" value={passenger.operatorName} />
-              <InfoRow label="Status">
-                <Badge
-                  label={passenger.status}
-                  tone={STATUS_TONE[passenger.status]}
-                  style={styles.statusBadge}
-                />
-              </InfoRow>
+              <InfoRow label="Originate Date" value={record.originateAt ? formatSlashDate(record.originateAt) : ''} />
+              <InfoRow label="Originate Time" value={record.originateAt ? formatClockTime(record.originateAt) : ''} />
+              <InfoRow label="Operator Name" value={record.operatorName} />
+              <InfoRow label="Status" value={record.statusLabel} />
             </InfoList>
           }
         />
@@ -103,10 +160,10 @@ export default function ReservationInfoScreen() {
 
       <SplitInfoCard
         onEdit={editSection}
-        left={{ title: 'Pickup Address', content: <AddressPane address={pickup} /> }}
+        left={{ title: 'Pickup Address', content: <StopPane stop={record.pickup} pickup /> }}
         right={{
           title: 'Destination Address',
-          content: destination ? <AddressPane address={destination} /> : <AsDirected />,
+          content: record.destination ? <StopPane stop={record.destination} /> : <AsDirected />,
         }}
       />
 
@@ -124,89 +181,272 @@ export default function ReservationInfoScreen() {
           }
           right={
             <InfoList>
-              <InfoRow label="Payment Method" value={billing.paymentMethod} />
-              <InfoRow label="Account #">
-                <View style={styles.account}>
-                  <Text style={styles.accountValue}>{billing.accountNumber}</Text>
-                  <Text style={styles.accountVip}>VIP # : {billing.vipNumber}</Text>
-                </View>
-              </InfoRow>
+              <InfoRow
+                label="Payment Method"
+                value={billing.paymentLabel || PAYMENT_METHOD_LABELS[billing.paymentMethod]}
+              />
+              {billing.accountNumber ? (
+                <InfoRow label="Account #">
+                  <View style={styles.account}>
+                    <Text style={styles.accountValue}>{billing.accountNumber}</Text>
+                    {billing.vipNumber ? <Text style={styles.accountVip}>VIP # : {billing.vipNumber}</Text> : null}
+                  </View>
+                </InfoRow>
+              ) : null}
+              {billing.cardMasked ? (
+                <InfoRow label="Card" value={[billing.cardType, `•••• ${billing.cardMasked.slice(-4)}`].filter(Boolean).join(' ')} />
+              ) : null}
             </InfoList>
           }
         />
       </InfoCard>
+
+      <DriverCard record={record} />
 
       <InfoCard title="Preferences" onEdit={editSection}>
         <InfoColumns
           left={
             <InfoList>
               <InfoRow label="Car Type" value={preferences.carType} />
-              <InfoRow label="Callback Phone (US)" value={preferences.callbackPhone} />
-              <InfoRow label="International Phone" value={preferences.internationalPhone} />
+              <InfoRow
+                label="Callback Phone (US)"
+                value={preferences.phoneUs ? withExt(formatUsPhone(preferences.phoneUs), preferences.phoneUsExt) : ''}
+              />
+              <InfoRow
+                label="International Phone"
+                value={preferences.phoneIntl ? withExt(formatIntlPhone(preferences.phoneIntl), preferences.phoneIntlExt) : ''}
+              />
               <InfoRow label="Email">
                 <EmailLink address={preferences.email} />
               </InfoRow>
+              <ExtraContact reservationNumber={record.reservationNumber} />
             </InfoList>
           }
           right={
             <InfoList>
-              <InfoRow label="Confirmation By" value={preferences.confirmationBy} />
+              <InfoRow label="Confirmation By" value={preferences.confirmByPhone ? 'Phone' : 'Email'} />
               <InfoRow label="No. of Passengers" value={preferences.passengers} />
               <InfoRow label="No. of Stops" value={preferences.stops} />
+              {preferences.ridePurpose ? (
+                <InfoRow label={RESERVATION_MESSAGES.RIDE_PURPOSE_LABEL} value={preferences.ridePurpose} />
+              ) : null}
             </InfoList>
           }
         />
       </InfoCard>
 
-      {confirmingCancel ? (
-        <View style={styles.confirm}>
-          <Text style={styles.confirmTitle}>Cancel this reservation?</Text>
-          <Text style={styles.confirmBody}>
-            Ride {reservation.reservationNumber} on {passenger.rideDate} at {passenger.rideTime}{' '}
-            will be called off. This cannot be undone.
-          </Text>
-          <View style={[styles.confirmActions, roomy ? styles.actionsWide : null]}>
-            <Button label="Keep reservation" variant="outline" onPress={() => setConfirmingCancel(false)} />
-            <Button label="Yes, cancel it" variant="danger" onPress={cancelRide} />
-          </View>
-        </View>
+      {record.charges.length > 0 ? (
+        <InfoCard title={RESERVATION_INFO_MESSAGES.CHARGES_TITLE}>
+          <InfoList>
+            {record.charges.map((charge) => (
+              <InfoRow key={charge.label} label={charge.label} value={charge.amount} />
+            ))}
+          </InfoList>
+        </InfoCard>
       ) : null}
 
-      {notice ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss message"
-          onPress={() => setNotice(null)}
-          style={styles.notice}
-        >
-          <Text style={styles.noticeText}>{notice}</Text>
-        </Pressable>
+      {cancelled && record.cancelReason ? (
+        <InfoCard title={RESERVATION_INFO_MESSAGES.CANCEL_REASON}>
+          <Text style={styles.body}>{record.cancelReason}</Text>
+        </InfoCard>
       ) : null}
+
+      <MessagesCard loginId={loginId} reservationNumber={record.reservationNumber} />
 
       <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
-        <Button label="Back" variant="outline" size="lg" onPress={goBack} />
+        <Button label={RESERVATION_INFO_MESSAGES.BACK} variant="outline" onPress={onBack} />
+        {upcoming ? (
+          <>
+            <Button
+              label={RESERVATION_INFO_MESSAGES.EDIT}
+              variant="outline"
+              disabled={opener.openingId !== null}
+              onPress={() => void opener.open(record.reservationNumber, 'edit')}
+            />
+            <Button
+              label={RESERVATION_INFO_MESSAGES.CANCEL}
+              variant="danger"
+              onPress={() => setCancelling(true)}
+            />
+          </>
+        ) : null}
+        {trackable ? (
+          <Button
+            label={RESERVATION_INFO_MESSAGES.TRACK}
+            variant="outline"
+            onPress={() =>
+              router.push({
+                pathname: '/track-ride',
+                params: { rideno: record.reservationNumber, car: record.driver.carNumber },
+              })
+            }
+          />
+        ) : null}
+        {hasVoucher ? (
+          <Button
+            label={RESERVATION_INFO_MESSAGES.VOUCHER}
+            variant="outline"
+            onPress={() => router.push({ pathname: '/voucher', params: { rideno: record.reservationNumber } })}
+          />
+        ) : null}
+        {record.destination ? (
+          <Button
+            label={RESERVATION_INFO_MESSAGES.RETURN_TRIP}
+            variant="outline"
+            disabled={opener.openingId !== null}
+            onPress={() => void opener.open(record.reservationNumber, 'return')}
+          />
+        ) : null}
         <Button
-          label="Cancel Call"
+          label={RESERVATION_INFO_MESSAGES.REPEAT}
           variant="outline"
-          size="lg"
-          disabled={cancelled}
-          onPress={() => setConfirmingCancel(true)}
+          disabled={opener.openingId !== null}
+          onPress={() => void opener.open(record.reservationNumber, 'repeat')}
         />
-        <Button label="Print Voucher" size="lg" onPress={printVoucher} />
+        <Button label={RESERVATION_INFO_MESSAGES.ASK} variant="outline" onPress={() => setAsking(true)} />
       </View>
-    </Screen>
+
+      <CancelReservationSheet
+        reservationNumber={cancelling ? record.reservationNumber : null}
+        onClose={() => setCancelling(false)}
+        onCancelled={() => {
+          setCancelling(false);
+          setNotice({ tone: 'success', message: RIDES_MESSAGES.CANCEL_DONE });
+          refetch();
+        }}
+      />
+
+      <RideQuestionSheet
+        reservationNumber={asking ? record.reservationNumber : null}
+        onClose={() => setAsking(false)}
+        onSent={(message) => setNotice({ tone: 'success', message })}
+      />
+    </>
+  );
+}
+
+function withExt(number: string, ext: string): string {
+  return ext ? `${number} ext. ${ext}` : number;
+}
+
+/** The car and driver: the record's own fields, completed by `PROF.S.CAR_INFO` when a car is assigned. */
+function DriverCard({ record }: { record: ReservationRecord }) {
+  return (
+    <InfoCard title={RESERVATION_INFO_MESSAGES.DRIVER_TITLE}>
+      {record.driver.carNumber ? (
+        <CarInfo record={record} carNumber={record.driver.carNumber} />
+      ) : (
+        <Text style={styles.muted}>{RESERVATION_INFO_MESSAGES.DRIVER_PENDING}</Text>
+      )}
+    </InfoCard>
+  );
+}
+
+function CarInfo({ record, carNumber }: { record: ReservationRecord; carNumber: string }) {
+  const { data } = useFetchData(ACTION_CODES.CAR_INFO, GATEWAY_VIEW_NAME, carJData(carNumber));
+  const info = useMemo(() => {
+    if (!data) return null;
+    try {
+      return toCarInfo(data);
+    } catch {
+      return null;
+    }
+  }, [data]);
+  const { driver } = record;
+
+  return (
+    <InfoColumns
+      left={
+        <InfoList>
+          <InfoRow label="Car Number" value={carNumber} />
+          <InfoRow label="Car Color" value={info?.carColor || driver.carColor} />
+          <InfoRow label="Car Model" value={info?.carModel || driver.carModel} />
+        </InfoList>
+      }
+      right={
+        <InfoList>
+          <InfoRow label="Driver Name" value={info?.driverName || driver.driverName} />
+          <InfoRow label="Driver Number" value={info?.driverNumber || driver.driverNumber} />
+          <InfoRow label="Car Type" value={info?.carType || record.preferences.carType} />
+        </InfoList>
+      }
+    />
+  );
+}
+
+/** The Email CC / extra contact stored on the reservation, when there is one. */
+function ExtraContact({ reservationNumber }: { reservationNumber: string }) {
+  const { data } = useFetchData(
+    ACTION_CODES.LOAD_RESERVATION_COLUMN_SINGLE_VALUE,
+    GATEWAY_VIEW_NAME,
+    columnReadJData(reservationNumber, RESERVATION_COLUMN_IDS.emailCc),
+  );
+  const value = data ? toSingleColumnValue(data) : '';
+  return value ? <InfoRow label={RESERVATION_INFO_MESSAGES.EXTRA_CONTACT} value={value} /> : null;
+}
+
+function MessagesCard({ loginId, reservationNumber }: { loginId: string; reservationNumber: string }) {
+  const { data, isLoading } = useFetchData(
+    ACTION_CODES.COMMUNICATION_LOG,
+    GATEWAY_VIEW_NAME,
+    communicationLogJData(loginId, reservationNumber),
+  );
+  const entries = useMemo(() => {
+    if (!data) return [];
+    try {
+      return toCommunicationLog(data);
+    } catch {
+      return [];
+    }
+  }, [data]);
+
+  return (
+    <InfoCard title={RESERVATION_INFO_MESSAGES.MESSAGES_TITLE}>
+      {isLoading && !data ? (
+        <ActivityIndicator color={colors.primary[600]} />
+      ) : entries.length === 0 ? (
+        <Text style={styles.muted}>{RESERVATION_INFO_MESSAGES.MESSAGES_EMPTY}</Text>
+      ) : (
+        <View style={styles.messages}>
+          {entries.map((entry) => (
+            <View key={entry.id} style={styles.message}>
+              <Text style={styles.messageMeta}>
+                {[entry.at ? `${formatSlashDate(entry.at)} ${formatClockTime(entry.at)}` : '', entry.channel]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+              <Text style={styles.body}>{entry.text}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </InfoCard>
   );
 }
 
 /** One end of the ride. Blank lines stay visible so the shape never shifts. */
-function AddressPane({ address }: { address: RideAddress }) {
+function StopPane({ stop, pickup }: { stop: RecordStop; pickup?: boolean }) {
+  const { place, airport } = stop;
+  const option = AIRPORT_PICKUP_OPTIONS.find((item) => item.value === airport.pickupOption)?.label;
   return (
     <InfoList>
-      <InfoRow label="City, State" value={address.cityState} />
-      <InfoRow label="Landmark" value={address.landmark} />
-      <InfoRow label="Cross Street1" value={address.crossStreet1} />
-      <InfoRow label="Cross Street2" value={address.crossStreet2} />
-      <InfoRow label="Pickup Point" value={address.pickupPoint} />
+      <InfoRow label="City, State" value={placeLocalityLine(place)} />
+      {place.kind === 'airport' ? (
+        <>
+          <InfoRow label="Airport" value={place.airportName} />
+          <InfoRow label={RESERVATION_MESSAGES.AIRLINE_LABEL} value={airport.airline} />
+          <InfoRow label={RESERVATION_MESSAGES.FLIGHT_LABEL} value={airport.flightNumber} />
+          {pickup ? <InfoRow label={RESERVATION_MESSAGES.PICKUP_OPTION_LABEL} value={option ?? ''} /> : null}
+        </>
+      ) : place.kind === 'landmark' ? (
+        <InfoRow label="Landmark" value={place.landmarkName} />
+      ) : (
+        <InfoRow label="St.# and Name" value={[place.streetNumber, place.streetName].filter(Boolean).join(' ')} />
+      )}
+      <InfoRow label="Cross Street1" value={place.crossStreet} />
+      <InfoRow label="Cross Street2" value={stop.crossStreet2} />
+      <InfoRow label="Pickup Point" value={place.pickupPoint || (pickup ? RESERVATION_INFO_MESSAGES.AS_DIRECTED : '')} />
+      {stop.directions ? <InfoRow label="Directions" value={stop.directions} /> : null}
     </InfoList>
   );
 }
@@ -215,7 +455,7 @@ function AddressPane({ address }: { address: RideAddress }) {
 function AsDirected() {
   return (
     <View style={styles.asDirected}>
-      <Text style={styles.asDirectedTitle}>As Directed</Text>
+      <Text style={styles.asDirectedTitle}>{RESERVATION_INFO_MESSAGES.AS_DIRECTED}</Text>
     </View>
   );
 }
@@ -231,7 +471,7 @@ function Reference({ label, value }: { label: string; value: string }) {
         style={[styles.referenceValue, filled ? null : styles.referenceEmpty]}
         selectable={filled}
       >
-        {filled ? value : 'Not issued'}
+        {filled ? value : RESERVATION_INFO_MESSAGES.NOT_ISSUED}
       </Text>
     </View>
   );
@@ -262,14 +502,15 @@ function EmailLink({ address }: { address: string }) {
 }
 
 const styles = StyleSheet.create({
+  state: { paddingVertical: space.xxl, alignItems: 'center' },
+  back: { alignSelf: 'flex-start' },
+
   refs: { gap: space.sm },
-  refsWide: { flexDirection: 'row', justifyContent: 'space-between', gap: space.lg },
+  refsWide: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space.lg },
   reference: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   referenceLabel: { color: colors.textBody, fontSize: 14, fontWeight: '700' },
   referenceValue: { color: colors.textTitle, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
   referenceEmpty: { color: colors.textDisabled, fontWeight: '400', letterSpacing: 0 },
-
-  statusBadge: { alignSelf: 'flex-start' },
 
   account: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: space.sm },
   accountValue: { color: colors.textStrong, fontSize: 14, fontWeight: '600' },
@@ -282,28 +523,18 @@ const styles = StyleSheet.create({
   emailPressed: { color: colors.textLinkHover },
   emailEmpty: { color: colors.textDisabled, fontSize: 14 },
 
-  confirm: {
-    backgroundColor: colors.dangerBg,
-    borderWidth: 1,
-    borderColor: colors.dangerBorder,
-    borderRadius: radii.lg,
-    padding: space.lg,
-    gap: space.sm,
+  body: { color: colors.textBody, fontSize: 14, lineHeight: 20 },
+  muted: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
+  messages: { gap: space.md },
+  message: {
+    gap: 2,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary[200],
+    paddingLeft: space.md,
+    borderRadius: radii.sm,
   },
-  confirmTitle: { color: colors.danger, fontSize: 15, fontWeight: '700' },
-  confirmBody: { color: colors.textBody, fontSize: 14, lineHeight: 20 },
-  confirmActions: { gap: space.md, marginTop: space.xs },
+  messageMeta: { color: colors.textMuted, fontSize: 12 },
 
-  notice: {
-    backgroundColor: colors.infoBg,
-    borderWidth: 1,
-    borderColor: colors.infoBorder,
-    borderRadius: radii.lg,
-    padding: space.md,
-    boxShadow: shadowValues.sm,
-  },
-  noticeText: { color: colors.info, fontSize: 14, lineHeight: 20 },
-
-  actions: { gap: space.md, marginTop: space.xs },
+  actions: { gap: space.md, marginTop: space.xs, flexWrap: 'wrap' },
   actionsWide: { flexDirection: 'row', justifyContent: 'center' },
 });

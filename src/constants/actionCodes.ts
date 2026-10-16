@@ -28,6 +28,78 @@ export const ACTION_CODES = {
   ACCOUNT_REQUIREMENTS_RS: 'PROF.S.ACCOUNT_REQUIREMENTS_RS',
   /** The whole new profile (41 P_* parameters) → o_code / o_message. */
   CREATE_PROFILE: 'PROF.I.PROFILE',
+
+  // ── Reservation flow: lookups (reverse-engineer-guide/05) ──────────────────
+  /** P_LOGIN_ID → saved addresses: address_id, country, state, city, zip_code, building_num, street_name, cross_street, pickup_point, …. */
+  USER_ADDRESSES: 'PROF.S.USER_ADDRESSES',
+  /** P_LOGIN_ID → the profile's home / office address rows (columns undocumented). */
+  USER_PROFILE_ADDRESSES: 'PROF.S.USER_PROFILE_ADDRESSES',
+  /** P_ACCOUNT_NUM → the company's own locations (columns undocumented). */
+  CORPORATE_ADDRESSES: 'PROF.S.CORPORATE_ADDRESSES',
+  /** P_LOGIN_ID, P_COLUMN_ID (contact type) → the profile's contacts of that type. */
+  LOAD_PROFILE_COLUMN_VALUES_BY_TYPE: 'PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE',
+  /** P_STREET_NUM, P_STREET_NAME, P_CITY_NAME, P_COUNTY_NAME, P_STATE_NAME, P_AIRPORT_NAME, P_LANDMARK_NAME, P_PU_DO_TYPE → zone; o_code / o_message. */
+  ZONE_THE_LOCATION: 'RES.S.ZONE_THE_LOCATION',
+  /** P_LAT, P_LON, P_ZIP → zone of a Google-searched place; o_code / o_message. */
+  GOOGLE_ZONE_NUM: 'RES.S.GOOGLE_ZONE_NUM',
+  /** No parameters → car types: car_type, car_type_name, max_passengers, max_luggage, description. */
+  VEHICLE_TYPE: 'RES.S.VEHICLE_TYPE',
+
+  // ── Booking wizard (guides 13–17) ──────────────────────────────────────────
+  /** P_LOGIN_ID_TO → profiles that let this login book on their behalf. */
+  LOAD_PROFILE_WHO_GRANTED_ACCESS: 'PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS',
+  /** P_ACCOUNT_NUM → which billing methods the account allows; o_code / o_message. */
+  BILLING_METHOD: 'RES.S.BILLING_METHOD',
+  /** P_LOGIN_ID, P_ACCOUNT_NUM, P_VIP_NUM → the account and VIP number on file. */
+  ACCOUNT_VIP_NUM: 'PROF.S.ACCOUNT_VIP_NUM',
+  /** P_ACCOUNT_NUM → o_code / o_message: is the account tied to a specific credit card? */
+  IS_CREDIT_CARD_SPECIFIC_ACCOUNT: 'RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT',
+  /** P_ACCOUNT_NUM, P_REQUIREMENT_NUM (1–4) → that requirement field's definition / values. */
+  ACCOUNT_REQUIREMENTS_LIST: 'RES.S.ACCOUNT_REQUIREMENTS_LIST',
+  /** P_ACCOUNT_NUMBER, P_VIP_NUMBER, P_IS_RES, P_ACCOUNT_REQUIREMENT1–4 → o_code / o_message. */
+  VERIFY_ACCOUNT_REQUIREMENTS: 'RES.S.VERIFY_ACCOUNT_REQUIREMENTS',
+  /** P_LOGIN_ID, P_CARD_TYPE, P_CARD_HOLDER_NAME, P_CARD_NUMBER, P_EXPIRATION_DATE, P_VERIFY_CODE → authorisation request; o_code / o_message. */
+  START_CREDIT_CARD_APPROVAL: 'RES.I.CREDIT_CARD_APPROVAL',
+  /** P_LOGIN_ID, P_REQUEST_NUM → the authorisation's outcome; o_code / o_message. */
+  CHECK_CREDIT_CARD_APPROVAL: 'RES.S.CREDIT_CARD_APPROVAL',
+  /** The whole booking (80 P_* parameters) → o_code / o_message (+ reservation number when returned). */
+  CREATE_RESERVATION: 'RES.I.RESERVATION',
+  /** P_RESERVATION_NUM + the whole booking + the *_OLD values → o_code / o_message. */
+  UPDATE_RESERVATION: 'RES.U.RESERVATION',
+  /** P_RES1, pickup / drop-off / payment fields, P_EMAILADDRESS, … → sends the confirmation e-mail; o_code / o_message. */
+  FORMAT_EMAIL_MESSAGE: 'RES.U.FORMAT_EMAIL_MESSAGE',
+
+  // ── Reservation records (guides 18–24) ─────────────────────────────────────
+  /** P_LOGIN_ID, P_DATE_FROM, P_DATE_TO, P_TOTAL_RECORDS → ride history rows. */
+  ALL_ORDERS: 'RES.S.ALL_ORDERS',
+  /** P_LOGIN_ID → open reservations that can still be changed or cancelled. */
+  UPDATABLE_ORDERS: 'RES.S.UPDATABLE_ORDERS',
+  /** P_LOGIN_ID, P_RESERVATION_NUM → one reservation record. */
+  LOAD_RESERVATION: 'RES.S.LOAD_RESERVATION',
+  /** P_LOGIN_ID, P_RESERVATION_NUM, P_CANCEL_REASON → o_code / o_message. */
+  CANCEL_RESERVATION: 'RES.U.CANCEL_RESERVATION',
+  /** P_CAR_NUM → the car and its driver (columns undocumented). */
+  CAR_INFO: 'PROF.S.CAR_INFO',
+  /** P_LOGIN_ID, P_RESERVATION_NUM → messages and confirmations sent for the ride. */
+  COMMUNICATION_LOG: 'RES.S.COMMUNICATION_LOG',
+  /** P_RESERVATION_NUM → the car's logged route: status, date, time, latitude, longitude. */
+  VEHICLE_LOG: 'RES.S.VEHICLE_LOG',
+  /** P_CAR_NUM → o_Latitude / o_Longitude: where the car is now. */
+  CAR_POSITION: 'RES.S.LATITUDE_LONGITUDE_FOR_CAR',
+  /** No parameters → the questions a rider can ask about a ride. */
+  ALL_PREDEFINED_QUESTIONS: 'RES.S.ALL_PREDEFINED_QUESTIONS',
+  /** P_LOGIN_ID, P_RESERVATION_NUM, P_QUESTION_ID, P_ADDITIONAL_MESSAGE → o_code / o_message. */
+  ASK_QUESTION: 'RES.I.ASKED_QUESTIONS',
+  /** P_RESERVATION_NUM, P_COLUMN_ID → o_ColumnValue: one extra value stored on the reservation. */
+  LOAD_RESERVATION_COLUMN_SINGLE_VALUE: 'RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE',
+  /** P_RESERVATION_NUM, P_COLUMN_ID → every extra value of that type on the reservation. */
+  LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE: 'RES.S.LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE',
+  /** P_RESERVATION_NUM, P_COLUMN_ID, P_COLUMN_VALUE → o_code / o_message. */
+  ADD_RESERVATION_COLUMN_VALUE: 'RES.I.RESERVATION_COLUMN_VALUE',
+  /** P_RESERVATION_NUM, P_COLUMN_ID, P_COLUMN_VALUE_OLD, P_COLUMN_VALUE_NEW → o_code / o_message. */
+  UPDATE_RESERVATION_COLUMN_VALUE: 'RES.U.RESERVATION_COLUMN_VALUE',
+  /** P_RESERVATION_NUM, P_COLUMN_ID, P_COLUMN_VALUE → o_code / o_message. */
+  DELETE_RESERVATION_COLUMN_VALUE: 'RES.D.RESERVATION_COLUMN_VALUE',
 } as const;
 
 export type ActionCode = (typeof ACTION_CODES)[keyof typeof ACTION_CODES];

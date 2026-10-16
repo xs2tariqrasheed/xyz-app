@@ -22,6 +22,8 @@ export type DateFieldProps = {
   sheetSubtitle?: string;
   required?: boolean;
   hint?: string;
+  /** Validation message; replaces the hint and reddens the control. */
+  error?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -37,6 +39,7 @@ export function DateField({
   sheetSubtitle = "",
   required,
   hint,
+  error,
   style,
 }: DateFieldProps) {
   const [open, setOpen] = useState(false);
@@ -48,6 +51,7 @@ export function DateField({
         label={label}
         required={required}
         hint={hint}
+        error={error}
         style={style}
         value={formatFullDate(value)}
         caption={formatDayDistance(value, today)}

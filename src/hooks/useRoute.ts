@@ -28,7 +28,7 @@ export function useRoute(
     const controller = new AbortController();
     let cancelled = false;
 
-    fetchRoute(origin.placeId, destination.placeId, controller.signal)
+    fetchRoute(origin, destination, controller.signal)
       .then((route) => {
         if (!cancelled) setResult({ key, route, error: null });
       })

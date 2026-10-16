@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 24 — Ride Rating, Complaints, Contact & Account Requests
 
 ## 1. Purpose

@@ -1,155 +1,244 @@
-import { Stack } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
-import { RideResults } from '@/components/rides/RideResults';
+import { CancelReservationSheet } from '@/components/rides/CancelReservationSheet';
 import type { RideAction } from '@/components/rides/RideActionLink';
+import { RideQuestionSheet } from '@/components/rides/RideQuestionSheet';
+import { RideResults } from '@/components/rides/RideResults';
 import { RideSearchForm, type RideSearchFormValue } from '@/components/rides/RideSearchForm';
-import { searchRides, type Ride } from '@/services/rides';
+import { Alert } from '@/components/ui/Alert';
+import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
+import { RIDES_MESSAGES } from '@/constants/messages';
+import { useAuth } from '@/context/AuthContext';
+import { useFetchData } from '@/hooks/useFetchData';
+import { useOpenReservation } from '@/hooks/useReservationActions';
+import {
+  allOrdersJData,
+  filterRides,
+  HISTORY_REACH_DAYS,
+  type Ride,
+  toRides,
+  updatableOrdersJData,
+} from '@/services/rides';
 import { colors, radii, space } from '@/theme';
 import { addDays, startOfDay } from '@/utils/datetime';
 
-/** How far back the history goes, and how far ahead the default range looks. */
-const HISTORY_DAYS = 365;
+type Tab = 'upcoming' | 'history';
+
+/** Default history range: the last three months up to today (guide 18). */
 const DEFAULT_FROM_OFFSET = -90;
-const DEFAULT_TO_OFFSET = 30;
 
-const ACTION_NOTICES: Record<RideAction, (ride: Ride) => string> = {
-  modify: (ride) => `Editing ride ${ride.id} opens once the dispatch API is connected.`,
-  cancel: (ride) => `Cancelling ride ${ride.id} needs the dispatch API — nothing has been changed.`,
-  feedback: (ride) => `Feedback for ride ${ride.id} will post once the dispatch API is connected.`,
-};
+type Notice = { tone: 'success' | 'danger'; message: string } | null;
 
+/**
+ * The customer's rides (reverse-engineer-guide/18, 19): open reservations
+ * that can still be changed or cancelled (`RES.S.UPDATABLE_ORDERS`), and the
+ * ride history search (`RES.S.ALL_ORDERS`). Each ride opens its details.
+ */
 export default function RideSearchScreen() {
+  const router = useRouter();
+  const { session } = useAuth();
+  const loginId = session?.loginId ?? '';
+
   // One "now" for the whole screen, so the calendar floor, the default range
   // and the "can this still be modified?" test cannot disagree.
   const [today] = useState(() => new Date());
-  const [earliest] = useState(() => addDays(startOfDay(today), -HISTORY_DAYS));
+  const [earliest] = useState(() => addDays(startOfDay(today), -HISTORY_REACH_DAYS));
+  const [tab, setTab] = useState<Tab>('upcoming');
+  const [notice, setNotice] = useState<Notice>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [asking, setAsking] = useState<string | null>(null);
+  // Bumped after a cancel so both lists reload.
+  const [generation, setGeneration] = useState(0);
+  const opener = useOpenReservation();
 
-  const [filters, setFilters] = useState<RideSearchFormValue>(() => ({
-    from: addDays(startOfDay(today), DEFAULT_FROM_OFFSET),
-    to: addDays(startOfDay(today), DEFAULT_TO_OFFSET),
-    paymentMethod: 'all',
-  }));
-
-  const [rides, setRides] = useState<readonly Ride[]>([]);
-  // The range the listed rides belong to — it only catches up with the form
-  // when a search actually returns, so the header never lies about the results.
-  const [range, setRange] = useState({ from: filters.from, to: filters.to });
-  const [loading, setLoading] = useState(true);
-  const [searched, setSearched] = useState(false);
-  const [error, setError] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  // Only the newest request may write to state: a second Search tapped while
-  // the first is in flight must not be overwritten by the slower answer.
-  const requestRef = useRef(0);
-
-  const settle = useCallback(
-    (request: number, next: RideSearchFormValue, results: readonly Ride[] | null) => {
-      if (requestRef.current !== request) return;
-      setRides(results ?? []);
-      setRange({ from: next.from, to: next.to });
-      setError(results === null);
-      setLoading(false);
-      setSearched(true);
-    },
-    [],
-  );
-
-  const startSearch = useCallback(
-    (next: RideSearchFormValue) => {
-      const request = requestRef.current + 1;
-      requestRef.current = request;
-
-      return searchRides(next).then(
-        (results) => settle(request, next, results),
-        () => settle(request, next, null),
-      );
-    },
-    [settle],
-  );
-
-  // First paint shows the default range rather than an empty table. `loading`
-  // already starts true, so the effect only has to write back the answer.
-  useEffect(() => {
-    void startSearch({
-      from: addDays(startOfDay(today), DEFAULT_FROM_OFFSET),
-      to: addDays(startOfDay(today), DEFAULT_TO_OFFSET),
-      paymentMethod: 'all',
-    });
-  }, [startSearch, today]);
+  const onAction = (action: RideAction, ride: Ride) => {
+    setNotice(null);
+    opener.clearError();
+    if (action === 'view') router.push({ pathname: '/reservation-info', params: { rideno: ride.id } });
+    else if (action === 'voucher') router.push({ pathname: '/voucher', params: { rideno: ride.id } });
+    else if (action === 'modify') void opener.open(ride.id, 'edit');
+    else if (action === 'cancel') setCancelling(ride.id);
+    else setAsking(ride.id);
+  };
 
   return (
-    <Screen title="Search rides">
-      <Stack.Screen options={{ title: 'Search rides' }} />
+    <Screen title={RIDES_MESSAGES.SCREEN_TITLE}>
+      <Stack.Screen options={{ title: RIDES_MESSAGES.SCREEN_TITLE }} />
 
-      <RideSearchForm
-        value={filters}
-        onChange={setFilters}
-        onSubmit={() => {
-          setNotice(null);
-          setLoading(true);
-          void startSearch(filters);
+      <Tabs value={tab} onChange={setTab} />
+
+      {notice ? <Alert tone={notice.tone} message={notice.message} /> : null}
+      {opener.error ? <Alert tone="danger" message={opener.error} /> : null}
+
+      {tab === 'upcoming' ? (
+        <UpcomingRides key={generation} loginId={loginId} now={today} onAction={onAction} />
+      ) : (
+        <RideHistory key={generation} loginId={loginId} today={today} earliest={earliest} onAction={onAction} />
+      )}
+
+      <CancelReservationSheet
+        reservationNumber={cancelling}
+        onClose={() => setCancelling(null)}
+        onCancelled={() => {
+          setCancelling(null);
+          setNotice({ tone: 'success', message: RIDES_MESSAGES.CANCEL_DONE });
+          setGeneration((count) => count + 1);
         }}
-        today={today}
-        earliest={earliest}
-        searching={loading}
       />
 
-      {notice ? <Notice message={notice} onDismiss={() => setNotice(null)} /> : null}
-
-      <RideResults
-        rides={rides}
-        range={range}
-        now={today}
-        loading={loading}
-        searched={searched}
-        failed={error}
-        onAction={(action, ride) => setNotice(ACTION_NOTICES[action](ride))}
+      <RideQuestionSheet
+        reservationNumber={asking}
+        onClose={() => setAsking(null)}
+        onSent={(message) => setNotice({ tone: 'success', message })}
       />
     </Screen>
   );
 }
 
-/** Says what a row action would do, until those flows exist. */
-function Notice({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+/** Maps a list response, treating a refusal like a failed load. */
+function useRides(data: Parameters<typeof toRides>[0] | undefined) {
+  return useMemo((): { rides: Ride[]; refused: boolean } => {
+    if (!data) return { rides: [], refused: false };
+    try {
+      return { rides: toRides(data), refused: false };
+    } catch {
+      return { rides: [], refused: true };
+    }
+  }, [data]);
+}
+
+function UpcomingRides({
+  loginId,
+  now,
+  onAction,
+}: {
+  loginId: string;
+  now: Date;
+  onAction: (action: RideAction, ride: Ride) => void;
+}) {
+  const { data, isLoading, isError, refetch } = useFetchData(
+    ACTION_CODES.UPDATABLE_ORDERS,
+    GATEWAY_VIEW_NAME,
+    updatableOrdersJData(loginId),
+  );
+  const { rides, refused } = useRides(data);
+  // Soonest first: what is coming next leads.
+  const sorted = useMemo(() => [...rides].reverse(), [rides]);
+
   return (
-    <View style={styles.notice}>
-      <Text style={styles.noticeText}>{message}</Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Dismiss"
-        onPress={onDismiss}
-        style={({ pressed }) => [styles.dismiss, pressed ? styles.pressed : null]}
-      >
-        <Text style={styles.dismissGlyph}>✕</Text>
-      </Pressable>
+    <RideResults
+      title={RIDES_MESSAGES.UPCOMING_TITLE}
+      rides={sorted}
+      now={now}
+      loading={isLoading && !data}
+      searched
+      failed={isError || refused}
+      failedTitle={RIDES_MESSAGES.UPCOMING_FAILED}
+      emptyTitle={RIDES_MESSAGES.UPCOMING_EMPTY}
+      onRetry={refetch}
+      onAction={onAction}
+    />
+  );
+}
+
+function RideHistory({
+  loginId,
+  today,
+  earliest,
+  onAction,
+}: {
+  loginId: string;
+  today: Date;
+  earliest: Date;
+  onAction: (action: RideAction, ride: Ride) => void;
+}) {
+  const [filters, setFilters] = useState<RideSearchFormValue>(() => ({
+    from: addDays(startOfDay(today), DEFAULT_FROM_OFFSET),
+    to: startOfDay(today),
+    paymentMethod: 'all',
+  }));
+  // The search that ran — the list and its header only follow the form on Search.
+  const [searched, setSearched] = useState(filters);
+
+  const { data, isLoading, isError, refetch } = useFetchData(
+    ACTION_CODES.ALL_ORDERS,
+    GATEWAY_VIEW_NAME,
+    allOrdersJData(loginId, searched.from, searched.to),
+  );
+  const { rides, refused } = useRides(data);
+  // The contract has no payment parameter, so the filter runs here.
+  const shown = useMemo(() => filterRides(rides, searched), [rides, searched]);
+
+  return (
+    <>
+      <RideSearchForm
+        value={filters}
+        onChange={setFilters}
+        onSubmit={() => {
+          // Same inputs → same request key, so an unchanged search refetches explicitly.
+          if (JSON.stringify(filters) === JSON.stringify(searched)) refetch();
+          setSearched(filters);
+        }}
+        today={today}
+        earliest={earliest}
+        searching={isLoading}
+      />
+
+      <RideResults
+        rides={shown}
+        range={{ from: searched.from, to: searched.to }}
+        now={today}
+        loading={isLoading}
+        searched
+        failed={isError || refused}
+        failedTitle={RIDES_MESSAGES.HISTORY_FAILED}
+        onAction={onAction}
+      />
+    </>
+  );
+}
+
+/** Upcoming | History — a two-way switch, the same on every platform. */
+function Tabs({ value, onChange }: { value: Tab; onChange: (next: Tab) => void }) {
+  const options: { value: Tab; label: string }[] = [
+    { value: 'upcoming', label: RIDES_MESSAGES.UPCOMING_TAB },
+    { value: 'history', label: RIDES_MESSAGES.HISTORY_TAB },
+  ];
+  return (
+    <View style={styles.tabs} accessibilityRole="tablist">
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            accessibilityLabel={option.label}
+            onPress={() => onChange(option.value)}
+            style={[styles.tab, selected ? styles.tabSelected : null]}
+          >
+            <Text style={[styles.tabLabel, selected ? styles.tabLabelSelected : null]}>{option.label}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  notice: {
+  tabs: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    backgroundColor: colors.infoBg,
-    borderWidth: 1,
-    borderColor: colors.infoBorder,
-    borderRadius: radii.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm + 2,
-  },
-  noticeText: { flex: 1, color: colors.info, fontSize: 13, lineHeight: 18 },
-  dismiss: {
-    width: 26,
-    height: 26,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surfaceSunken,
     borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 3,
+    gap: 3,
   },
-  pressed: { opacity: 0.6 },
-  dismissGlyph: { color: colors.info, fontSize: 12, fontWeight: '700' },
+  tab: { paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radii.pill },
+  tabSelected: { backgroundColor: colors.surface },
+  tabLabel: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
+  tabLabelSelected: { color: colors.primary[600] },
 });

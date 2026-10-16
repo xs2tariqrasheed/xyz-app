@@ -1,18 +1,13 @@
-import { googleMapsApiKey, hasGoogleMapsKey } from '@/config/maps';
-
-const COMPUTE_ROUTES_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+import { hasGoogleMapsKey } from '@/config/maps';
+import { drivingDirections } from '@/services/googleDirections';
+import type { DirectionsPoint } from '@/services/googleDirectionsTypes';
+import { type AddressSuggestion, formatAddress } from '@/services/places';
 
 /**
- * Routes API bills per requested field, so ask for exactly what the map and
- * the summary strip render — nothing more.
+ * Driving routes for the booking form's map, from Google Directions (legacy):
+ * the `directions/json` web service on iOS / Android and the Maps JavaScript
+ * API's `DirectionsService` in the browser (`googleDirections(.web).ts`).
  */
-const FIELD_MASK = [
-  'routes.duration',
-  'routes.distanceMeters',
-  'routes.polyline.encodedPolyline',
-  'routes.legs.startLocation',
-  'routes.legs.endLocation',
-].join(',');
 
 export type LatLng = { latitude: number; longitude: number };
 
@@ -20,83 +15,39 @@ export type RouteSummary = {
   /** Encoded polyline of the driving path, ready for the static map. */
   encodedPolyline: string;
   distanceMeters: number;
+  /** Drive time in current traffic when Google has it. */
   durationSeconds: number;
   start: LatLng;
   end: LatLng;
 };
 
-type ComputeRoutesResponse = {
-  routes?: {
-    duration?: string;
-    distanceMeters?: number;
-    polyline?: { encodedPolyline?: string };
-    legs?: {
-      startLocation?: { latLng?: { latitude?: number; longitude?: number } };
-      endLocation?: { latLng?: { latitude?: number; longitude?: number } };
-    }[];
-  }[];
-};
-
 /**
- * Driving route between two places.
+ * Driving route between two places, through any stops in between.
  *
- * Returns `null` when no key is configured — the map then draws its schematic
- * preview instead of inventing a path that does not exist.
+ * Returns `null` when no key is configured or Google finds no route — the map
+ * then draws its schematic preview instead of inventing a path.
  */
 export async function fetchRoute(
-  originPlaceId: string,
-  destinationPlaceId: string,
+  origin: AddressSuggestion,
+  destination: AddressSuggestion,
   signal?: AbortSignal,
+  stops: readonly AddressSuggestion[] = [],
 ): Promise<RouteSummary | null> {
   if (!hasGoogleMapsKey) return null;
-
-  const response = await fetch(COMPUTE_ROUTES_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': googleMapsApiKey,
-      'X-Goog-FieldMask': FIELD_MASK,
-    },
-    body: JSON.stringify({
-      origin: { placeId: originPlaceId },
-      destination: { placeId: destinationPlaceId },
-      travelMode: 'DRIVE',
-      routingPreference: 'TRAFFIC_AWARE',
-    }),
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Route lookup failed (${response.status})`);
-  }
-
-  const json = (await response.json()) as ComputeRoutesResponse;
-  const route = json.routes?.[0];
-  const encodedPolyline = route?.polyline?.encodedPolyline;
-  if (!route || !encodedPolyline) return null;
-
-  const legs = route.legs ?? [];
-  const start = legs[0]?.startLocation?.latLng;
-  const end = legs[legs.length - 1]?.endLocation?.latLng;
-
-  return {
-    encodedPolyline,
-    distanceMeters: route.distanceMeters ?? 0,
-    durationSeconds: parseDuration(route.duration),
-    start: toLatLng(start),
-    end: toLatLng(end),
-  };
+  return drivingDirections(routePoint(origin), routePoint(destination), stops.map(routePoint), signal);
 }
 
-/** Routes API returns protobuf durations as seconds with a trailing `s`. */
-function parseDuration(duration: string | undefined): number {
-  if (!duration) return 0;
-  const seconds = Number.parseFloat(duration.replace(/s$/, ''));
-  return Number.isFinite(seconds) ? seconds : 0;
-}
-
-function toLatLng(value: { latitude?: number; longitude?: number } | undefined): LatLng {
-  return { latitude: value?.latitude ?? 0, longitude: value?.longitude ?? 0 };
+/**
+ * A Google prediction routes by its place id; a saved place has no Google id,
+ * so it routes by its coordinates when it has them, else by its address text.
+ */
+function routePoint(stop: AddressSuggestion): DirectionsPoint {
+  const place = stop.place;
+  if (!place) return { placeId: stop.placeId };
+  const latitude = Number.parseFloat(place.latitude);
+  const longitude = Number.parseFloat(place.longitude);
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) return { latitude, longitude };
+  return { address: formatAddress(stop) };
 }
 
 /** "12.4 mi" / "800 m" — display only, never fed back into a request. */

@@ -1,5 +1,6 @@
 import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { Button } from '@/components/ui/Button';
 import { SearchGlyph } from '@/components/ui/Glyph';
 import type { Ride } from '@/services/rides';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
@@ -11,8 +12,16 @@ import { RideResultsTable } from './RideResultsTable';
 
 export type RideResultsProps = {
   rides: readonly Ride[];
-  /** The range the listed rides were fetched for — not the live form values. */
-  range: { from: Date; to: Date };
+  /** The range the listed rides were fetched for — not the live form values. Omit for an undated list. */
+  range?: { from: Date; to: Date };
+  /** Heading; "Ride history" by default. */
+  title?: string;
+  /** Shown when the list is empty after a load. */
+  emptyTitle?: string;
+  /** Title when the load failed. */
+  failedTitle?: string;
+  /** Offered beside a failed load. */
+  onRetry?: () => void;
   now: Date;
   loading: boolean;
   /** False until the first search has run. */
@@ -29,6 +38,10 @@ export type RideResultsProps = {
 export function RideResults({
   rides,
   range,
+  title = 'Ride history',
+  emptyTitle,
+  failedTitle,
+  onRetry,
   now,
   loading,
   searched,
@@ -42,16 +55,18 @@ export function RideResults({
     <View style={styles.root}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Ride history</Text>
+          <Text style={styles.title}>{title}</Text>
           <Text style={styles.count}>
             {loading
               ? 'Searching…'
-              : `${rides.length} ${rides.length === 1 ? 'ride' : 'rides'}, newest first`}
+              : `${rides.length} ${rides.length === 1 ? 'ride' : 'rides'}${range ? ', newest first' : ''}`}
           </Text>
         </View>
-        <Text style={styles.range}>
-          {formatSlashDate(range.from)} – {formatSlashDate(range.to)}
-        </Text>
+        {range ? (
+          <Text style={styles.range}>
+            {formatSlashDate(range.from)} – {formatSlashDate(range.to)}
+          </Text>
+        ) : null}
       </View>
 
       {loading ? (
@@ -62,14 +77,18 @@ export function RideResults({
       ) : failed ? (
         <Placeholder>
           <SearchGlyph color={colors.danger} size={26} />
-          <Text style={styles.placeholderTitle}>We could not load your rides</Text>
-          <Text style={styles.placeholderBody}>Tap Search to try again.</Text>
+          <Text style={styles.placeholderTitle}>{failedTitle ?? 'We could not load your rides'}</Text>
+          {onRetry ? (
+            <Button label="Try again" variant="outline" onPress={onRetry} />
+          ) : (
+            <Text style={styles.placeholderBody}>Tap Search to try again.</Text>
+          )}
         </Placeholder>
       ) : rides.length === 0 ? (
         <Placeholder>
           <SearchGlyph color={colors.textMuted} size={26} />
           <Text style={styles.placeholderTitle}>
-            {searched ? 'No rides in this range' : 'No search run yet'}
+            {emptyTitle ?? (searched ? 'No rides in this range' : 'No search run yet')}
           </Text>
         </Placeholder>
       ) : tabular ? (

@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 16 — Booking Step 3: Billing Method & Payment
 
 Part of the booking wizard (module 13). Submitted with `hfactive=2`.

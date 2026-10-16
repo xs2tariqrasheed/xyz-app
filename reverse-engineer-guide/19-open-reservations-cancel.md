@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 19 — Open Reservations ("Update/Cancel Reservation") & Cancellation
 
 ## 1. Purpose

@@ -15,6 +15,8 @@ export type NextRideCardProps = {
   ride: Ride | null;
   now: Date;
   loading: boolean;
+  /** Starts a new booking from the empty state. */
+  onBook: () => void;
 };
 
 /**
@@ -23,7 +25,7 @@ export type NextRideCardProps = {
  * A car already on the road outranks a future booking; with neither, the card
  * becomes the booking prompt rather than an empty slot.
  */
-export function NextRideCard({ ride, now, loading }: NextRideCardProps) {
+export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) {
   const { width } = useWindowDimensions();
   const router = useRouter();
   const roomy = width >= breakpoints.sm;
@@ -45,7 +47,7 @@ export function NextRideCard({ ride, now, loading }: NextRideCardProps) {
         <Text style={styles.emptyBody}>
           Book ahead for a set date and time, or have a car sent to you now.
         </Text>
-        <Button label="Book a ride" size="lg" onPress={() => router.navigate('/reserve')} />
+        <Button label="Book a ride" size="lg" onPress={onBook} />
       </View>
     );
   }
@@ -76,7 +78,10 @@ export function NextRideCard({ ride, now, loading }: NextRideCardProps) {
         </View>
 
         <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
-          <Button label="View details" onPress={() => router.navigate('/reservation-info')} />
+          <Button
+            label="View details"
+            onPress={() => router.navigate({ pathname: '/reservation-info', params: { rideno: ride.id } })}
+          />
           <Button label="All rides" variant="outline" onPress={() => router.navigate('/rides')} />
         </View>
       </View>

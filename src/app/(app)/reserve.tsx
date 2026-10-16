@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   BillingMethodSection,
-  emptyCardDetails,
+  emptyBilling,
   type BillingMethodValue,
 } from '@/components/reservation/BillingMethodSection';
 import {
@@ -26,25 +26,36 @@ import {
   type PreferencesValue,
 } from '@/components/reservation/PreferencesSection';
 import {
+  emptyRideAddressInfo,
   RideAddressInfoSection,
   type RideAddressInfoValue,
 } from '@/components/reservation/RideAddressInfoSection';
 import { ReservationConfirmSection } from '@/components/reservation/ReservationConfirmSection';
-import {
-  makeReservationNumber,
-  RideReceiptSection,
-} from '@/components/reservation/RideReceiptSection';
+import { RideReceiptSection } from '@/components/reservation/RideReceiptSection';
 import { SectionCard } from '@/components/reservation/SectionCard';
-import { DEFAULT_CAR_TYPE } from '@/components/reservation/carTypes';
 import { RESERVATION_SECTIONS } from '@/components/reservation/sections';
 import { StepProgress, StepRail } from '@/components/reservation/StepRail';
 import { AppHeader } from '@/components/nav/AppHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { useVehicleTypes } from '@/hooks/useReservationLookups';
+import { findVehicleType } from '@/services/vehicleTypes';
 import { breakpoints, colors, contentMaxWidth, formMaxWidth, radii, space } from '@/theme';
-import { nextSlot, startOfDay } from '@/utils/datetime';
+import { nextSlot, pad2, startOfDay } from '@/utils/datetime';
 
 const LAST_INDEX = RESERVATION_SECTIONS.length - 1;
+
+/**
+ * This original layout is not connected to the gateway — Reservation 2
+ * (`/reserver-2`) is the wired booking flow. The number below is a local
+ * placeholder for this layout's receipt only: a `W` and the booking's
+ * month/day/hour/minute/second.
+ */
+function placeholderReservationNumber(bookedAt: Date): string {
+  const stamp =
+    pad2(bookedAt.getMonth() + 1) + pad2(bookedAt.getDate()) + pad2(bookedAt.getHours());
+  return `W${stamp}${pad2(bookedAt.getMinutes())}${pad2(bookedAt.getSeconds())}`;
+}
 
 export default function MakeReservationScreen() {
   const { width } = useWindowDimensions();
@@ -64,29 +75,16 @@ export default function MakeReservationScreen() {
     date: startOfDay(today),
     time: nextSlot(today),
     estimatedTime: nextSlot(today),
+    bookingFor: '',
   }));
-  const [addresses, setAddresses] = useState<RideAddressInfoValue>({
-    pickup: null,
-    pickupNotes: '',
-    destination: null,
-    destinationNotes: '',
-  });
-  const [billing, setBilling] = useState<BillingMethodValue>({
-    method: 'corporate',
-    // Stands in for the account on the customer's profile, which is why the
-    // field renders locked behind an Edit button rather than empty.
-    accountNumber: 'CORP-48213',
-    vipNumber: '',
-    card: emptyCardDetails,
-    saveCard: false,
-  });
-  const [preferences, setPreferences] = useState<PreferencesValue>(() =>
-    emptyPreferences(DEFAULT_CAR_TYPE),
-  );
+  const [addresses, setAddresses] = useState<RideAddressInfoValue>(emptyRideAddressInfo);
+  const [billing, setBilling] = useState<BillingMethodValue>(() => emptyBilling());
+  const [preferences, setPreferences] = useState<PreferencesValue>(() => emptyPreferences());
+  const vehicleTypes = useVehicleTypes();
+  const carLabel = findVehicleType(vehicleTypes.items, preferences.carType)?.label ?? '';
 
-  // Stands in for the number a booking endpoint will return; fixed for the
-  // life of the screen so the receipt never renumbers itself mid-flow.
-  const [reservationNumber] = useState(() => makeReservationNumber(today));
+  // Fixed for the life of the screen so the receipt never renumbers itself mid-flow.
+  const [reservationNumber] = useState(() => placeholderReservationNumber(today));
 
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -119,8 +117,10 @@ export default function MakeReservationScreen() {
     setAddresses({
       pickup: addresses.destination,
       pickupNotes: addresses.destinationNotes,
+      pickupLeg: addresses.destinationLeg,
       destination: addresses.pickup,
       destinationNotes: addresses.pickupNotes,
+      destinationLeg: addresses.pickupLeg,
     });
     setInfo((current) => ({ ...current, isLive: false }));
     goToSection(0);
@@ -164,13 +164,18 @@ export default function MakeReservationScreen() {
                 ) : section.id === 'billing' ? (
                   <BillingMethodSection value={billing} onChange={setBilling} today={today} />
                 ) : section.id === 'preferences' ? (
-                  <PreferencesSection value={preferences} onChange={setPreferences} />
+                  <PreferencesSection
+                    value={preferences}
+                    onChange={setPreferences}
+                    vehicleTypes={vehicleTypes}
+                  />
                 ) : section.id === 'confirm' ? (
                   <ReservationConfirmSection
                     info={info}
                     addresses={addresses}
                     billing={billing}
                     preferences={preferences}
+                    carLabel={carLabel}
                     onEdit={goToSection}
                   />
                 ) : section.id === 'receipt' ? (

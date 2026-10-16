@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 
 import { Field } from '@/components/ui/Field';
+import { ADDRESS_FIELD_MESSAGES } from '@/constants/messages';
 import { useAddressSuggestions } from '@/hooks/useAddressSuggestions';
-import { hasGoogleMapsKey } from '@/config/maps';
 import { formatAddress, MIN_QUERY_LENGTH, type AddressSuggestion } from '@/services/places';
 import { colors, focusedFieldStyle, nativeFocusRingReset, radii, shadowValues, space } from '@/theme';
 
@@ -29,6 +29,13 @@ export type AddressFieldProps = {
   /** Fired when the text input takes focus — lets a parent highlight a group. */
   onFocus?: () => void;
   onBlur?: () => void;
+  /**
+   * The customer's own places (saved, profile and company addresses), listed
+   * above the search results and filtered by what is typed.
+   */
+  savedOptions?: readonly AddressSuggestion[];
+  /** Validation message under the field. */
+  error?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -59,6 +66,8 @@ export function AddressField({
   hint,
   onFocus,
   onBlur,
+  savedOptions = [],
+  error: fieldError,
   style,
 }: AddressFieldProps) {
   const [query, setQuery] = useState(() => (value ? formatAddress(value) : ''));
@@ -73,8 +82,15 @@ export function AddressField({
     setQuery(value ? formatAddress(value) : '');
   }
 
-  const { suggestions, loading, error } = useAddressSuggestions(query, open);
-  const showList = open && query.trim().length >= MIN_QUERY_LENGTH;
+  // The committed address in the box is not a search: every saved place shows.
+  const needle = query.trim().toLowerCase();
+  const searching = needle.length > 0 && (!value || query !== formatAddress(value));
+  const { suggestions, loading, error } = useAddressSuggestions(query, open && searching);
+  const savedMatches = savedOptions.filter(
+    (option) => !searching || formatAddress(option).toLowerCase().includes(needle),
+  );
+  const searchable = query.trim().length >= MIN_QUERY_LENGTH && searching;
+  const showList = open && (searchable || savedMatches.length > 0);
 
   const select = (address: AddressSuggestion) => {
     setQuery(formatAddress(address));
@@ -90,7 +106,7 @@ export function AddressField({
 
   return (
     <View style={[styles.root, showList ? styles.rootRaised : null, style]}>
-      <Field label={label} required={required} hint={hint}>
+      <Field label={label} required={required} hint={hint} error={fieldError}>
         <View style={[styles.control, focused ? styles.controlFocused : null]}>
           <View style={[styles.marker, { backgroundColor: markerColor }]}>
             <Text style={styles.markerLabel}>{marker}</Text>
@@ -137,46 +153,72 @@ export function AddressField({
 
       {showList ? (
         <View style={styles.dropdown}>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          {!error && suggestions.length === 0 && !loading ? (
-            <Text style={styles.empty}>No matching addresses.</Text>
+          {savedMatches.length > 0 ? (
+            <Text style={styles.groupLabel}>{ADDRESS_FIELD_MESSAGES.SAVED_GROUP}</Text>
           ) : null}
-
-          {suggestions.map((suggestion, index) => (
-            <Pressable
-              key={suggestion.placeId}
-              accessibilityRole="button"
-              accessibilityLabel={formatAddress(suggestion)}
-              // Press-in beats the input's blur, which would otherwise close
-              // the list before the tap lands.
-              onPressIn={() => select(suggestion)}
-              {...PRESS_IN_WITHOUT_DELAY}
-              style={({ pressed }) => [
-                styles.option,
-                index > 0 ? styles.optionDivided : null,
-                pressed ? styles.optionPressed : null,
-              ]}
-            >
-              <Text style={styles.optionPrimary} numberOfLines={1}>
-                {suggestion.primary}
-              </Text>
-              {suggestion.secondary ? (
-                <Text style={styles.optionSecondary} numberOfLines={1}>
-                  {suggestion.secondary}
-                </Text>
-              ) : null}
-            </Pressable>
+          {savedMatches.map((option, index) => (
+            <Option
+              key={option.placeId}
+              suggestion={option}
+              divided={index > 0}
+              onSelect={select}
+            />
           ))}
 
-          {!hasGoogleMapsKey ? (
-            <Text style={styles.sampleNote}>
-              Sample addresses — add a Google Maps key for live results.
-            </Text>
+          {searchable && error ? <Text style={styles.error}>{error}</Text> : null}
+
+          {searchable && !error && suggestions.length === 0 && !loading && savedMatches.length === 0 ? (
+            <Text style={styles.empty}>{ADDRESS_FIELD_MESSAGES.NO_MATCHES}</Text>
           ) : null}
+
+          {searchable
+            ? suggestions.map((suggestion, index) => (
+                <Option
+                  key={suggestion.placeId}
+                  suggestion={suggestion}
+                  divided={index > 0 || savedMatches.length > 0}
+                  onSelect={select}
+                />
+              ))
+            : null}
         </View>
       ) : null}
     </View>
+  );
+}
+
+function Option({
+  suggestion,
+  divided,
+  onSelect,
+}: {
+  suggestion: AddressSuggestion;
+  divided: boolean;
+  onSelect: (suggestion: AddressSuggestion) => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={formatAddress(suggestion)}
+      // Press-in beats the input's blur, which would otherwise close the list
+      // before the tap lands.
+      onPressIn={() => onSelect(suggestion)}
+      {...PRESS_IN_WITHOUT_DELAY}
+      style={({ pressed }) => [
+        styles.option,
+        divided ? styles.optionDivided : null,
+        pressed ? styles.optionPressed : null,
+      ]}
+    >
+      <Text style={styles.optionPrimary} numberOfLines={1}>
+        {suggestion.primary}
+      </Text>
+      {suggestion.secondary ? (
+        <Text style={styles.optionSecondary} numberOfLines={1}>
+          {suggestion.secondary}
+        </Text>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -239,9 +281,12 @@ const styles = StyleSheet.create({
 
   error: { color: colors.danger, fontSize: 13, padding: space.md },
   empty: { color: colors.textMuted, fontSize: 13, padding: space.md },
-  sampleNote: {
+  groupLabel: {
     color: colors.textMuted,
     fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
     backgroundColor: colors.surfaceSunken,
     paddingHorizontal: space.md,
     paddingVertical: 6,

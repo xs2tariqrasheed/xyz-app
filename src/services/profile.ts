@@ -18,6 +18,12 @@ export type CustomerProfile = {
   lastLoginAt: Date | null;
   /** What the Profile screen's Personal Info panel edits. */
   personalInfo: PersonalInfoValue;
+  /** Contact e-mail on file; '' when the profile has none. */
+  email: string;
+  /** Corporate account the customer books against; '' for card-only profiles. */
+  accountNumber: string;
+  /** Car preferences from registration, sent with every booking ('' when unset). */
+  carPreferences: { fleetName: string; carYear: string; smokingAllowed: string };
 };
 
 /** Thrown when the server refuses a profile update, as opposed to failing. */
@@ -41,6 +47,13 @@ const COLUMNS = {
   faxNumber: 'fax_number',
   faxExt: 'fax_ext',
   lastLogin: 'last_login',
+  email: 'email',
+  accountNumber: 'account_number',
+  /** The contract's own spelling (`P_ACCOUNT_NUM`), should the row use it. */
+  accountNum: 'account_num',
+  preferredFleet: 'preferred_fleet',
+  carYear: 'car_year',
+  smokingCar: 'smoking_car',
 } as const;
 
 type ProfileRow = Record<string, string>;
@@ -62,6 +75,13 @@ export function toCustomerProfile(rows: ProfileRow[] | undefined): CustomerProfi
       usPhone: { country: null, number: digits(row, COLUMNS.usNumber), ext: digits(row, COLUMNS.usExt) },
       intlPhone: intlPhone(row, COLUMNS.intlDial, COLUMNS.intlNumber, COLUMNS.intlExt),
       fax: intlPhone(row, COLUMNS.faxDial, COLUMNS.faxNumber, COLUMNS.faxExt),
+    },
+    email: text(row, COLUMNS.email),
+    accountNumber: text(row, COLUMNS.accountNumber) || text(row, COLUMNS.accountNum),
+    carPreferences: {
+      fleetName: text(row, COLUMNS.preferredFleet),
+      carYear: text(row, COLUMNS.carYear),
+      smokingAllowed: text(row, COLUMNS.smokingCar).toUpperCase(),
     },
   };
 }

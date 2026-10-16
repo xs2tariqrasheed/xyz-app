@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 17 — Booking Step 4: Preferences, Contact & Ride Options
 
 Part of the booking wizard (module 13). Submitted with `hfactive=3` — **this submit creates the reservation**.

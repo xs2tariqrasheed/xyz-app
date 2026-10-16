@@ -61,7 +61,7 @@ export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps
           style={[styles.row, index % 2 === 1 ? styles.rowAlt : null]}
         >
           <View style={[styles.cell, { flex: COLUMNS.rideNo }]}>
-            <Text style={styles.rideNo}>{ride.id}</Text>
+            <RideActionLink label={ride.id} onPress={() => onAction('view', ride)} />
           </View>
           <View style={[styles.cell, { flex: COLUMNS.passenger }]}>
             <Text style={styles.cellText}>{ride.passengerName}</Text>
@@ -83,9 +83,11 @@ export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps
             <Text style={styles.cellText}>{PAYMENT_METHOD_LABELS[ride.paymentMethod]}</Text>
           </View>
           <View style={[styles.cell, { flex: COLUMNS.voucher }]}>
-            <Text style={ride.voucherNo ? styles.cellText : styles.cellEmpty}>
-              {ride.voucherNo ?? '—'}
-            </Text>
+            {ride.voucherNo ? (
+              <RideActionLink label={ride.voucherNo} onPress={() => onAction('voucher', ride)} />
+            ) : (
+              <Text style={styles.cellEmpty}>—</Text>
+            )}
           </View>
           <View style={[styles.cell, { flex: COLUMNS.actions }]}>
             {canModifyRide(ride, now) ? (
@@ -150,7 +152,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
-  rideNo: { color: colors.textLink, fontSize: 13, fontWeight: '700' },
   cellText: { color: colors.textStrong, fontSize: 13, lineHeight: 18 },
   cellMuted: { color: colors.textMuted, fontSize: 12 },
   cellEmpty: { color: colors.textDisabled, fontSize: 13 },

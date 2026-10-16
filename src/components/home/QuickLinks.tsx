@@ -11,7 +11,7 @@ type QuickLink = { label: string; href: Href };
  * including `/reservation-info` and `/theme`, which nothing else links to.
  */
 const LINKS: readonly QuickLink[] = [
-  { label: 'Review a booked ride', href: '/reservation-info' },
+  { label: 'Review a booked ride', href: '/rides' },
   { label: 'Receipts & invoices', href: '/receipts' },
   { label: 'Saved addresses', href: '/addresses' },
   { label: 'Color theme', href: '/theme' },

@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 23 — Vouchers, Print Voucher, Receipts & Invoices
 
 ## 1. Purpose

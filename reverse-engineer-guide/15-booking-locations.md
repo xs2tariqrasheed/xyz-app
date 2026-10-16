@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 15 — Booking Step 2: Pickup & Drop-off Locations
 
 Part of the booking wizard (module 13). Submitted with `hfactive=1`. Lookups in module 05.

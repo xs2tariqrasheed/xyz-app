@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 21 — Ride Tracking, Live Status & Ask a Question
 
 ## 1. Purpose

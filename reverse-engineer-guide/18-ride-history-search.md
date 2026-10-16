@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 18 — Ride History Search ("Previous orders")
 
 ## 1. Purpose

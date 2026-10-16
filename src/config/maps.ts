@@ -16,5 +16,5 @@ const rawKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export const googleMapsApiKey = rawKey?.trim() ?? '';
 
-/** False until a key is configured — the UI falls back to sample data. */
+/** False until a key is configured — address search then offers only saved places. */
 export const hasGoogleMapsKey = googleMapsApiKey.length > 0;

@@ -86,8 +86,10 @@ test('signs in, books a reservation and reaches the receipt', async ({ page }) =
   expect(profile?.first_name).toBeTruthy();
   await expect(page.getByText(`Welcome back, ${profile.first_name}`)).toBeVisible();
 
-  // ── Reservation ("checkout") ────────────────────────────────────────────
-  await page.getByRole('button', { name: 'Book a ride' }).click();
+  // ── Reservation ("checkout") on the original, unwired layout ─────────────
+  // Home's "Book a ride" opens Reservation 2 (e2e/reservation-2.spec.ts);
+  // this layout stays reachable from the menu.
+  await page.goto('/reserve');
   await expect(page).toHaveURL(/\/reserve$/);
 
   // 1. Passenger & ride info
@@ -104,7 +106,7 @@ test('signs in, books a reservation and reaches the receipt', async ({ page }) =
   await continueTo(page, 'Preferences');
 
   // 4. Preferences: defaults.
-  await continueTo(page, 'Confirmation');
+  await continueTo(page, 'Preview');
 
   // 5. Review shows what was entered.
   await expect(visibleText(page, PASSENGER.firstName, true)).toBeVisible();

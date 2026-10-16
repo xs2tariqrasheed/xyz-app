@@ -260,10 +260,55 @@ On success the screen links back to login; the user is not signed in automatical
 
 ---
 
+## 7a. Reservations
+
+Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens; specs `reverse-engineer-guide/05`, `06`, `13`–`24`. The original `/reserve` layout stays in the menu unwired; every other entry point opens `/reserver-2`.
+
+| Piece | File |
+|---|---|
+| Draft, place / zone lookups, billing checks, card approval, submit | `src/context/ReservationContext.tsx` (`useReservation()`) |
+| Saved addresses shared by Home and the form | `src/context/SavedPlacesContext.tsx` (`useSavedPlaces()`) |
+| Draft ↔ JData, record mapping, cancel, e-mail, extra values | `src/services/reservation.ts` |
+| Billing rules, requirements, card approval | `src/services/billing.ts` |
+| Zones · saved places · car types · rides · tracking · questions | `src/services/zones.ts`, `savedPlaces.ts`, `vehicleTypes.ts`, `rides.ts`, `tracking.ts`, `feedback.ts` |
+| Step checks (guide 26) | `src/services/reservationValidation.ts` |
+| Defensive row readers (`pick`, `recordSet`, `assertResultCode`) | `src/services/gatewayRows.ts` |
+| Step lookups / open-for-edit | `src/hooks/useReservationLookups.ts`, `src/hooks/useReservationActions.ts` |
+
+| Where | Action code | JData / notes |
+|---|---|---|
+| Home dashboard, History tab | `RES.S.ALL_ORDERS` | `P_LOGIN_ID`, `P_DATE_FROM` / `P_DATE_TO` (`MM/DD/YYYY`), `P_TOTAL_RECORDS` (number). Payment filter runs on the client — the contract has no parameter for it. |
+| Upcoming tab | `RES.S.UPDATABLE_ORDERS` | `P_LOGIN_ID` |
+| Express panel, address fields | `PROF.S.USER_ADDRESSES` (+ `USER_PROFILE_ADDRESSES`, and `CORPORATE_ADDRESSES` with an account) | Listed above the Google results as "Your places". |
+| Step 1 | `PROF.S.LOAD_PROFILE` ✅, `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS` | Names pre-fill from the profile; "Reservation for" shows only when someone granted access. |
+| Step 2, stop picked | `RES.S.GOOGLE_ZONE_NUM` (has lat/lon/ZIP) or `RES.S.ZONE_THE_LOCATION` | Google stops are resolved with Place Details first. No match / no answer → the customer must acknowledge the address (guide 13). Airport stops ask for airline, flight # and pickup option. |
+| Step 3 | `RES.S.BILLING_METHOD`, `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` ×4, `PROF.S.IS_VALID_VIP` ✅, `PROF.S.ACCOUNT_VIP_NUM` | Account-keyed reads mount only with an account number. Continue → `RES.S.VERIFY_ACCOUNT_REQUIREMENTS` (`P_IS_RES 'Y'`), or for a card `RES.I.CREDIT_CARD_APPROVAL` then `RES.S.CREDIT_CARD_APPROVAL` every 10 s for up to 90 s. |
+| Step 4 | `RES.S.VEHICLE_TYPE`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` (8 e-mail, 6 cell) | First car type is the default. Passengers 1–4, stops 0–4. |
+| Preview → Book / Save changes | `RES.I.RESERVATION` / `RES.U.RESERVATION` | Every contract parameter, `retry: false`, behind an in-flight lock. Then (needs a reservation number) the Email CC values via `RES.*RESERVATION_COLUMN_VALUE` and `RES.U.FORMAT_EMAIL_MESSAGE`, both best effort. |
+| Details | `RES.S.LOAD_RESERVATION`, `PROF.S.CAR_INFO`, `RES.S.COMMUNICATION_LOG`, `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | Edit / return trip / repeat reload the record and open the wizard. |
+| Cancel (rides, details) | `RES.U.CANCEL_RESERVATION` | Reason required, ≤ 50 characters, `retry: false`. |
+| Track your route | `RES.S.VEHICLE_LOG`, `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | Position refreshes on demand only, as on the old site. |
+| Voucher | `RES.S.LOAD_RESERVATION` | Drawn from the record — never the old internal image server. |
+| Ask about this ride | `RES.S.ALL_PREDEFINED_QUESTIONS`, `RES.I.ASKED_QUESTIONS` | Message ≤ 200 characters. |
+
+**Mapping notes**
+
+- **Outputs are mostly undocumented.** Each service names, per field, every column the value may arrive under (today's gateway column first, then the old site's) and takes the first present; `recordSet` drops rows that carry only `o_code` / `o_message` or the stub's `placeholder_col*`. A refusal (`o_code` ≠ `"0"`) throws the service's own error; a write with no `o_code` fails closed.
+- **No reservation number is ever made up.** `RES.I.RESERVATION` returns only `o_code` / `o_message` today, so the receipt says the ride is booked and links to Upcoming rides. The e-mail and Email CC writes need a number, so they run only once one is returned (and always on an edit).
+- **Unconfirmed codes**, each set once in `src/services/reservation.ts`: `P_PU_TYPE` / `P_DO_TYPE` `S` / `A` / `L` (only `A` is in the samples); `P_PAYMENT_METHOD` `CA` / `AC` / `CC` (only `CC`); `P_RESERVATION_MAKE_FOR` `SELF` / `OTHER`; `P_CONFIRMATION_METHOD` `EMAIL` / `PHONE`; `P_CALL_SOURCE` `WEB`; `P_PU_DO_TYPE` `P` / `D`; Email CC column id `8` (the contact-type id).
+- **Card data** stays in `ReservationContext` memory only — never stored, logged or shown unmasked — and is cleared after booking and on sign-out. An edit that keeps the card on file resends the masked number the record came with (the old site's "unchanged" convention); `RES.U.FORMAT_EMAIL_MESSAGE` gets a masked `P_CC_NUMBER1`. **The contract still posts full card numbers to the gateway**: tokenising them (00-README §5 #2) is a backend change.
+- **Stub gaps today:** `PROF.S.USER_PROFILE_ADDRESSES`, `CORPORATE_ADDRESSES`, `LOAD_PROFILE_WHO_GRANTED_ACCESS`, `LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` and `CAR_INFO` answer "Action code is not supported"; those lookups simply offer nothing extra. `LOAD_RESERVATION` returns the same record for every number.
+- **No action code** exists for airports, airlines, streets or landmarks (guide 05) or the fare estimate: stops come from Google Places, airline and flight are typed.
+- **Google Places (legacy)** backs address search: `place/autocomplete/json` and `place/details/json` on iOS / Android (`src/services/googlePlaces.ts`), and the Maps JavaScript API's `AutocompleteService` / `PlacesService` on web (`googlePlaces.web.ts`), because the web service sends no CORS headers. The route preview uses **Directions** the same way (`directions/json` with `mode=driving&departure_time=now`, and `waypoints` for stops, on iOS / Android; `DirectionsService` on web — `src/services/googleDirections(.web).ts`). The booking form shows the route on an interactive map the customer can pinch, drag and zoom with + / − / fit buttons (`src/components/reservation/RouteMapView(.web).tsx`: react-native-maps on iOS / Android, a Maps JavaScript API map on web). Track your route turns the car's position into a street address with **Geocoding** (`geocode/json?latlng=…`, which allows browser calls, so one implementation — `src/services/geocoding.ts`). The key needs **Places API**, **Directions API**, **Geocoding API**, **Maps JavaScript API**, **Maps Static API**, and **Maps SDK for Android / iOS** for native builds (`app.config.ts` passes it to react-native-maps); refusals show short copy to the customer and Google's reason in the dev console.
+
+**Tests:** `e2e/reservation-2.spec.ts` drives every flow against the gateway and compares each request's JData keys with this contract. The card-authorisation case runs only with `E2E_CARD_TESTS=1`.
+
+---
+
 ## 8. Not wired yet
 
 - **Gateway service token.** The original contract sends `Authorization: Bearer <IdToken>` from a shared Cognito service account (`InitiateAuth`, `USER_PASSWORD_AUTH`, no client secret), fetched on app start, refreshed and retried once on HTTP `401`. It identifies the app, not the user, and is kept on logout. When added, it goes in `getAuthHeaders()` in `gateway.ts` (plus env vars) — nothing else changes. Prefer issuing it from a backend over shipping the service password.
-- **Ride history / dispatch.** `src/services/rides.ts` still filters sample data; swap it for gateway calls inside that file only.
+- **Card tokenisation.** Reservations post card numbers through the gateway because the contract requires `P_CARD_NUMBER`; a tokenising payment gateway would replace that (reverse-engineer-guide/00-README §5 #2).
 
 ---
 

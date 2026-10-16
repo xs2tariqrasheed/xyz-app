@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { ExpressPickupPanel } from '@/components/home/ExpressPickupPanel';
@@ -10,8 +10,13 @@ import { RideStatTiles } from '@/components/home/RideStatTiles';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Notice } from '@/components/ui/Notice';
+import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
+import { RIDES_MESSAGES } from '@/constants/messages';
+import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/context/ProfileContext';
-import { loadRideOverview, type RideOverview } from '@/services/rides';
+import { useReservation } from '@/context/ReservationContext';
+import { useFetchData } from '@/hooks/useFetchData';
+import { allOrdersJData, overviewWindow, type RideOverview, toRideOverview, toRides } from '@/services/rides';
 import { breakpoints, space } from '@/theme';
 import { formatClockTime, formatFullDate } from '@/utils/datetime';
 
@@ -28,25 +33,32 @@ export default function HomeScreen() {
   // One "now" for the whole screen, so the counts, the "next ride" pick and
   // the relative dates under it cannot disagree.
   const [now] = useState(() => new Date());
-  const [overview, setOverview] = useState<RideOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
+  const { session } = useAuth();
+  const { startNew } = useReservation();
 
-  useEffect(() => {
-    let live = true;
+  // `RES.S.ALL_ORDERS` over a history search's reach either side of today.
+  const range = overviewWindow(now);
+  const orders = useFetchData(
+    ACTION_CODES.ALL_ORDERS,
+    GATEWAY_VIEW_NAME,
+    allOrdersJData(session?.loginId ?? '', range.from, range.to),
+  );
+  const mapped = useMemo((): { overview: RideOverview | null; refused: boolean } => {
+    if (!orders.data) return { overview: null, refused: false };
+    try {
+      return { overview: toRideOverview(toRides(orders.data), now), refused: false };
+    } catch {
+      return { overview: null, refused: true };
+    }
+  }, [orders.data, now]);
+  const overview = mapped.overview;
+  const loading = orders.isLoading && !orders.data;
+  const failed = orders.isError || mapped.refused;
 
-    const settle = (result: RideOverview | null) => {
-      if (!live) return;
-      setOverview(result);
-      setFailed(result === null);
-      setLoading(false);
-    };
-
-    void loadRideOverview(now).then(settle, () => settle(null));
-    return () => {
-      live = false;
-    };
-  }, [now]);
+  const bookRide = () => {
+    startNew();
+    router.navigate('/reserver-2');
+  };
 
   const { profile } = useProfile();
   const lastLoginAt = profile?.lastLoginAt ?? null;
@@ -62,13 +74,13 @@ export default function HomeScreen() {
           ? `Last login ${formatFullDate(lastLoginAt)} · ${formatClockTime(lastLoginAt)}`
           : undefined
       }
-      trailing={<Button label="Book a ride" onPress={() => router.navigate('/reserve')} />}
+      trailing={<Button label="Book a ride" onPress={bookRide} />}
     >
       {failed ? (
         <Notice
           tone="danger"
-          title="Your rides could not be loaded"
-          message="The dispatch service did not answer. Booking still works."
+          title={RIDES_MESSAGES.HOME_RIDES_FAILED_TITLE}
+          message={RIDES_MESSAGES.HOME_RIDES_FAILED}
         />
       ) : null}
 
@@ -76,7 +88,7 @@ export default function HomeScreen() {
 
       <View style={[styles.columns, twoUp ? styles.columnsWide : null]}>
         <View style={[styles.main, twoUp ? styles.mainWide : null]}>
-          <NextRideCard ride={featured} now={now} loading={loading} />
+          <NextRideCard ride={featured} now={now} loading={loading} onBook={bookRide} />
 
           <RideListPanel
             title="Upcoming rides"

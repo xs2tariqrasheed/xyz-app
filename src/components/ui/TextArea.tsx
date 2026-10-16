@@ -11,6 +11,8 @@ export type TextAreaProps = Omit<TextInputProps, 'style' | 'multiline'> & {
   hint?: string;
   /** Visible rows before the box starts scrolling. */
   rows?: number;
+  /** Validation message under the box. */
+  error?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -27,6 +29,7 @@ export function TextArea({
   label,
   required,
   hint,
+  error,
   rows = 3,
   maxLength,
   value,
@@ -42,7 +45,7 @@ export function TextArea({
   // The hint is rendered here, not by `Field`, so it can share a baseline with
   // the counter instead of being pushed a line below it.
   return (
-    <Field label={label} required={required} style={style}>
+    <Field label={label} required={required} error={error} style={style}>
       <TextInput
         {...inputProps}
         value={value}

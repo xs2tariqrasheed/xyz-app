@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 05 — Lookup & Geo Services
 
 Reference-data and validation endpoints used by registration, profile, address book, contacts and the booking flow. All are `POST`, form-urlencoded, return JSON. Responses below are **real** (captured 2026-10-15) unless tagged [C].

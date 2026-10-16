@@ -39,8 +39,8 @@ export const RESERVATION_SECTIONS: readonly ReservationSection[] = [
   },
   {
     id: 'confirm',
-    title: 'Confirmation',
-    short: 'Confirm',
+    title: 'Preview',
+    short: 'Preview',
   },
   {
     id: 'receipt',

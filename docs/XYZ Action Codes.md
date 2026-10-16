@@ -1,6 +1,6 @@
 ## **RESERVATION MODULE**
 
-### **Action Code: RES.I.RESERVATION**
+### **Action Code: RES.I.RESERVATION** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -82,7 +82,7 @@
 | P\_PICKUP\_ZONE\_NUM | ‘15’ |
 | P\_DROPOFF\_ZONE\_NUM | ‘22’  |
 
-### **Action Code: RES.U.RESERVATION**
+### **Action Code: RES.U.RESERVATION** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -168,7 +168,7 @@
 | P\_PICKUP\_ZONE\_NUM | ‘15’ |
 | P\_DROPOFF\_ZONE\_NUM | ‘22’ |
 
-### **Action Code: RES.U.CANCEL\_RESERVATION**
+### **Action Code: RES.U.CANCEL\_RESERVATION** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -176,7 +176,7 @@
 | P\_RESERVATION\_NUM | ‘W202609230001’ |
 | P\_CANCEL\_REASON | ‘Change of plans’ |
 
-### **Action Code: RES.S.VERIFY\_ACCOUNT\_REQUIREMENTS**
+### **Action Code: RES.S.VERIFY\_ACCOUNT\_REQUIREMENTS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -188,20 +188,20 @@
 | P\_ACCOUNT\_REQUIREMENT3 | ‘REQ001’ |
 | P\_ACCOUNT\_REQUIREMENT4 | ‘REQ001’ |
 
-### **Action Code: RES.S.LOAD\_RESERVATION**
+### **Action Code: RES.S.LOAD\_RESERVATION** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 | P\_RESERVATION\_NUM | ‘W202609230001’ |
 
-### **Action Code: RES.S.UPDATABLE\_ORDERS**
+### **Action Code: RES.S.UPDATABLE\_ORDERS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 
-### **Action Code: RES.S.ALL\_ORDERS**
+### **Action Code: RES.S.ALL\_ORDERS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -210,7 +210,7 @@
 | P\_DATE\_TO | ‘09/30/2026’ |
 | P\_TOTAL\_RECORDS | 50 |
 
-### **Action Code: RES.I.CREDIT\_CARD\_APPROVAL**
+### **Action Code: RES.I.CREDIT\_CARD\_APPROVAL** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -221,34 +221,34 @@
 | P\_EXPIRATION\_DATE | ‘12/2027’ |
 | P\_VERIFY\_CODE | ‘123’ |
 
-### **Action Code: RES.S.CREDIT\_CARD\_APPROVAL**
+### **Action Code: RES.S.CREDIT\_CARD\_APPROVAL** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 | P\_REQUEST\_NUM | ‘REQ56789’ |
 
-### **Action Code: RES.S.IS\_CREDIT\_CARD\_SPECIFIC\_ACCOUNT**
+### **Action Code: RES.S.IS\_CREDIT\_CARD\_SPECIFIC\_ACCOUNT** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_ACCOUNT\_NUM | ‘ACCT10023’ |
 
-### **Action Code: RES.S.LOAD\_RESERVATION\_COLUMN\_SINGLE\_VALUE**
+### **Action Code: RES.S.LOAD\_RESERVATION\_COLUMN\_SINGLE\_VALUE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_RESERVATION\_NUM | ‘W202609230001’ |
 | P\_COLUMN\_ID | 2 |
 
-### **Action Code: RES.S.LOAD\_RESERVATION\_COLUMN\_VALUES\_BY\_TYPE**
+### **Action Code: RES.S.LOAD\_RESERVATION\_COLUMN\_VALUES\_BY\_TYPE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_RESERVATION\_NUM | ‘W202609230001’ |
 | P\_COLUMN\_ID | 2 |
 
-### **Action Code: RES.I.RESERVATION\_COLUMN\_VALUE**
+### **Action Code: RES.I.RESERVATION\_COLUMN\_VALUE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -256,7 +256,7 @@
 | P\_COLUMN\_ID | 2 |
 | P\_COLUMN\_VALUE | ‘Business Trip’ |
 
-### **Action Code: RES.U.RESERVATION\_COLUMN\_VALUE**
+### **Action Code: RES.U.RESERVATION\_COLUMN\_VALUE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -265,7 +265,7 @@
 | P\_COLUMN\_VALUE\_OLD | ‘Business Trip’ |
 | P\_COLUMN\_VALUE\_NEW | ‘Personal Trip’ |
 
-### **Action Code: RES.D.RESERVATION\_COLUMN\_VALUE**
+### **Action Code: RES.D.RESERVATION\_COLUMN\_VALUE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -273,13 +273,13 @@
 | P\_COLUMN\_ID | 2 |
 | P\_COLUMN\_VALUE | ‘Business Trip’ |
 
-### **Action Code: RES.S.LATITUDE\_LONGITUDE\_FOR\_CAR**
+### **Action Code: RES.S.LATITUDE\_LONGITUDE\_FOR\_CAR** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_CAR\_NUM | ‘C1023’ |
 
-### **Action Code: RES.U.FORMAT\_EMAIL\_MESSAGE**
+### **Action Code: RES.U.FORMAT\_EMAIL\_MESSAGE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -325,7 +325,7 @@
 | P\_CC\_NUMBER1 | ‘4111111111111111’ |
 | P\_CC\_TYPE1 | ‘VISA’ |
 
-### **Action Code: RES.S.ZONE\_THE\_LOCATION**
+### **Action Code: RES.S.ZONE\_THE\_LOCATION** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -338,11 +338,11 @@
 | P\_LANDMARK\_NAME | ‘Empire State Building’ |
 | P\_PU\_DO\_TYPE | ‘P’ |
 
-### **Action Code: RES.S.ALL\_PREDEFINED\_QUESTIONS**
+### **Action Code: RES.S.ALL\_PREDEFINED\_QUESTIONS** — ✅ Implemented
 
 *No input parameters.*
 
-### **Action Code: RES.I.ASKED\_QUESTIONS**
+### **Action Code: RES.I.ASKED\_QUESTIONS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -351,20 +351,20 @@
 | P\_QUESTION\_ID | 501 |
 | P\_ADDITIONAL\_MESSAGE | ‘Can you confirm my pickup time?’ |
 
-### **Action Code: RES.S.COMMUNICATION\_LOG**
+### **Action Code: RES.S.COMMUNICATION\_LOG** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 | P\_RESERVATION\_NUM | ‘jdoe2024’ |
 
-### **Action Code: RES.S.BILLING\_METHOD**
+### **Action Code: RES.S.BILLING\_METHOD** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_ACCOUNT\_NUM | ‘ACCT10023’ |
 
-### **Action Code: RES.S.GOOGLE\_ZONE\_NUM**
+### **Action Code: RES.S.GOOGLE\_ZONE\_NUM** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -372,20 +372,20 @@
 | P\_LON | ‘-74.0060’ |
 | P\_ZIP | ‘10001’ |
 
-### **Action Code: RES.S.VEHICLE\_LOG**
+### **Action Code: RES.S.VEHICLE\_LOG** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_RESERVATION\_NUM | ‘jdoe2024’ |
 
-### **Action Code: RES.S.ACCOUNT\_REQUIREMENTS\_LIST**
+### **Action Code: RES.S.ACCOUNT\_REQUIREMENTS\_LIST** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_ACCOUNT\_NUM | ‘ACCT10023’ |
 | P\_REQUIREMENT\_NUM | ‘1’ |
 
-### **Action Code: RES.S.VEHICLE\_TYPE**
+### **Action Code: RES.S.VEHICLE\_TYPE** — ✅ Implemented
 
 *No input parameters.*
 
@@ -534,13 +534,13 @@
 | :---- | :---- |
 | P\_ACCOUNT\_NUM | ‘ACCT10023’ |
 
-### **Action Code: PROF.S.USER\_ADDRESSES**
+### **Action Code: PROF.S.USER\_ADDRESSES** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 
-### **Action Code: PROF.S.CAR\_INFO**
+### **Action Code: PROF.S.CAR\_INFO** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -560,7 +560,7 @@
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 | P\_CAR\_NUM | ‘C1023’ |
 
-### **Action Code: PROF.S.USER\_ADDRESSES**
+### **Action Code: PROF.S.USER\_ADDRESSES** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -619,7 +619,7 @@
 | P\_ACCOUNT\_NUM | ‘ACCT10023’ |
 | P\_VIP\_NUM | ‘VIP4521’ |
 
-### **Action Code: PROF.S.ACCOUNT\_VIP\_NUM**
+### **Action Code: PROF.S.ACCOUNT\_VIP\_NUM** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -679,7 +679,7 @@
 | :---- | :---- |
 | P\_LOGIN\_ID\_FROM | ‘jdoe2024’ |
 
-### **Action Code: PROF.S.LOAD\_PROFILE\_WHO\_GRANTED\_ACCESS**
+### **Action Code: PROF.S.LOAD\_PROFILE\_WHO\_GRANTED\_ACCESS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -691,7 +691,7 @@
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 
-### **Action Code: PROF.S.LOAD\_PROFILE\_COLUMN\_VALUES\_BY\_TYPE**
+### **Action Code: PROF.S.LOAD\_PROFILE\_COLUMN\_VALUES\_BY\_TYPE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -723,7 +723,7 @@
 | P\_COLUMN\_ID | 2 |
 | P\_COLUMN\_VALUE | ‘Business Trip’ |
 
-### **Action Code: PROF.S.USER\_PROFILE\_ADDRESSES**
+### **Action Code: PROF.S.USER\_PROFILE\_ADDRESSES** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -739,7 +739,7 @@
 | P\_DEBUG\_LEVEL | ‘1’ |
 | P\_USER\_ID | ‘jdoe2024’ |
 
-### **Action Code: PROF.S.CORPORATE\_ADDRESSES**
+### **Action Code: PROF.S.CORPORATE\_ADDRESSES** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |

@@ -5,6 +5,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ProfileProvider } from '@/context/ProfileContext';
+import { ReservationProvider } from '@/context/ReservationContext';
+import { SavedPlacesProvider } from '@/context/SavedPlacesContext';
 import { colors } from '@/theme';
 
 // Hold the native splash until the stored session has been checked, so no
@@ -16,7 +18,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <ProfileProvider>
-          <RootNavigator />
+          <SavedPlacesProvider>
+            <ReservationProvider>
+              <RootNavigator />
+            </ReservationProvider>
+          </SavedPlacesProvider>
         </ProfileProvider>
       </AuthProvider>
     </SafeAreaProvider>
