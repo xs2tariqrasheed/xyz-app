@@ -1,15 +1,18 @@
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
 
+import type { PreferencesValue } from '@/components/preferences/preferences';
 import type { PersonalInfoValue } from '@/components/profile/PersonalInfoSection';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
+import { PREFERENCES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { usePostData } from '@/hooks/usePostData';
-import { type ErrorDisplay, mapRows } from '@/services/gateway';
+import { type ErrorDisplay, type GatewayJData, mapRows } from '@/services/gateway';
 import {
   assertProfileUpdated,
   type CustomerProfile,
   toCustomerProfile,
+  updatePreferencesJData,
   updateProfileJData,
 } from '@/services/profile';
 
@@ -33,6 +36,8 @@ export type ProfileContextValue = {
    * `ProfileError` when the server refuses, `GatewayError` when the call fails.
    */
   updatePersonalInfo: (personal: PersonalInfoValue) => Promise<void>;
+  /** Saves the Preferences screen, then reloads the profile. Throws like `updatePersonalInfo`. */
+  updatePreferences: (preferences: PreferencesValue) => Promise<void>;
 };
 
 // Not exported: screens go through useProfile(), which guards a missing provider.
@@ -43,6 +48,7 @@ const SIGNED_OUT: ProfileContextValue = {
   isLoading: false,
   refetch: () => undefined,
   updatePersonalInfo: () => Promise.reject(new Error('No signed-in profile to update.')),
+  updatePreferences: () => Promise.reject(new Error('No signed-in profile to update.')),
 };
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
@@ -73,20 +79,37 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
   const row = useMemo(() => (data ? mapRows(data)[0] : undefined), [data]);
   const profile = useMemo(() => toCustomerProfile(row ? [row] : undefined), [row]);
 
-  const updatePersonalInfo = async (personal: PersonalInfoValue) => {
+  /** Sends the whole profile built from the loaded row, then reloads it. */
+  const saveProfile = async (build: (loaded: Record<string, string>) => GatewayJData, rejected?: string) => {
     if (!row) throw new Error('The profile has not loaded yet.');
     const response = await sendUpdate(
       ACTION_CODES.UPDATE_PROFILE,
       GATEWAY_VIEW_NAME,
-      updateProfileJData(loginId, row, personal),
+      build(row),
       // A write: a lost response must not send the update twice.
       { retry: false },
     );
-    assertProfileUpdated(response);
+    assertProfileUpdated(response, rejected);
     refetch();
   };
 
-  const value: ProfileContextValue = { profile, isLoading, errorDisplay, refetch, updatePersonalInfo };
+  const updatePersonalInfo = (personal: PersonalInfoValue) =>
+    saveProfile((loaded) => updateProfileJData(loginId, loaded, personal));
+
+  const updatePreferences = (preferences: PreferencesValue) =>
+    saveProfile(
+      (loaded) => updatePreferencesJData(loginId, loaded, preferences),
+      PREFERENCES_MESSAGES.UPDATE_REJECTED,
+    );
+
+  const value: ProfileContextValue = {
+    profile,
+    isLoading,
+    errorDisplay,
+    refetch,
+    updatePersonalInfo,
+    updatePreferences,
+  };
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
 }

@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app (2026-10-16). `/preferences` loads `confirmation_method` / `special_offer` from `PROF.S.LOAD_PROFILE` and saves `P_CONFIRMATION_METHOD` / `P_SPECIAL_OFFER` with `PROF.U.PROFILE` through `ProfileContext.updatePreferences`; a new booking's "confirm by phone" starts from the saved value.
+
 # Module 09 — Profile: Preferences
 
 ## 1. Purpose

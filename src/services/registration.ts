@@ -5,6 +5,7 @@ import {
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { normalizeLoginId } from '@/services/auth';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
+import { CONFIRMATION_CODES, SPECIAL_OFFER_CODES } from '@/services/profile';
 import { detectBrand, digitsOnly, type CardBrand } from '@/utils/payment';
 import { COUNTRIES, toIntlDigits } from '@/utils/phone';
 
@@ -207,11 +208,11 @@ export function createProfileJData(draft: RegistrationDraft, requirementCount: n
     P_ACCOUNT_REQ2: requirement(1),
     P_ACCOUNT_REQ3: requirement(2),
     P_ACCOUNT_REQ4: requirement(3),
-    P_CONFIRMATION_METHOD: preferences.confirmByPhone ? 'PHONE' : 'EMAIL',
+    P_CONFIRMATION_METHOD: preferences.confirmByPhone ? CONFIRMATION_CODES.phone : CONFIRMATION_CODES.email,
     P_PREFERRED_FLEET: car.preferredFleet.trim(),
     P_CAR_YEAR: car.carYear,
     P_CAR_PHONE: car.carPhone.number,
-    P_SPECIAL_OFFER: preferences.subscribeSpecialOffers ? 'Y' : 'N',
+    P_SPECIAL_OFFER: preferences.subscribeSpecialOffers ? SPECIAL_OFFER_CODES.yes : SPECIAL_OFFER_CODES.no,
     P_SMOKING_CAR: car.smokingCar ? 'Y' : 'N',
     P_IVR_PIN: car.ivrPin,
   };

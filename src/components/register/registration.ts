@@ -1,6 +1,6 @@
 import { EMPTY_MAILING_ADDRESS, type MailingAddress } from '@/components/account/mailingAddress';
 import type { CardFieldsErrors, CardFieldsValue } from '@/components/payment/CardDetailsFields';
-import { DEFAULT_PREFERENCES, type PreferencesValue } from '@/components/preferences/preferences';
+import { EMPTY_PREFERENCES, type PreferencesValue } from '@/components/preferences/preferences';
 import {
   EMPTY_PERSONAL_INFO,
   type PersonalInfoErrors,
@@ -106,7 +106,7 @@ export const EMPTY_REGISTRATION: RegistrationDraft = {
     requirements: EMPTY_REQUIREMENTS,
     card: { holder: '', number: '', expiry: '', cvv: '' },
   },
-  preferences: DEFAULT_PREFERENCES,
+  preferences: EMPTY_PREFERENCES,
   car: {
     preferredFleet: '',
     carYear: '',

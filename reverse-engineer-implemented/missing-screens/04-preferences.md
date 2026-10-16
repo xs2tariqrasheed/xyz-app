@@ -1,9 +1,11 @@
+> ✅ **Implemented** in the XYZ app (2026-10-16). `ProfileContext.updatePreferences` saves through `PROF.U.PROFILE` (`updatePreferencesJData` in `src/services/profile.ts`); `DEFAULT_PREFERENCES` is gone. An untouched setting is sent back exactly as loaded. Still open: the column names / enum in §6.
+
 # Missing 04 — Change Preferences — Gateway Load & Save
 
 | | |
 |---|---|
 | **App today** | 🟡 Not wired. `src/app/(app)/preferences.tsx` + `src/components/preferences/{PreferencesForm.tsx,preferences.ts}` start from `DEFAULT_PREFERENCES` (both `false`); "Update" only does `setSaved`. Booking step 4 does not default "confirm by phone" from the profile. |
-| **Legacy reference** | [`../reverse-engineer-guide/09-profile-preferences.md`](../reverse-engineer-guide/09-profile-preferences.md); help text in `/Content/HelpWindow/RidePreferences.htm` (captured, `ev_63d0bf8e…`) |
+| **Legacy reference** | [`../guide/09-profile-preferences.md`](../guide/09-profile-preferences.md); help text in `/Content/HelpWindow/RidePreferences.htm` (captured, `ev_63d0bf8e…`) |
 | **Gateway** | ✅ `PROF.S.LOAD_PROFILE` (load, implemented via `ProfileContext`), `PROF.U.PROFILE` (save, implemented for personal info) |
 | **Priority** | P1 |
 
@@ -65,9 +67,9 @@ Default missing columns to `false` (CLAUDE.md: map defensively).
 5. Copy → `messages.ts` `PREFERENCES_MESSAGES`. No explanatory help paragraphs (no-noise rule); labels only.
 
 ## 5. Acceptance criteria
-- [ ] Opening Preferences shows the values from `PROF.S.LOAD_PROFILE`.
-- [ ] Update calls `PROF.U.PROFILE` with only the two preference params changed. Name, phones and address are unchanged after a reload.
-- [ ] A new booking's confirmation toggle starts from the saved preference.
+- [x] Opening Preferences shows the values from `PROF.S.LOAD_PROFILE`.
+- [x] Update calls `PROF.U.PROFILE` with only the two preference params changed. Name, phones and address are unchanged after a reload.
+- [x] A new booking's confirmation toggle starts from the saved preference.
 
 ## 6. Unknowns
 - [U] Column names and allowed values for confirmation method and special offer in `LOAD_PROFILE`.

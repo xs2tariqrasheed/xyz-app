@@ -31,6 +31,7 @@ import {
   toCountryCode,
   toSuggestion,
 } from '@/services/places';
+import { CONFIRMATION_CODES } from '@/services/profile';
 import { type PaymentMethod, type RideStatus, toPaymentMethod, toRideStatus } from '@/services/rides';
 import { IDLE_ZONE } from '@/services/zones';
 import { addDays, nextSlot, pad2, startOfDay, type TimeValue } from '@/utils/datetime';
@@ -90,9 +91,6 @@ export const PAYMENT_METHOD_CODES: Record<BillingMethodId, string> = {
 
 /** `P_RESERVATION_MAKE_FOR`: "SELF" is the sample; "OTHER" marks a booking for someone who granted access. */
 export const MAKE_FOR_CODES = { self: 'SELF', other: 'OTHER' } as const;
-
-/** `P_CONFIRMATION_METHOD`: "EMAIL" is the sample; "PHONE" mirrors it. */
-export const CONFIRMATION_CODES = { email: 'EMAIL', phone: 'PHONE' } as const;
 
 /** `P_CALL_SOURCE` — the sample value; the app books through the same web channel. */
 export const CALL_SOURCE = 'WEB';

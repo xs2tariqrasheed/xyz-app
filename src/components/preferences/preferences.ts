@@ -6,8 +6,8 @@ export type PreferencesValue = {
   subscribeSpecialOffers: boolean;
 };
 
-/** What a customer starts with before they ever open the page. */
-export const DEFAULT_PREFERENCES: PreferencesValue = {
+/** A blank form, for registration — a signed-in customer's come from `PROF.S.LOAD_PROFILE`. */
+export const EMPTY_PREFERENCES: PreferencesValue = {
   confirmByPhone: false,
   subscribeSpecialOffers: false,
 };

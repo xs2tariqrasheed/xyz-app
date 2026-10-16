@@ -1,8 +1,10 @@
+import type { PreferencesValue } from '@/components/preferences/preferences';
 import type { PersonalInfoValue } from '@/components/profile/PersonalInfoSection';
 import type { PhoneValue } from '@/components/ui/PhoneField';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { PROFILE_MESSAGES } from '@/constants/messages';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
+import { isYes } from '@/services/gatewayRows';
 import { findCountryByDial, toIntlDigits } from '@/utils/phone';
 
 /**
@@ -24,7 +26,15 @@ export type CustomerProfile = {
   accountNumber: string;
   /** Car preferences from registration, sent with every booking ('' when unset). */
   carPreferences: { fleetName: string; carYear: string; smokingAllowed: string };
+  /** What the Preferences screen edits; a new booking's confirmation starts from it. */
+  preferences: PreferencesValue;
 };
+
+/** `P_CONFIRMATION_METHOD`: "EMAIL" is the sample; "PHONE" mirrors it. */
+export const CONFIRMATION_CODES = { email: 'EMAIL', phone: 'PHONE' } as const;
+
+/** `P_SPECIAL_OFFER`: "N" is the sample; "Y" opts in. */
+export const SPECIAL_OFFER_CODES = { yes: 'Y', no: 'N' } as const;
 
 /** Thrown when the server refuses a profile update, as opposed to failing. */
 export class ProfileError extends Error {
@@ -54,6 +64,8 @@ const COLUMNS = {
   preferredFleet: 'preferred_fleet',
   carYear: 'car_year',
   smokingCar: 'smoking_car',
+  confirmationMethod: 'confirmation_method',
+  specialOffer: 'special_offer',
 } as const;
 
 type ProfileRow = Record<string, string>;
@@ -83,7 +95,16 @@ export function toCustomerProfile(rows: ProfileRow[] | undefined): CustomerProfi
       carYear: text(row, COLUMNS.carYear),
       smokingAllowed: text(row, COLUMNS.smokingCar).toUpperCase(),
     },
+    preferences: {
+      confirmByPhone: isPhoneConfirmation(text(row, COLUMNS.confirmationMethod)),
+      subscribeSpecialOffers: isYes(text(row, COLUMNS.specialOffer)),
+    },
   };
+}
+
+/** Anything other than a phone value (EMAIL, NONE, '') means no call-back. */
+function isPhoneConfirmation(value: string): boolean {
+  return /phone/i.test(value) || value.toUpperCase() === 'P';
 }
 
 /**
@@ -154,14 +175,44 @@ export function updateProfileJData(
   };
 }
 
-/** Throws unless the update's first row carries `o_code` "0". A missing code fails closed. */
-export function assertProfileUpdated(response: GatewayResponse): void {
+/**
+ * `JData` for {@link ACTION_CODES.UPDATE_PROFILE} from the Preferences
+ * screen: the whole profile as loaded, personal info included, with only the
+ * settings the customer changed replaced. An untouched setting goes back as
+ * the server sent it, so a value the app does not model (e.g. "NONE") survives.
+ */
+export function updatePreferencesJData(
+  loginId: string,
+  row: ProfileRow,
+  preferences: PreferencesValue,
+): GatewayJData {
+  const loaded = toCustomerProfile([row]);
+  if (!loaded) throw new Error('The profile has not loaded yet.');
+
+  const jdata = updateProfileJData(loginId, row, loaded.personalInfo);
+  if (preferences.confirmByPhone !== loaded.preferences.confirmByPhone) {
+    jdata.P_CONFIRMATION_METHOD = preferences.confirmByPhone ? CONFIRMATION_CODES.phone : CONFIRMATION_CODES.email;
+  }
+  if (preferences.subscribeSpecialOffers !== loaded.preferences.subscribeSpecialOffers) {
+    jdata.P_SPECIAL_OFFER = preferences.subscribeSpecialOffers ? SPECIAL_OFFER_CODES.yes : SPECIAL_OFFER_CODES.no;
+  }
+  return jdata;
+}
+
+/**
+ * Throws unless the update's first row carries `o_code` "0". A missing code
+ * fails closed; `rejected` is shown when the server refuses without a message.
+ */
+export function assertProfileUpdated(
+  response: GatewayResponse,
+  rejected: string = PROFILE_MESSAGES.UPDATE_REJECTED,
+): void {
   const result = mapRows(response)[0];
   if (!result || !('o_code' in result)) {
     throw new GatewayError('parsing', 'The profile update response has no result code.');
   }
   if (result.o_code !== DB_SUCCESS_CODE) {
-    throw new ProfileError(result.o_message || PROFILE_MESSAGES.UPDATE_REJECTED);
+    throw new ProfileError(result.o_message || rejected);
   }
 }
 

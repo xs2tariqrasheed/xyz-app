@@ -132,6 +132,25 @@ export const PROFILE_MESSAGES = {
   CHANGE_PASSWORD_LINK: 'Change password',
 } as const;
 
+/** Preferences screen; the form labels are shared with registration. */
+export const PREFERENCES_MESSAGES = {
+  SCREEN_TITLE: 'Update Preferences',
+  PANEL_TITLE: 'Preferences',
+  CONFIRMATION_LABEL: 'Confirmation through',
+  CONFIRM_BY_PHONE: 'Phone',
+  SPECIAL_OFFERS_LABEL: 'Subscribe special offer',
+  SPECIAL_OFFERS_OPTION: 'Send me special offers',
+  DISCARD: 'Discard changes',
+  UPDATE: 'Update',
+  UPDATING: 'Updating…',
+  UPDATE_SUCCESS: 'Preferences updated.',
+  UPDATE_FAILED_TITLE: 'Preferences not updated',
+  /** Server refused the update without saying why. */
+  UPDATE_REJECTED: "We couldn't update your preferences.",
+  LOAD_FAILED_TITLE: 'Your preferences could not be loaded',
+  RETRY: 'Try again',
+} as const;
+
 /** Card inputs, shared by registration and the reservation billing step. */
 export const CARD_MESSAGES = {
   HOLDER_LABEL: 'Name on card',

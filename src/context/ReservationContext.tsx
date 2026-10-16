@@ -182,6 +182,8 @@ function freshDraft(now: Date, profile: CustomerProfile | null): ReservationDraf
     preferences: profile
       ? {
           ...preferences,
+          // Module 09: the saved preference is the new booking's default.
+          confirmByPhone: profile.preferences.confirmByPhone,
           email: profile.email,
           callbackUs: profile.personalInfo.usPhone,
           callbackIntl: profile.personalInfo.intlPhone,
