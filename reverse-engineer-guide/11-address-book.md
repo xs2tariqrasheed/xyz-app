@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app
+
 # Module 11 — Address Book ("My Addresses" / Addresses Maintenance)
 
 ## 1. Purpose

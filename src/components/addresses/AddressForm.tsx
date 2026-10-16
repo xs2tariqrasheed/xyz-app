@@ -1,8 +1,10 @@
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
+import { ADDRESS_BOOK_MESSAGES as M } from '@/constants/messages';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 import { formatUsPhone, toDigits } from '@/utils/phone';
 
@@ -13,10 +15,17 @@ export type AddressFormProps = {
   errors: AddressErrors;
   /** True while an existing location is loaded, which swaps the copy. */
   editing: boolean;
+  /** A save is in flight: the buttons wait for it. */
+  saving: boolean;
+  /** The gateway's refusal of the last save, shown above the buttons. */
+  formError: string | null;
   onChange: (next: AddressDraft) => void;
   onSubmit: () => void;
   onCancel: () => void;
 };
+
+/** Field limits from the old address book (reverse-engineer-guide/11 §3). */
+const MAX = { zip: 5, building: 6, street: 30, ext: 5, directions: 500 } as const;
 
 /**
  * Add or edit one saved location.
@@ -24,43 +33,54 @@ export type AddressFormProps = {
  * Fully controlled: the screen owns the draft so a row in the list can load
  * itself into the form, and so cancelling is a single reset.
  */
-export function AddressForm({ draft, errors, editing, onChange, onSubmit, onCancel }: AddressFormProps) {
+export function AddressForm({
+  draft,
+  errors,
+  editing,
+  saving,
+  formError,
+  onChange,
+  onSubmit,
+  onCancel,
+}: AddressFormProps) {
   const { width } = useWindowDimensions();
   // Phones keep one field per line; anything wider pairs them up.
   const twoUp = width >= breakpoints.sm;
 
   const patch = (next: Partial<AddressDraft>) => onChange({ ...draft, ...next });
 
+  const submitLabel = saving ? (editing ? M.SAVING : M.ADDING) : editing ? M.SAVE : M.ADD;
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>{editing ? 'Edit this location' : 'Add a location'}</Text>
-        <Badge label={editing ? 'EDITING' : 'NEW'} tone={editing ? 'accent' : 'primary'} />
+        <Text style={styles.title}>{editing ? M.FORM_TITLE_EDIT : M.FORM_TITLE_ADD}</Text>
+        <Badge label={editing ? M.BADGE_EDITING : M.BADGE_NEW} tone={editing ? 'accent' : 'primary'} />
       </View>
 
-      <GroupLabel text="Address" />
+      <GroupLabel text={M.GROUP_ADDRESS} />
 
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
         <TextField
           style={styles.field}
-          label="Country"
+          label={M.COUNTRY_LABEL}
           required
           value={draft.country}
           onChangeText={(country) => patch({ country })}
           error={errors.country}
-          placeholder="United States"
+          placeholder={M.COUNTRY_PLACEHOLDER}
           autoComplete="country"
           textContentType="countryName"
           autoCapitalize="words"
         />
         <TextField
           style={styles.field}
-          label="State"
+          label={M.STATE_LABEL}
           required
           value={draft.state}
           onChangeText={(state) => patch({ state })}
           error={errors.state}
-          placeholder="e.g. NY"
+          placeholder={M.STATE_PLACEHOLDER}
           autoComplete="postal-address-region"
           textContentType="addressState"
           autoCapitalize="characters"
@@ -70,85 +90,91 @@ export function AddressForm({ draft, errors, editing, onChange, onSubmit, onCanc
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
         <TextField
           style={styles.field}
-          label="City"
+          label={M.CITY_LABEL}
           required
           value={draft.city}
           onChangeText={(city) => patch({ city })}
           error={errors.city}
-          placeholder="e.g. Manhattan"
+          placeholder={M.CITY_PLACEHOLDER}
           autoComplete="postal-address-locality"
           textContentType="addressCity"
           autoCapitalize="words"
         />
         <TextField
           style={styles.field}
-          label="ZIP"
+          label={M.ZIP_LABEL}
           value={draft.zip}
-          onChangeText={(zip) => patch({ zip })}
+          onChangeText={(zip) => patch({ zip: toDigits(zip, MAX.zip) })}
           error={errors.zip}
-          placeholder="e.g. 10019"
+          placeholder={M.ZIP_PLACEHOLDER}
           keyboardType="number-pad"
           inputMode="numeric"
           autoComplete="postal-code"
           textContentType="postalCode"
-          maxLength={10}
         />
       </View>
 
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
         <TextField
           style={twoUp ? styles.building : null}
-          label="Building #"
+          label={M.BUILDING_LABEL}
+          required
           value={draft.building}
-          onChangeText={(building) => patch({ building })}
-          placeholder="666"
-          keyboardType="numbers-and-punctuation"
+          onChangeText={(building) => patch({ building: toDigits(building, MAX.building) })}
+          error={errors.building}
+          placeholder={M.BUILDING_PLACEHOLDER}
+          keyboardType="number-pad"
+          inputMode="numeric"
         />
         <TextField
           style={styles.field}
-          label="Street name"
+          label={M.STREET_LABEL}
           required
           value={draft.street}
           onChangeText={(street) => patch({ street })}
           error={errors.street}
-          placeholder="e.g. 5 Ave"
+          placeholder={M.STREET_PLACEHOLDER}
           autoComplete="street-address"
           textContentType="streetAddressLine1"
           autoCapitalize="words"
+          maxLength={MAX.street}
         />
       </View>
 
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
         <TextField
           style={styles.field}
-          label="Cross street"
+          label={M.CROSS_STREET_LABEL}
           value={draft.crossStreet}
           onChangeText={(crossStreet) => patch({ crossStreet })}
-          placeholder="e.g. W 53 St"
+          error={errors.crossStreet}
+          placeholder={M.CROSS_STREET_PLACEHOLDER}
           autoCapitalize="words"
+          maxLength={MAX.street}
         />
         <TextField
           style={styles.field}
-          label="Pickup point"
+          label={M.PICKUP_POINT_LABEL}
           value={draft.pickupPoint}
           onChangeText={(pickupPoint) => patch({ pickupPoint })}
-          placeholder="e.g. North entrance"
+          error={errors.pickupPoint}
+          placeholder={M.PICKUP_POINT_PLACEHOLDER}
           autoCapitalize="sentences"
         />
       </View>
 
-      <GroupLabel text="Callback numbers" />
+      <GroupLabel text={M.GROUP_CALLBACK} />
 
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
         <TextField
           style={styles.field}
-          label="Callback phone (US)"
+          label={M.US_PHONE_LABEL}
           value={formatUsPhone(draft.phoneUs)}
           // The mask is re-derived from digits on every keystroke, so pasting a
           // formatted number and deleting through one both behave.
           onChangeText={(value) => patch({ phoneUs: toDigits(value, 10) })}
           error={errors.phoneUs}
-          placeholder="(212) 555-0134"
+          placeholder={M.US_PHONE_PLACEHOLDER}
           keyboardType="phone-pad"
           inputMode="tel"
           autoComplete="tel"
@@ -156,10 +182,9 @@ export function AddressForm({ draft, errors, editing, onChange, onSubmit, onCanc
         />
         <TextField
           style={twoUp ? styles.ext : null}
-          label="Ext."
+          label={M.EXT_LABEL}
           value={draft.phoneUsExt}
-          onChangeText={(value) => patch({ phoneUsExt: toDigits(value, 6) })}
-          placeholder="12"
+          onChangeText={(value) => patch({ phoneUsExt: toDigits(value, MAX.ext) })}
           keyboardType="number-pad"
           inputMode="numeric"
         />
@@ -168,53 +193,53 @@ export function AddressForm({ draft, errors, editing, onChange, onSubmit, onCanc
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
         <TextField
           style={twoUp ? styles.code : null}
-          label="Dial code"
+          label={M.DIAL_CODE_LABEL}
           value={draft.phoneIntlCode}
           onChangeText={(value) => patch({ phoneIntlCode: toDigits(value, 4) })}
           error={errors.phoneIntlCode}
-          placeholder="44"
+          placeholder={M.DIAL_CODE_PLACEHOLDER}
           keyboardType="number-pad"
           inputMode="numeric"
         />
         <TextField
           style={styles.field}
-          label="Callback phone (international)"
+          label={M.INTL_PHONE_LABEL}
           value={draft.phoneIntl}
           onChangeText={(phoneIntl) => patch({ phoneIntl })}
-          placeholder="20 7946 0018"
+          error={errors.phoneIntl}
+          placeholder={M.INTL_PHONE_PLACEHOLDER}
           keyboardType="phone-pad"
           inputMode="tel"
         />
         <TextField
           style={twoUp ? styles.ext : null}
-          label="Ext."
+          label={M.EXT_LABEL}
           value={draft.phoneIntlExt}
-          onChangeText={(value) => patch({ phoneIntlExt: toDigits(value, 6) })}
-          placeholder="4"
+          onChangeText={(value) => patch({ phoneIntlExt: toDigits(value, MAX.ext) })}
           keyboardType="number-pad"
           inputMode="numeric"
         />
       </View>
 
-      <GroupLabel text="Directions" />
+      <GroupLabel text={M.GROUP_DIRECTIONS} />
 
       <TextField
-        label="Notes for the driver"
+        label={M.DIRECTIONS_LABEL}
         value={draft.directions}
         onChangeText={(directions) => patch({ directions })}
-        placeholder="Gate codes, which entrance to use, where to wait…"
+        error={errors.directions}
+        placeholder={M.DIRECTIONS_PLACEHOLDER}
         multiline
         numberOfLines={4}
         autoCapitalize="sentences"
+        maxLength={MAX.directions}
       />
 
+      {formError ? <Alert tone="danger" title={M.SAVE_FAILED_TITLE} message={formError} /> : null}
+
       <View style={[styles.actions, twoUp ? styles.actionsWide : null]}>
-        <Button label="Cancel" variant="outline" onPress={onCancel} />
-        <Button
-          label={editing ? 'Save changes' : 'Add location'}
-          onPress={onSubmit}
-          size="lg"
-        />
+        <Button label={M.CANCEL} variant="outline" onPress={onCancel} disabled={saving} />
+        <Button label={submitLabel} onPress={onSubmit} size="lg" disabled={saving} />
       </View>
     </View>
   );

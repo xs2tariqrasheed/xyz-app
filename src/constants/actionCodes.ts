@@ -38,6 +38,22 @@ export const ACTION_CODES = {
   CORPORATE_ADDRESSES: 'PROF.S.CORPORATE_ADDRESSES',
   /** P_LOGIN_ID, P_COLUMN_ID (contact type) → the profile's contacts of that type. */
   LOAD_PROFILE_COLUMN_VALUES_BY_TYPE: 'PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE',
+
+  // ── Address book & contacts (reverse-engineer-guide/11, 12) ────────────────
+  /** P_LOGIN_ID, P_COUNTRY, P_STATE, P_CITY, P_STREET_NUM, P_STREET_NAME, P_CROSS_STREET, P_PICKUP_POINT, P_ZIP, P_DIRECTIONS, P_PHONE_NUM, P_EXT, P_PHONE_NUM_US, P_EXT_US → o_code / o_message. */
+  ADD_USER_ADDRESS: 'PROF.I.USER_ADDRESS',
+  /** P_LOGIN_ID, P_PICKUP_COUNT + the same fields as ADD_USER_ADDRESS → o_code / o_message. */
+  UPDATE_USER_ADDRESS: 'PROF.U.USER_ADDRESS',
+  /** P_LOGIN_ID, P_PICKUP_COUNT → o_code / o_message. */
+  DELETE_USER_ADDRESS: 'PROF.D.USER_ADDRESS',
+  /** P_LOGIN_ID → every extra value on the profile (contacts and others), one row each (columns undocumented). */
+  LOAD_PROFILE_COLUMN_VALUES: 'PROF.S.LOAD_PROFILE_COLUMN_VALUES',
+  /** P_LOGIN_ID, P_COLUMN_ID, P_COLUMN_VALUE → o_code / o_message. */
+  ADD_PROFILE_COLUMN_VALUE: 'PROF.I.PROFILE_COLUMN_VALUE',
+  /** P_LOGIN_ID, P_COLUMN_ID, P_COLUMN_VALUE_OLD, P_COLUMN_VALUE_NEW → o_code / o_message. */
+  UPDATE_PROFILE_COLUMN_VALUE: 'PROF.U.PROFILE_COLUMN_VALUE',
+  /** P_LOGIN_ID, P_COLUMN_ID, P_COLUMN_VALUE → o_code / o_message. */
+  DELETE_PROFILE_COLUMN_VALUE: 'PROF.D.PROFILE_COLUMN_VALUE',
   /** P_STREET_NUM, P_STREET_NAME, P_CITY_NAME, P_COUNTY_NAME, P_STATE_NAME, P_AIRPORT_NAME, P_LANDMARK_NAME, P_PU_DO_TYPE → zone; o_code / o_message. */
   ZONE_THE_LOCATION: 'RES.S.ZONE_THE_LOCATION',
   /** P_LAT, P_LON, P_ZIP → zone of a Google-searched place; o_code / o_message. */

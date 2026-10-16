@@ -566,7 +566,7 @@
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 
-### **Action Code: PROF.I.USER\_ADDRESS**
+### **Action Code: PROF.I.USER\_ADDRESS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -585,7 +585,7 @@
 | P\_PHONE\_NUM\_US | ‘2125551234’ |
 | P\_EXT\_US | ‘101’ |
 
-### **Action Code: PROF.U.USER\_ADDRESS**
+### **Action Code: PROF.U.USER\_ADDRESS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -605,7 +605,7 @@
 | P\_PHONE\_NUM\_US | ‘2125551234’ |
 | P\_EXT\_US | ‘101’ |
 
-### **Action Code: PROF.D.USER\_ADDRESS**
+### **Action Code: PROF.D.USER\_ADDRESS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -685,7 +685,7 @@
 | :---- | :---- |
 | P\_LOGIN\_ID\_TO | ‘msmith2024’ |
 
-### **Action Code: PROF.S.LOAD\_PROFILE\_COLUMN\_VALUES**
+### **Action Code: PROF.S.LOAD\_PROFILE\_COLUMN\_VALUES** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -698,7 +698,7 @@
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 | P\_COLUMN\_ID | 2 |
 
-### **Action Code: PROF.I.PROFILE\_COLUMN\_VALUE**
+### **Action Code: PROF.I.PROFILE\_COLUMN\_VALUE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -706,7 +706,7 @@
 | P\_COLUMN\_ID | 2 |
 | P\_COLUMN\_VALUE | ‘Business Trip’ |
 
-### **Action Code: PROF.U.PROFILE\_COLUMN\_VALUE**
+### **Action Code: PROF.U.PROFILE\_COLUMN\_VALUE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
@@ -715,7 +715,7 @@
 | P\_COLUMN\_VALUE\_OLD | ‘Business Trip’ |
 | P\_COLUMN\_VALUE\_NEW | ‘Personal Trip’ |
 
-### **Action Code: PROF.D.PROFILE\_COLUMN\_VALUE**
+### **Action Code: PROF.D.PROFILE\_COLUMN\_VALUE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |

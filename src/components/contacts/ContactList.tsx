@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Badge } from '@/components/ui/Badge';
+import { CONTACTS_MESSAGES as M } from '@/constants/messages';
 import { breakpoints, colors, radii, space } from '@/theme';
 import { contactType, formatContactValue, type Contact } from '@/utils/contacts';
 
@@ -8,30 +9,20 @@ import { ContactTypeGlyph } from './ContactTypeGlyph';
 
 export type ContactListProps = {
   contacts: readonly Contact[];
-  /** The contact reservation confirmations are sent to. */
-  primaryId: string | null;
   /** Row currently loaded into the form, highlighted so the pair reads as one. */
   editingId: string | null;
   onEdit: (contact: Contact) => void;
   onRemove: (contact: Contact) => void;
-  onMakePrimary: (contact: Contact) => void;
 };
 
-export function ContactList({
-  contacts,
-  primaryId,
-  editingId,
-  onEdit,
-  onRemove,
-  onMakePrimary,
-}: ContactListProps) {
+export function ContactList({ contacts, editingId, onEdit, onRemove }: ContactListProps) {
   const { width } = useWindowDimensions();
   const wide = width >= breakpoints.sm;
 
   if (contacts.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyTitle}>No contacts saved yet</Text>
+        <Text style={styles.emptyTitle}>{M.EMPTY}</Text>
       </View>
     );
   }
@@ -43,11 +34,9 @@ export function ContactList({
           key={contact.id}
           contact={contact}
           wide={wide}
-          isPrimary={contact.id === primaryId}
           isEditing={contact.id === editingId}
           onEdit={() => onEdit(contact)}
           onRemove={() => onRemove(contact)}
-          onMakePrimary={() => onMakePrimary(contact)}
         />
       ))}
     </View>
@@ -57,22 +46,12 @@ export function ContactList({
 type ContactRowProps = {
   contact: Contact;
   wide: boolean;
-  isPrimary: boolean;
   isEditing: boolean;
   onEdit: () => void;
   onRemove: () => void;
-  onMakePrimary: () => void;
 };
 
-function ContactRow({
-  contact,
-  wide,
-  isPrimary,
-  isEditing,
-  onEdit,
-  onRemove,
-  onMakePrimary,
-}: ContactRowProps) {
+function ContactRow({ contact, wide, isEditing, onEdit, onRemove }: ContactRowProps) {
   const { label } = contactType(contact.type);
   // Rows repeat, so each action names the contact it belongs to.
   const describe = `${label} ${formatContactValue(contact)}`;
@@ -80,18 +59,14 @@ function ContactRow({
   return (
     <View style={[styles.row, wide ? styles.rowWide : null, isEditing ? styles.rowEditing : null]}>
       <View style={styles.identity}>
-        <View style={[styles.iconWell, isPrimary ? styles.iconWellPrimary : null]}>
-          <ContactTypeGlyph
-            type={contact.type}
-            color={isPrimary ? colors.success : colors.primary[600]}
-          />
+        <View style={styles.iconWell}>
+          <ContactTypeGlyph type={contact.type} color={colors.primary[600]} />
         </View>
 
         <View style={styles.text}>
           <View style={styles.labelRow}>
             <Text style={styles.type}>{label}</Text>
-            {isPrimary ? <Badge label="PRIMARY" tone="success" /> : null}
-            {isEditing ? <Badge label="EDITING" tone="primary" /> : null}
+            {isEditing ? <Badge label={M.BADGE_EDITING} tone="primary" /> : null}
           </View>
           <Text style={styles.value} numberOfLines={1}>
             {formatContactValue(contact)}
@@ -100,17 +75,10 @@ function ContactRow({
       </View>
 
       <View style={styles.actions}>
-        {isPrimary ? null : (
-          <RowAction
-            label="Make primary"
-            a11yLabel={`Make ${describe} your primary contact`}
-            onPress={onMakePrimary}
-          />
-        )}
-        <RowAction label="Edit" a11yLabel={`Edit ${describe}`} onPress={onEdit} />
+        <RowAction label={M.EDIT} a11yLabel={`${M.EDIT} ${describe}`} onPress={onEdit} />
         <RowAction
-          label="Remove"
-          a11yLabel={`Remove ${describe}`}
+          label={M.REMOVE}
+          a11yLabel={`${M.REMOVE} ${describe}`}
           tone="danger"
           onPress={onRemove}
         />
@@ -167,7 +135,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWellPrimary: { backgroundColor: colors.successBg },
   text: { flex: 1, gap: 2 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
   type: { color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },

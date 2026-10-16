@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/Badge';
 import { PinGlyph, TrashGlyph } from '@/components/ui/Glyph';
+import { ADDRESS_BOOK_MESSAGES as M } from '@/constants/messages';
 import { colors, radii, shadowValues, space } from '@/theme';
 
 import {
@@ -30,13 +31,13 @@ export function SavedAddressList({ addresses, editingId, onEdit, onDelete }: Sav
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>Saved locations</Text>
-        <Badge label={`${addresses.length} SAVED`} tone="muted" />
+        <Text style={styles.title}>{M.LIST_TITLE}</Text>
+        <Badge label={`${addresses.length} ${M.SAVED_BADGE}`} tone="muted" />
       </View>
 
       {addresses.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No saved locations yet</Text>
+          <Text style={styles.emptyTitle}>{M.EMPTY}</Text>
         </View>
       ) : (
         <View style={styles.list}>
@@ -63,7 +64,7 @@ type SavedAddressRowProps = {
 };
 
 function SavedAddressRow({ address, editing, onEdit, onDelete }: SavedAddressRowProps) {
-  const street = formatStreet(address) || address.city.trim() || 'Untitled location';
+  const street = formatStreet(address) || address.city.trim() || M.UNTITLED;
   const locality = formatLocality(address);
   const usPhone = formatUsCallback(address);
   const intlPhone = formatIntlCallback(address);
@@ -75,7 +76,7 @@ function SavedAddressRow({ address, editing, onEdit, onDelete }: SavedAddressRow
     <View style={[styles.row, editing ? styles.rowEditing : null]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Edit ${formatAddressLine(address)}`}
+        accessibilityLabel={`${M.EDIT_A11Y} ${formatAddressLine(address)}`}
         accessibilityState={{ selected: editing }}
         onPress={onEdit}
         style={({ pressed }) => [styles.rowMain, pressed ? styles.rowMainPressed : null]}
@@ -89,7 +90,7 @@ function SavedAddressRow({ address, editing, onEdit, onDelete }: SavedAddressRow
             <Text style={styles.street} numberOfLines={1}>
               {street}
             </Text>
-            {editing ? <Badge label="EDITING" tone="accent" /> : null}
+            {editing ? <Badge label={M.BADGE_EDITING} tone="accent" /> : null}
           </View>
 
           {locality ? (
@@ -100,7 +101,7 @@ function SavedAddressRow({ address, editing, onEdit, onDelete }: SavedAddressRow
 
           {address.pickupPoint.trim() ? (
             <Text style={styles.detail} numberOfLines={1}>
-              Pickup point · {address.pickupPoint.trim()}
+              {M.PICKUP_POINT_PREFIX} · {address.pickupPoint.trim()}
             </Text>
           ) : null}
 
@@ -121,7 +122,7 @@ function SavedAddressRow({ address, editing, onEdit, onDelete }: SavedAddressRow
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Delete ${formatAddressLine(address)}`}
+        accessibilityLabel={`${M.DELETE_A11Y} ${formatAddressLine(address)}`}
         onPress={onDelete}
         hitSlop={6}
         style={({ pressed }) => [styles.delete, pressed ? styles.deletePressed : null]}

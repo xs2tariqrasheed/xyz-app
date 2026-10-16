@@ -305,6 +305,23 @@ Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens
 
 ---
 
+## 7b. Address book & contacts
+
+Specs `reverse-engineer-guide/11`, `12` and `reverse-engineer-missing-screens/02`, `03`. Both screens render only what the gateway returns — the old seed lists are gone.
+
+| Where | Action code | JData / notes |
+|---|---|---|
+| My Addresses list (`addresses.tsx`) | `PROF.S.USER_ADDRESSES` | The **same** request `SavedPlacesContext` makes for Home and the booking form; the context exposes it as `places` (booking suggestions) and `addresses` (editable entries, `toSavedAddresses` in `src/services/addressBook.ts`). |
+| Add / edit / delete a location | `PROF.I.USER_ADDRESS`, `PROF.U.USER_ADDRESS`, `PROF.D.USER_ADDRESS` | Through `useSavedPlaces().saveAddress` / `deleteAddress`, `retry: false`, then the shared list reloads. `P_PICKUP_COUNT` = the row's `address_id` (the old site used the 1-based list position; that is the fallback when a row has no id). The international number goes in `P_PHONE_NUM` as dial code + number (no dial-code parameter). `P_COUNTRY` is the code (`US`). |
+| My Contacts list (`contacts.tsx`) | `PROF.S.LOAD_PROFILE_COLUMN_VALUES` | `P_LOGIN_ID`. Rows mapped in `src/services/contacts.ts`; only the contact columns 3 home, 4 office, 5 fax, 6 cell, 8 e-mail are shown. |
+| Add / edit / remove a contact | `PROF.I.PROFILE_COLUMN_VALUE`, `PROF.U.PROFILE_COLUMN_VALUE`, `PROF.D.PROFILE_COLUMN_VALUE` | A contact is identified by column id + stored value. Changing a contact's **type** adds it under the new column, then deletes the old one (the contract has no move). |
+
+- **Validation** follows the old site (guide 11 §3, 12 §3, 26): a location needs country, state, city, building # (digits ≤ 6), street (4–30 street characters) and one callback number; ZIP is exactly 5 digits; pickup point ≤ 20; directions ≤ 500 without `"`. A contact phone is 10 digits not starting with 0/1; an e-mail ≤ 50; only an office phone takes an extension (≤ 5 digits).
+- **Unconfirmed**, each set in one place: office extension stored as `<number>-<ext>` (`toStoredValue` in `src/utils/contacts.ts`, the old `CompleteContactNumber` form); contact load columns (`column_id` / `column_value` first, then the old site's names).
+- **Stub today:** the address codes answer (the writes with a hard-coded success, so the reloaded list does not change); every contacts code answers "Action code is not supported", so My Contacts shows its load error and refuses saves with that message.
+
+---
+
 ## 8. Not wired yet
 
 - **Gateway service token.** The original contract sends `Authorization: Bearer <IdToken>` from a shared Cognito service account (`InitiateAuth`, `USER_PASSWORD_AUTH`, no client secret), fetched on app start, refreshed and retried once on HTTP `401`. It identifies the app, not the user, and is kept on logout. When added, it goes in `getAuthHeaders()` in `gateway.ts` (plus env vars) — nothing else changes. Prefer issuing it from a backend over shipping the service password.

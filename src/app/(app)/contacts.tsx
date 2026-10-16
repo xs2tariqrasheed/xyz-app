@@ -1,45 +1,90 @@
 import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ContactForm, type ContactDraft } from '@/components/contacts/ContactForm';
 import { ContactList } from '@/components/contacts/ContactList';
 import { ContactPanel } from '@/components/contacts/ContactPanel';
 import { Screen } from '@/components/layout/Screen';
+import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Notice } from '@/components/ui/Notice';
 import { Reveal } from '@/components/ui/Reveal';
 import { Sheet } from '@/components/ui/Sheet';
+import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
+import { CONTACTS_MESSAGES as M } from '@/constants/messages';
+import { useAuth } from '@/context/AuthContext';
+import { useFetchData } from '@/hooks/useFetchData';
+import { usePostData } from '@/hooks/usePostData';
+import {
+  addContactJData,
+  assertContactRemoved,
+  assertContactSaved,
+  ContactsError,
+  contactsJData,
+  deleteContactJData,
+  toContacts,
+  updateContactJData,
+} from '@/services/contacts';
+import { getErrorDisplay } from '@/services/gateway';
 import { colors, radii, space } from '@/theme';
 import {
+  type Contact,
   contactType,
   formatContactValue,
   isDuplicateContact,
-  nextContactId,
-  normalizeContactValue,
-  type Contact,
+  toStoredValue,
 } from '@/utils/contacts';
 
 /** How long a confirmation line stays on screen. */
 const NOTICE_MS = 4000;
 
 /** The id makes a repeated message a new notice, so its timer restarts. */
-type Notice = { id: number; text: string };
+type Flash = { id: number; text: string };
 
 let noticeSequence = 0;
 const noticeId = () => (noticeSequence += 1);
 
-/** Stand-in for the saved contacts a signed-in customer would load. */
-const SEED_CONTACTS: readonly Contact[] = [
-  { id: nextContactId(), type: 'mobile', value: '5550142187' },
-  { id: nextContactId(), type: 'email', value: 'a.okafor@example.com' },
-];
+/** The gateway's own refusal, or friendly copy for anything else. */
+function describeError(error: unknown): string {
+  if (error instanceof ContactsError) return error.message;
+  return getErrorDisplay(error).customDescription;
+}
 
-export default function ContactManagementScreen() {
-  const [contacts, setContacts] = useState<readonly Contact[]>(SEED_CONTACTS);
-  const [primaryId, setPrimaryId] = useState<string | null>(SEED_CONTACTS[0]?.id ?? null);
+/**
+ * My Contacts (reverse-engineer-guide/12): the profile's extra phones and
+ * e-mails from `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, changed through the
+ * `PROF.I/U/D.PROFILE_COLUMN_VALUE` codes. Booking offers them as callback and
+ * e-mail choices.
+ */
+export default function ContactsScreen() {
+  const { session } = useAuth();
+  const loginId = session?.loginId ?? '';
+
+  const { data, isLoading, errorDisplay, refetch } = useFetchData(
+    ACTION_CODES.LOAD_PROFILE_COLUMN_VALUES,
+    GATEWAY_VIEW_NAME,
+    contactsJData(loginId),
+  );
+  const { mutateAsync: send } = usePostData();
+
+  // A refusal inside the record set is a load error too, not an empty list.
+  const loaded = useMemo((): { contacts: readonly Contact[]; error?: string } => {
+    if (!data) return { contacts: [] };
+    try {
+      return { contacts: toContacts(data) };
+    } catch (error) {
+      return { contacts: [], error: describeError(error) };
+    }
+  }, [data]);
+  const { contacts } = loaded;
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<Contact | null>(null);
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Flash | null>(null);
 
   // The notice acknowledges the last change and then gets out of the way, so a
   // stale "added" can never sit above a fresh error in the form.
@@ -53,63 +98,102 @@ export default function ContactManagementScreen() {
 
   const editing = contacts.find((contact) => contact.id === editingId) ?? null;
 
-  /** Returns a message when the draft is refused, `null` when it is saved. */
-  const submit = (draft: ContactDraft): string | null => {
-    const value = normalizeContactValue(draft.type, draft.value);
-    const { label } = contactType(draft.type);
+  /** Resolves with a message when the draft is refused, `null` when it is saved. */
+  const submit = async (draft: ContactDraft): Promise<string | null> => {
+    const stored = toStoredValue(draft.type, draft.value, draft.extension);
+    if (isDuplicateContact(contacts, { type: draft.type, stored }, editing?.id)) return M.DUPLICATE;
 
-    if (isDuplicateContact(contacts, { type: draft.type, value }, editingId ?? undefined)) {
-      return `That ${label.toLowerCase()} is already saved.`;
+    try {
+      if (!editing) {
+        assertContactSaved(
+          await send(ACTION_CODES.ADD_PROFILE_COLUMN_VALUE, GATEWAY_VIEW_NAME, addContactJData(loginId, draft.type, stored), {
+            retry: false,
+          }),
+        );
+      } else if (editing.type === draft.type) {
+        assertContactSaved(
+          await send(
+            ACTION_CODES.UPDATE_PROFILE_COLUMN_VALUE,
+            GATEWAY_VIEW_NAME,
+            updateContactJData(loginId, editing, stored),
+            { retry: false },
+          ),
+        );
+      } else {
+        // The contract has no "change type" call: the value moves to the new
+        // column. Add first, so a failure never leaves the contact deleted.
+        assertContactSaved(
+          await send(ACTION_CODES.ADD_PROFILE_COLUMN_VALUE, GATEWAY_VIEW_NAME, addContactJData(loginId, draft.type, stored), {
+            retry: false,
+          }),
+        );
+        assertContactRemoved(
+          await send(ACTION_CODES.DELETE_PROFILE_COLUMN_VALUE, GATEWAY_VIEW_NAME, deleteContactJData(loginId, editing), {
+            retry: false,
+          }),
+        );
+      }
+    } catch (error) {
+      return describeError(error);
     }
 
-    if (editing) {
-      setContacts((current) =>
-        current.map((contact) =>
-          contact.id === editing.id ? { ...contact, type: draft.type, value } : contact,
-        ),
-      );
-      setEditingId(null);
-      announce(`${label} updated.`);
-      return null;
-    }
-
-    const contact: Contact = { id: nextContactId(), type: draft.type, value };
-    setContacts((current) => [...current, contact]);
-    // First contact saved becomes the one we confirm reservations on.
-    setPrimaryId((current) => current ?? contact.id);
-    announce(`${label} added.`);
+    setEditingId(null);
+    announce(editing ? M.UPDATED : M.ADDED);
+    refetch();
     return null;
   };
 
-  const cancel = () => {
-    setEditingId(null);
-    setNotice(null);
+  const askRemove = (contact: Contact) => {
+    setRemoveError(null);
+    setPendingRemoval(contact);
   };
 
-  const remove = (contact: Contact) => {
-    const rest = contacts.filter((item) => item.id !== contact.id);
-    setContacts(rest);
-    if (primaryId === contact.id) setPrimaryId(rest[0]?.id ?? null);
-    if (editingId === contact.id) setEditingId(null);
-    setPendingRemoval(null);
-    announce(`${contactType(contact.type).label} removed.`);
+  const remove = async () => {
+    if (!pendingRemoval || removing) return;
+
+    setRemoving(true);
+    try {
+      assertContactRemoved(
+        await send(
+          ACTION_CODES.DELETE_PROFILE_COLUMN_VALUE,
+          GATEWAY_VIEW_NAME,
+          deleteContactJData(loginId, pendingRemoval),
+          { retry: false },
+        ),
+      );
+      if (editingId === pendingRemoval.id) setEditingId(null);
+      setPendingRemoval(null);
+      announce(M.REMOVED);
+      refetch();
+    } catch (error) {
+      setRemoveError(describeError(error));
+    } finally {
+      setRemoving(false);
+    }
   };
+
+  // The previous list stays on screen while a reload is in flight.
+  const firstLoad = isLoading && !data;
+  const loadError = loaded.error ?? (!isLoading && !data ? errorDisplay?.customDescription : undefined);
 
   return (
-    <Screen title="Contact Management">
-      <Stack.Screen options={{ title: 'Contact Management' }} />
+    <Screen title={M.SCREEN_TITLE}>
+      <Stack.Screen options={{ title: M.SCREEN_TITLE }} />
 
       <ContactPanel
-        title={editing ? 'Edit your contact' : 'Enter your contact'}
-        trailing={editing ? <Badge label="EDITING" tone="primary" /> : null}
+        title={editing ? M.FORM_TITLE_EDIT : M.FORM_TITLE_ADD}
+        trailing={editing ? <Badge label={M.BADGE_EDITING} tone="primary" /> : null}
       >
         <ContactForm
           // Restarts the draft whenever the row being edited changes.
           key={editing?.id ?? 'new'}
           mode={editing ? 'edit' : 'add'}
-          initial={editing ? { type: editing.type, value: editing.value } : undefined}
+          initial={editing ? { type: editing.type, value: editing.value, extension: editing.extension } : undefined}
           onSubmit={submit}
-          onCancel={cancel}
+          onCancel={() => {
+            setEditingId(null);
+            setNotice(null);
+          }}
         />
       </ContactPanel>
 
@@ -124,44 +208,50 @@ export default function ContactManagementScreen() {
       ) : null}
 
       <ContactPanel
-        title="My Contacts"
-        trailing={
-          <Badge
-            label={contacts.length === 1 ? '1 SAVED' : `${contacts.length} SAVED`}
-            tone="info"
-          />
-        }
+        title={M.LIST_TITLE}
+        trailing={loadError || firstLoad ? null : <Badge label={`${contacts.length} ${M.SAVED_BADGE}`} tone="info" />}
       >
-        <ContactList
-          contacts={contacts}
-          primaryId={primaryId}
-          editingId={editingId}
-          onEdit={(contact) => {
-            setEditingId(contact.id);
-            setNotice(null);
-          }}
-          onRemove={setPendingRemoval}
-          onMakePrimary={(contact) => {
-            setPrimaryId(contact.id);
-            announce(`${contactType(contact.type).label} is now your primary contact.`);
-          }}
-        />
+        {firstLoad ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.primary[600]} />
+          </View>
+        ) : loadError ? (
+          <View style={styles.failed}>
+            <Notice tone="danger" title={M.LOAD_FAILED_TITLE} message={loadError} />
+            <Button label={M.RETRY} variant="outline" onPress={refetch} />
+          </View>
+        ) : (
+          <ContactList
+            contacts={contacts}
+            editingId={editingId}
+            onEdit={(contact) => {
+              setEditingId(contact.id);
+              setNotice(null);
+            }}
+            onRemove={askRemove}
+          />
+        )}
       </ContactPanel>
 
       <Sheet
         visible={pendingRemoval !== null}
-        title="Remove this contact?"
-        subtitle="It will no longer be used for pickup confirmations."
-        confirmLabel="Remove"
-        onClose={() => setPendingRemoval(null)}
-        onConfirm={() => {
-          if (pendingRemoval) remove(pendingRemoval);
+        title={M.REMOVE_TITLE}
+        subtitle={M.REMOVE_SUBTITLE}
+        confirmLabel={removing ? M.REMOVING : M.REMOVE_CONFIRM}
+        confirmVariant="danger"
+        confirmDisabled={removing}
+        onClose={() => {
+          if (!removing) setPendingRemoval(null);
         }}
+        onConfirm={remove}
       >
         {pendingRemoval ? (
-          <View style={styles.confirm}>
-            <Text style={styles.confirmType}>{contactType(pendingRemoval.type).label}</Text>
-            <Text style={styles.confirmValue}>{formatContactValue(pendingRemoval)}</Text>
+          <View style={styles.confirmBody}>
+            <View style={styles.confirm}>
+              <Text style={styles.confirmType}>{contactType(pendingRemoval.type).label}</Text>
+              <Text style={styles.confirmValue}>{formatContactValue(pendingRemoval)}</Text>
+            </View>
+            {removeError ? <Alert tone="danger" title={M.REMOVE_FAILED_TITLE} message={removeError} /> : null}
           </View>
         ) : null}
       </Sheet>
@@ -180,6 +270,10 @@ const styles = StyleSheet.create({
   },
   noticeText: { color: colors.success, fontSize: 13, fontWeight: '600' },
 
+  loading: { minHeight: 72, alignItems: 'center', justifyContent: 'center' },
+  failed: { gap: space.md },
+
+  confirmBody: { gap: space.md },
   confirm: {
     borderWidth: 1,
     borderColor: colors.border,
