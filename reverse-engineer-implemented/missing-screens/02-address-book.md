@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **App today** | 🟡 Not wired. `src/app/(app)/addresses.tsx` + `src/components/addresses/{AddressForm,SavedAddressList,savedAddress}.ts(x)` start from `SEED_ADDRESSES`; add/edit/delete only change React state. Meanwhile Home and booking load the **real** list (`PROF.S.USER_ADDRESSES` via `SavedPlacesContext`), so the address book and the booking pickers show different data. |
-| **Legacy reference** | [`../reverse-engineer-guide/11-address-book.md`](../guide/11-address-book.md) (full legacy contract), [`05-lookup-services.md`](../guide/05-lookup-services.md) §3 |
+| **Legacy reference** | [`../guide/11-address-book.md`](../guide/11-address-book.md) (full legacy contract), [`05-lookup-services.md`](../guide/05-lookup-services.md) §3 |
 | **Gateway** | ✅ `PROF.S.USER_ADDRESSES` (implemented), `PROF.I.USER_ADDRESS`, `PROF.U.USER_ADDRESS`, `PROF.D.USER_ADDRESS` (not implemented) |
 | **Priority** | P1 |
 

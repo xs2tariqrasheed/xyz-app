@@ -4,7 +4,7 @@ import { assertResultCode, pick, recordSet } from '@/services/gatewayRows';
 
 /**
  * "Ask about this ride" — the predefined questions and the rider's answer
- * (reverse-engineer-guide/21, 24): `RES.S.ALL_PREDEFINED_QUESTIONS` and
+ * (reverse-engineer-implemented/guide/21, reverse-engineer-guide/24): `RES.S.ALL_PREDEFINED_QUESTIONS` and
  * `RES.I.ASKED_QUESTIONS`, keeping feedback inside the app instead of the
  * marketing site's forms.
  */

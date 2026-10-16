@@ -24,7 +24,7 @@ export type AddressFormProps = {
   onCancel: () => void;
 };
 
-/** Field limits from the old address book (reverse-engineer-guide/11 §3). */
+/** Field limits from the old address book (reverse-engineer-implemented/guide/11 §3). */
 const MAX = { zip: 5, building: 6, street: 30, ext: 5, directions: 500 } as const;
 
 /**

@@ -1,6 +1,6 @@
 /**
  * Contact model: the extra phone numbers and e-mail addresses on a profile
- * (reverse-engineer-guide/12), offered as callback and e-mail choices when
+ * (reverse-engineer-implemented/guide/12), offered as callback and e-mail choices when
  * booking.
  *
  * Each type is a profile "column" on the gateway (`P_COLUMN_ID`): 3 home,

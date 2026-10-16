@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **App today** | 🔵 Partial: small gaps across already-implemented screens, plus two nav entries that should not ship. |
-| **Legacy reference** | [`02-authentication.md`](../reverse-engineer-guide/02-authentication.md), [`04-registration.md`](../reverse-engineer-guide/04-registration.md), [`06-member-home-express-ride.md`](../reverse-engineer-guide/06-member-home-express-ride.md); live login page capture `ev_c413af98…` |
+| **Legacy reference** | [`02-authentication.md`](../reverse-engineer-implemented/guide/02-authentication.md), [`04-registration.md`](../reverse-engineer-implemented/guide/04-registration.md), [`06-member-home-express-ride.md`](../reverse-engineer-implemented/guide/06-member-home-express-ride.md); live login page capture `ev_c413af98…` |
 | **Priority** | P2 (21.4 and 21.6 are P1 before release) |
 
 ## 1. Gap list

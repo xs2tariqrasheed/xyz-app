@@ -61,7 +61,7 @@ import { nextSlot, startOfDay } from '@/utils/datetime';
 /**
  * The reservation being made or changed, shared by every step of the booking
  * wizard on Reservation 2, the Express Checkout panel and the ride screens
- * that start an edit, a return trip or a repeat (reverse-engineer-guide/13–22).
+ * that start an edit, a return trip or a repeat (reverse-engineer-implemented/guide/13–22).
  *
  * Writes go out through `usePostData` with `retry: false` and behind an
  * in-flight lock, so a booking can never be sent twice. Card details live only

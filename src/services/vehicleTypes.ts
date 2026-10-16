@@ -4,7 +4,7 @@ import { pick, recordSet, toInt } from '@/services/gatewayRows';
 
 /**
  * Car types offered on the Preferences step, from `RES.S.VEHICLE_TYPE`
- * (reverse-engineer-guide/05, 17). The code goes out as `P_CAR_TYPE`.
+ * (reverse-engineer-implemented/guide/05, 17). The code goes out as `P_CAR_TYPE`.
  */
 
 export type VehicleType = {

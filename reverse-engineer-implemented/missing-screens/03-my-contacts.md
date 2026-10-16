@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **App today** | 🟡 Not wired. `src/app/(app)/contacts.tsx` ("Contact Management") + `src/components/contacts/*` + `src/utils/contacts.ts` start from a hard-coded `SEED_CONTACTS` list, so add/edit/remove are local only. The type set (home / mobile / work / fax / email) differs from the legacy codes. The app also adds a "make primary" concept with no backend, and has no Office-phone extension field. |
-| **Legacy reference** | [`../reverse-engineer-guide/12-contacts.md`](../guide/12-contacts.md), [`17-booking-preferences-contact.md`](../guide/17-booking-preferences-contact.md) §4 |
+| **Legacy reference** | [`../guide/12-contacts.md`](../guide/12-contacts.md), [`17-booking-preferences-contact.md`](../guide/17-booking-preferences-contact.md) §4 |
 | **Gateway** | ✅ `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` (implemented, used by booking), `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.I.PROFILE_COLUMN_VALUE`, `PROF.U.PROFILE_COLUMN_VALUE`, `PROF.D.PROFILE_COLUMN_VALUE` (not implemented) |
 | **Priority** | P1 |
 

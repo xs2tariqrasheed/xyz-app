@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **App today** | 🔵 Partial. In `src/app/(app)/rides.tsx`, the Upcoming tab (`RES.S.UPDATABLE_ORDERS`) offers view / modify / cancel. History (`RES.S.ALL_ORDERS`) offers view / voucher / "Leave feedback" (Ask-a-Question). Tracking lives only on the details page (`track-ride.tsx`). |
-| **Legacy reference** | [`19-open-reservations-cancel.md`](../reverse-engineer-guide/19-open-reservations-cancel.md) §3, [`21-ride-tracking-live-status.md`](../reverse-engineer-guide/21-ride-tracking-live-status.md) §3–4, [`23-vouchers-receipts.md`](../reverse-engineer-guide/23-vouchers-receipts.md) §3, [`18-ride-history-search.md`](../reverse-engineer-guide/18-ride-history-search.md) §4 |
+| **Legacy reference** | [`19-open-reservations-cancel.md`](../reverse-engineer-implemented/guide/19-open-reservations-cancel.md) §3, [`21-ride-tracking-live-status.md`](../reverse-engineer-implemented/guide/21-ride-tracking-live-status.md) §3–4, [`23-vouchers-receipts.md`](../reverse-engineer-guide/23-vouchers-receipts.md) §3, [`18-ride-history-search.md`](../reverse-engineer-implemented/guide/18-ride-history-search.md) §4 |
 | **Gateway** | ✅ Everything needed already exists: `RES.S.LOAD_RESERVATION`, `RES.S.VEHICLE_LOG`, `RES.S.LATITUDE_LONGITUDE_FOR_CAR`, `PROF.S.CAR_INFO`, `RES.S.ALL_PREDEFINED_QUESTIONS`, `RES.I.ASKED_QUESTIONS`, `RES.S.ALL_ORDERS` |
 | **Priority** | P2 |
 

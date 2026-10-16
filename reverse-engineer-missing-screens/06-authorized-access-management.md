@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **App today** | 🔴 Missing. The booking side only **reads** who granted access to me (`PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS`, used by `useGrantedProfiles` for "Reservation for"). Nobody can grant or revoke access, so that list can never be filled from the app. |
-| **Legacy reference** | [`../reverse-engineer-guide/14-booking-passenger-time.md`](../reverse-engineer-guide/14-booking-passenger-time.md) §2–4 (option `4` Authorised employee, `ddlAuthorizeEmployees`, `LoadAuthorizeProfile`) |
+| **Legacy reference** | [`../reverse-engineer-implemented/guide/14-booking-passenger-time.md`](../reverse-engineer-implemented/guide/14-booking-passenger-time.md) §2–4 (option `4` Authorised employee, `ddlAuthorizeEmployees`, `LoadAuthorizeProfile`) |
 | **Gateway** | ✅ `PROF.U.GRANT_ACCESS_RIGHTS`, `PROF.U.REVOKE_ACCESS_RIGHTS`, `PROF.S.LOAD_MATCHING_PROFILE_LIST`, `PROF.S.GRANT_ACCESS_RIGHTS_TO_ALL`, `PROF.U.GRANT_ACCESS_RIGHTS_TO_ALL`, `PROF.U.REVOKE_ACCESS_RIGHTS_TO_ALL`, `PROF.S.LOAD_ACCESS_RIGHTS_GRANTED_PROFILE` — none implemented |
 | **Priority** | P2 |
 

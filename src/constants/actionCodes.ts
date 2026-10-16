@@ -29,7 +29,7 @@ export const ACTION_CODES = {
   /** The whole new profile (41 P_* parameters) → o_code / o_message. */
   CREATE_PROFILE: 'PROF.I.PROFILE',
 
-  // ── Reservation flow: lookups (reverse-engineer-guide/05) ──────────────────
+  // ── Reservation flow: lookups (reverse-engineer-implemented/guide/05) ──────────────────
   /** P_LOGIN_ID → saved addresses: address_id, country, state, city, zip_code, building_num, street_name, cross_street, pickup_point, …. */
   USER_ADDRESSES: 'PROF.S.USER_ADDRESSES',
   /** P_LOGIN_ID → the profile's home / office address rows (columns undocumented). */
@@ -39,7 +39,7 @@ export const ACTION_CODES = {
   /** P_LOGIN_ID, P_COLUMN_ID (contact type) → the profile's contacts of that type. */
   LOAD_PROFILE_COLUMN_VALUES_BY_TYPE: 'PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE',
 
-  // ── Address book & contacts (reverse-engineer-guide/11, 12) ────────────────
+  // ── Address book & contacts (reverse-engineer-implemented/guide/11, 12) ────────────────
   /** P_LOGIN_ID, P_COUNTRY, P_STATE, P_CITY, P_STREET_NUM, P_STREET_NAME, P_CROSS_STREET, P_PICKUP_POINT, P_ZIP, P_DIRECTIONS, P_PHONE_NUM, P_EXT, P_PHONE_NUM_US, P_EXT_US → o_code / o_message. */
   ADD_USER_ADDRESS: 'PROF.I.USER_ADDRESS',
   /** P_LOGIN_ID, P_PICKUP_COUNT + the same fields as ADD_USER_ADDRESS → o_code / o_message. */

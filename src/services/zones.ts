@@ -5,7 +5,7 @@ import { mapRows } from '@/services/gateway';
 import type { StructuredPlace } from '@/services/places';
 
 /**
- * Service-area zones for the two ends of a ride (reverse-engineer-guide/05,
+ * Service-area zones for the two ends of a ride (reverse-engineer-implemented/guide/05,
  * 13). A stop with coordinates and a ZIP (a Google place) is zoned with
  * `RES.S.GOOGLE_ZONE_NUM`; anything else (a saved address, an airport or a
  * landmark without coordinates) by its street with `RES.S.ZONE_THE_LOCATION`.

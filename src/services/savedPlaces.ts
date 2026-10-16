@@ -4,7 +4,7 @@ import type { GatewayJData } from '@/services/gateway';
 
 /**
  * The customer's own places, offered above the Google results in the address
- * fields and in the Express Checkout lists (reverse-engineer-guide/05, 06):
+ * fields and in the Express Checkout lists (reverse-engineer-implemented/guide/05, 06):
  *
  * - `PROF.S.USER_ADDRESSES` — saved ("favourite") addresses;
  * - `PROF.S.USER_PROFILE_ADDRESSES` — the profile's home / office address;

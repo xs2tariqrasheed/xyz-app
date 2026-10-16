@@ -39,7 +39,7 @@ import { formatIntlPhone, formatUsPhone } from '@/utils/phone';
 type Notice = { tone: 'success' | 'danger'; message: string } | null;
 
 /**
- * One reservation in full (reverse-engineer-guide/20): `RES.S.LOAD_RESERVATION`
+ * One reservation in full (reverse-engineer-implemented/guide/20): `RES.S.LOAD_RESERVATION`
  * for the record, `PROF.S.CAR_INFO` for the car and driver,
  * `RES.S.COMMUNICATION_LOG` for the messages sent, and the extra contact
  * stored on it (`RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE`).

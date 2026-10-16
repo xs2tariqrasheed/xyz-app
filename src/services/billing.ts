@@ -7,7 +7,7 @@ import { CARD_TYPE_CODES } from '@/services/registration';
 import { detectBrand, digitsOnly } from '@/utils/payment';
 
 /**
- * Step 3 of the booking — who pays and how (reverse-engineer-guide/16).
+ * Step 3 of the booking — who pays and how (reverse-engineer-implemented/guide/16).
  *
  * Card numbers only ever leave the device inside the authorisation and booking
  * calls themselves; nothing here stores, logs or echoes one back

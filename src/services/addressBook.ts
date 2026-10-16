@@ -6,7 +6,7 @@ import { toCountryCode } from '@/services/places';
 import { MAX_INTL_DIGITS, toDigits } from '@/utils/phone';
 
 /**
- * My Addresses (reverse-engineer-guide/11) over the gateway:
+ * My Addresses (reverse-engineer-implemented/guide/11) over the gateway:
  *
  * - `PROF.S.USER_ADDRESSES` lists the saved locations — the same request
  *   `SavedPlacesContext` already makes for Home and the booking form, so the

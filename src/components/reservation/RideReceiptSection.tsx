@@ -21,7 +21,7 @@ export type RideReceiptSectionProps = {
 
 /**
  * Section 6 — the confirmation the customer lands on after booking
- * (reverse-engineer-guide/13). It shows the number the server issued, never
+ * (reverse-engineer-implemented/guide/13). It shows the number the server issued, never
  * one made up on the device.
  */
 export function RideReceiptSection({

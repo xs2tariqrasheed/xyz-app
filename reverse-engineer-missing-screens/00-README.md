@@ -2,7 +2,7 @@
 
 This folder lists every screen and feature of the live system (**https://booking.xyzcar.com** plus the linked marketing site **https://xyzcar.com**) that the XYZ app (`xyz-app`) does **not** have yet, or has only as a non-working shell.
 
-**One file = one screen or module still to build.** When a module is finished, move its file out of this folder (or mark it `✅ Implemented` at the top, as `reverse-engineer-guide/` does).
+**One file = one screen or module still to build.** When a module is finished, move its file to [`../reverse-engineer-implemented/missing-screens/`](../reverse-engineer-implemented/00-README.md) and list it there.
 
 Reverse engineered on **2026-10-16**. Inputs:
 - the 27 guides in [`../reverse-engineer-guide/`](../reverse-engineer-guide/00-README.md)
@@ -31,7 +31,7 @@ Reverse engineered on **2026-10-16**. Inputs:
   - Download Receipt / Invoice pages
   - the help files
 
-Several guides are marked "✅ Implemented" but are only partly done in the app. Modules 13–17 (booking), 23 (vouchers & receipts) and 24 (feedback) are the main ones. Their remaining gaps are in files 04–07, 19 and 20 below.
+The booking guides 13–17 are implemented, but sub-features are still missing; those gaps are in files 19 and 20 below. Guide 23 (vouchers & receipts) is only partly built, and guide 24 (feedback) is not built. Their gaps are in files 08–11 and 13.
 
 ## 2. Status legend
 
@@ -51,8 +51,8 @@ Action-code availability:
 | # | File | Screen / module | App today | Gateway | Priority |
 |---|---|---|---|---|---|
 | 01 | [01-system-status-screens.md](01-system-status-screens.md) | Session timeout, error, not-allowed, account locked, account expired, 404, error boundary | 🔴 Missing | ✅ `PROF.S.DB_LOG_ERROR` (logging only) | **P1** |
-| 02 | [02-address-book.md](02-address-book.md) | My Addresses: list / add / edit / delete saved locations | ✅ Implemented 2026-10-16 | ✅ `PROF.S.USER_ADDRESSES`, `PROF.I/U/D.USER_ADDRESS` | **P1** |
-| 03 | [03-my-contacts.md](03-my-contacts.md) | My Contacts: extra phones / e-mails CRUD | ✅ Implemented 2026-10-16 (stub does not support the codes yet) | ✅ `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.I/U/D.PROFILE_COLUMN_VALUE` | **P1** |
+| 02 | [02-address-book.md](../reverse-engineer-implemented/missing-screens/02-address-book.md) | My Addresses: list / add / edit / delete saved locations | ✅ Implemented 2026-10-16 | ✅ `PROF.S.USER_ADDRESSES`, `PROF.I/U/D.USER_ADDRESS` | **P1** |
+| 03 | [03-my-contacts.md](../reverse-engineer-implemented/missing-screens/03-my-contacts.md) | My Contacts: extra phones / e-mails CRUD | ✅ Implemented 2026-10-16 (stub does not support the codes yet) | ✅ `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.I/U/D.PROFILE_COLUMN_VALUE` | **P1** |
 | 04 | [04-preferences.md](04-preferences.md) | Change Preferences: confirm by phone, special offers | 🟡 Not wired (`DEFAULT_PREFERENCES`) | ✅ `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | **P1** |
 | 05 | [05-mailing-address.md](05-mailing-address.md) | Change Billing / Mailing Address | 🟡 Not wired (`SAVED_MAILING_ADDRESS`) | ✅ `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | **P1** |
 | 06 | [06-authorized-access-management.md](06-authorized-access-management.md) | Authorise colleagues to book on my behalf (grant / revoke / grant-to-all / list / search) | 🔴 Missing | ✅ 7 `PROF.*ACCESS_RIGHTS*` codes | **P2** |

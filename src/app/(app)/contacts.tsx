@@ -53,7 +53,7 @@ function describeError(error: unknown): string {
 }
 
 /**
- * My Contacts (reverse-engineer-guide/12): the profile's extra phones and
+ * My Contacts (reverse-engineer-implemented/guide/12): the profile's extra phones and
  * e-mails from `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, changed through the
  * `PROF.I/U/D.PROFILE_COLUMN_VALUE` codes. Booking offers them as callback and
  * e-mail choices.

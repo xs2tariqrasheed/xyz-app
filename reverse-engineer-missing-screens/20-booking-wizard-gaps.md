@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **App today** | 🔵 Partial. `src/app/(app)/reserver-2.tsx` + `src/context/ReservationContext.tsx` + `src/components/reservation/*` are wired:<br>• create / update<br>• zone check + acknowledgement<br>• airport pickup options C / D / B / A with airline, flight, arriving-from and terminal<br>• three billing modes<br>• account requirements<br>• card authorisation polling (10 s / 90 s)<br>• the K premium-wheelchair block<br>• e-mail and CC writes<br>• express checkout<br>The items below from the live wizard are absent. Guides 13–17 are marked "✅ Implemented", but these gaps remain. |
-| **Legacy reference** | [`13-booking-wizard-core.md`](../reverse-engineer-guide/13-booking-wizard-core.md), [`14`](../reverse-engineer-guide/14-booking-passenger-time.md), [`15`](../reverse-engineer-guide/15-booking-locations.md), [`16`](../reverse-engineer-guide/16-booking-billing-payment.md), [`17`](../reverse-engineer-guide/17-booking-preferences-contact.md), [`05-lookup-services.md`](../reverse-engineer-guide/05-lookup-services.md) |
+| **Legacy reference** | [`13-booking-wizard-core.md`](../reverse-engineer-implemented/guide/13-booking-wizard-core.md), [`14`](../reverse-engineer-implemented/guide/14-booking-passenger-time.md), [`15`](../reverse-engineer-implemented/guide/15-booking-locations.md), [`16`](../reverse-engineer-implemented/guide/16-booking-billing-payment.md), [`17`](../reverse-engineer-implemented/guide/17-booking-preferences-contact.md), [`05-lookup-services.md`](../reverse-engineer-implemented/guide/05-lookup-services.md) |
 | **Gateway** | Mixed. See the "Code" column. |
 | **Priority** | P1 for 20.1–20.5, which affect booking correctness. P2 for the rest. |
 

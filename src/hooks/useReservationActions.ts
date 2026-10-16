@@ -21,7 +21,7 @@ export function actionErrorMessage(error: unknown): string {
 
 /**
  * Opens a reservation in the booking wizard — to change it, book the way
- * back, or book it again (reverse-engineer-guide/19, 22). The record is
+ * back, or book it again (reverse-engineer-implemented/guide/19, 22). The record is
  * loaded fresh with `RES.S.LOAD_RESERVATION`, so the wizard never edits a
  * stale list row.
  */

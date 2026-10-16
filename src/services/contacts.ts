@@ -4,7 +4,7 @@ import { assertResultCode, pick, recordSet, toInt } from '@/services/gatewayRows
 import { type Contact, contactType, contactTypeByColumn, fromStoredValue } from '@/utils/contacts';
 
 /**
- * My Contacts (reverse-engineer-guide/12) over the gateway. Contacts are
+ * My Contacts (reverse-engineer-implemented/guide/12) over the gateway. Contacts are
  * profile "column values": `PROF.S.LOAD_PROFILE_COLUMN_VALUES` lists them, and
  * `PROF.I` / `PROF.U` / `PROF.D.PROFILE_COLUMN_VALUE` add, change and remove
  * one, identified by its column id and value.

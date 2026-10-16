@@ -29,7 +29,7 @@ export const EMPTY_PERSONAL_INFO: PersonalInfoValue = {
   fax: EMPTY_PHONE,
 };
 
-/** Column limits and rules from reverse-engineer-guide/07-profile-personal-info.md. */
+/** Column limits and rules from reverse-engineer-implemented/guide/07-profile-personal-info.md. */
 const FIRST_NAME_MAX = 15;
 const LAST_NAME_MIN = 2;
 const LAST_NAME_MAX = 20;

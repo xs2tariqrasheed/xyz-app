@@ -71,7 +71,7 @@ type Banner = { title: string; message: string } | null;
 
 /**
  * "Make a reservation" with the steps across the top and a live summary
- * beside the form (reverse-engineer-guide/13–17). The draft lives in
+ * beside the form (reverse-engineer-implemented/guide/13–17). The draft lives in
  * `ReservationContext`; this screen validates each step, runs the server
  * checks, and books from the Preview step.
  */

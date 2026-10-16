@@ -79,7 +79,7 @@ function isValidStreet(value: string): boolean {
 }
 
 /**
- * The legacy address book's rules (reverse-engineer-guide/11 §3, 26): country,
+ * The legacy address book's rules (reverse-engineer-implemented/guide/11 §3, 26): country,
  * state, city, building # and street are required, and at least one callback
  * number — US, or a complete international one.
  */

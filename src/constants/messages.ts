@@ -90,7 +90,7 @@ export const CHANGE_PASSWORD_MESSAGES = {
 
 /**
  * Profile screen and the personal info panel it shares with registration
- * (reverse-engineer-guide/07-profile-personal-info.md).
+ * (reverse-engineer-implemented/guide/07-profile-personal-info.md).
  */
 export const PROFILE_MESSAGES = {
   SCREEN_TITLE: 'Profile',
@@ -225,7 +225,7 @@ export const REGISTER_MESSAGES = {
   HAVE_ACCOUNT_LINK: 'Already have an account? Log in',
 } as const;
 
-/** Address combobox shared by the booking form (reverse-engineer-guide/15). */
+/** Address combobox shared by the booking form (reverse-engineer-implemented/guide/15). */
 export const ADDRESS_FIELD_MESSAGES = {
   SAVED_GROUP: 'Your places',
   NO_MATCHES: 'No matching addresses.',
@@ -236,7 +236,7 @@ export const ADDRESS_FIELD_MESSAGES = {
   FIT_ROUTE: 'Show the whole route',
 } as const;
 
-/** My Addresses: saved pickup / drop-off locations (reverse-engineer-guide/11). */
+/** My Addresses: saved pickup / drop-off locations (reverse-engineer-implemented/guide/11). */
 export const ADDRESS_BOOK_MESSAGES = {
   SCREEN_TITLE: 'Addresses',
   FORM_TITLE_ADD: 'Add a location',
@@ -299,7 +299,7 @@ export const ADDRESS_BOOK_MESSAGES = {
   DELETE_REJECTED: "We couldn't delete this location.",
   LOAD_REJECTED: "We couldn't load your saved locations.",
   RETRY: 'Try again',
-  // Validation (reverse-engineer-guide/11 §3, 26).
+  // Validation (reverse-engineer-implemented/guide/11 §3, 26).
   COUNTRY_REQUIRED: 'Country is required.',
   STATE_REQUIRED: 'State is required.',
   CITY_REQUIRED: 'City is required.',
@@ -318,7 +318,7 @@ export const ADDRESS_BOOK_MESSAGES = {
   DIRECTIONS_INVALID: 'Use up to 500 characters, without quotation marks.',
 } as const;
 
-/** My Contacts: extra phones and e-mails (reverse-engineer-guide/12). */
+/** My Contacts: extra phones and e-mails (reverse-engineer-implemented/guide/12). */
 export const CONTACTS_MESSAGES = {
   SCREEN_TITLE: 'My Contacts',
   FORM_TITLE_ADD: 'Add a contact',
@@ -362,7 +362,7 @@ export const CONTACTS_MESSAGES = {
   REMOVE_REJECTED: "We couldn't remove this contact.",
   LOAD_REJECTED: "We couldn't load your contacts.",
   RETRY: 'Try again',
-  // Validation (reverse-engineer-guide/12 §6, 26 §11).
+  // Validation (reverse-engineer-implemented/guide/12 §6, 26 §11).
   EMAIL_REQUIRED: 'Please provide your email address.',
   EMAIL_INVALID: 'Invalid email address.',
   EMAIL_TOO_LONG: 'An email address can be at most 50 characters.',
@@ -374,7 +374,7 @@ export const CONTACTS_MESSAGES = {
 
 /**
  * The booking wizard on Reservation 2 and the screens around it
- * (reverse-engineer-guide/13–17).
+ * (reverse-engineer-implemented/guide/13–17).
  */
 export const RESERVATION_MESSAGES = {
   SCREEN_TITLE: 'Make a reservation',

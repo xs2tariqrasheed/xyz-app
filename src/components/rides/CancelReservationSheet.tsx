@@ -27,7 +27,7 @@ export type CancelReservationSheetProps = {
 
 /**
  * Asks for a reason, then cancels with `RES.U.CANCEL_RESERVATION`
- * (reverse-engineer-guide/19). The call is never resent, and the confirm
+ * (reverse-engineer-implemented/guide/19). The call is never resent, and the confirm
  * button stays locked while it is in flight.
  */
 export function CancelReservationSheet({ reservationNumber, onClose, onCancelled }: CancelReservationSheetProps) {

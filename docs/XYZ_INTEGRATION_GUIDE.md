@@ -228,7 +228,7 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 
 **Change password** (`change-password.tsx`, form in `src/components/account/ChangePasswordForm.tsx`): `PROF.U.PASSWORD` with `{ P_LOGIN_ID: session.loginId, P_OLD_PASSWORD, P_NEW_PASSWORD }` via `usePostData`, sent with `retry: false`. The confirm field is checked on the client only — the contract has no parameter for it. A returned `o_code` other than `"0"` (e.g. a wrong old password) → `AuthError(o_message)`; no `o_code` → changed. The session holds no password, so the user stays signed in.
 
-**Profile — Personal Info** (`profile.tsx`, state in `src/context/ProfileContext.tsx`, mapping in `src/services/profile.ts`; spec `reverse-engineer-guide/07-profile-personal-info.md`). `ProfileProvider` loads `PROF.S.LOAD_PROFILE` once per signed-in login and shares it through `useProfile()` — Home's welcome line and the Profile form read the same request. The form pre-fills name, US callback phone, international callback phone and fax from the row (`first_name`, `last_name`, `phone_number_us` / `phone_ext_us`, `dial_code_intl` / `phone_number_intl` / `phone_ext_intl`, `fax_dial_code` / `fax_number`); the column names live in one `COLUMNS` map. Update sends `PROF.U.PROFILE` via `updatePersonalInfo` with `retry: false`; anything but `o_code` `"0"` → `ProfileError(o_message)`, no `o_code` → `GatewayError('parsing')`. On success the profile is reloaded.
+**Profile — Personal Info** (`profile.tsx`, state in `src/context/ProfileContext.tsx`, mapping in `src/services/profile.ts`; spec `reverse-engineer-implemented/guide/07-profile-personal-info.md`). `ProfileProvider` loads `PROF.S.LOAD_PROFILE` once per signed-in login and shares it through `useProfile()` — Home's welcome line and the Profile form read the same request. The form pre-fills name, US callback phone, international callback phone and fax from the row (`first_name`, `last_name`, `phone_number_us` / `phone_ext_us`, `dial_code_intl` / `phone_number_intl` / `phone_ext_intl`, `fax_dial_code` / `fax_number`); the column names live in one `COLUMNS` map. Update sends `PROF.U.PROFILE` via `updatePersonalInfo` with `retry: false`; anything but `o_code` `"0"` → `ProfileError(o_message)`, no `o_code` → `GatewayError('parsing')`. On success the profile is reloaded.
 
 - **The update replaces the whole profile.** `PROF.U.PROFILE` has no personal-info-only variant, so `updateProfileJData` sends the edited fields on top of the loaded row: every other parameter (`P_PASSWORD`, address, card, account requirements, preferences) is copied from the `LOAD_PROFILE` column named like it without the `P_` prefix (`P_CC_YEAR` → `cc_year`), or sent as `''` when the row has no such column. **Today's `LOAD_PROFILE` returns none of those columns**, so they all go out blank — confirm with the backend that blanks are ignored (or that `LOAD_PROFILE` will return them) before this reaches real data.
 - **Phones.** International and fax numbers go out as calling code + number in one run of digits (`P_PHONE_NUMBER`, `P_FAX`), as in registration. On load the calling code is matched back to a picker country; a code shared by several countries (+1) picks the first listed. The fax extension box is hidden — the contract has no parameter for it.
@@ -262,7 +262,7 @@ On success the screen links back to login; the user is not signed in automatical
 
 ## 7a. Reservations
 
-Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens; specs `reverse-engineer-guide/05`, `06`, `13`–`24`. The original `/reserve` layout stays in the menu unwired; every other entry point opens `/reserver-2`.
+Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens; specs `reverse-engineer-implemented/guide/05`, `06`, `13`–`22` and `reverse-engineer-guide/23`, `24`. The original `/reserve` layout stays in the menu unwired; every other entry point opens `/reserver-2`.
 
 | Piece | File |
 |---|---|
@@ -307,7 +307,7 @@ Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens
 
 ## 7b. Address book & contacts
 
-Specs `reverse-engineer-guide/11`, `12` and `reverse-engineer-missing-screens/02`, `03`. Both screens render only what the gateway returns — the old seed lists are gone.
+Specs `reverse-engineer-implemented/guide/11`, `12` and `reverse-engineer-implemented/missing-screens/02`, `03`. Both screens render only what the gateway returns — the old seed lists are gone.
 
 | Where | Action code | JData / notes |
 |---|---|---|

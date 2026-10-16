@@ -23,35 +23,37 @@ Evidence tags: **[O]** observed live (page markup or real response) · **[C]** r
 
 ## 2. Module index
 
-| # | File | Module |
-|---|---|---|
-| 01 | [01-platform-conventions.md](01-platform-conventions.md) | Session, response envelopes, errors, input filter, help content (shared by all modules) |
-| 02 | [02-authentication.md](02-authentication.md) | Login, logout, lockout/expiry, session timeout |
-| 03 | [03-forgot-password.md](03-forgot-password.md) | Password recovery |
-| 04 | [04-registration.md](04-registration.md) | New member registration (4 steps) |
-| 05 | [05-lookup-services.md](05-lookup-services.md) | Country/State/City/Street/Cross-street, Airport, Airline, Landmark, Contact-type lookups, Zone checks |
-| 06 | [06-member-home-express-ride.md](06-member-home-express-ride.md) | Member home data + "I am ready for pickup" express ride |
-| 07 | [07-profile-personal-info.md](07-profile-personal-info.md) | Update personal info |
-| 08 | [08-profile-mailing-address.md](08-profile-mailing-address.md) | Update billing/mailing address |
-| 09 | [09-profile-preferences.md](09-profile-preferences.md) | Confirmation & subscription preferences |
-| 10 | [10-change-password.md](10-change-password.md) | Change password |
-| 11 | [11-address-book.md](11-address-book.md) | Saved locations CRUD |
-| 12 | [12-contacts.md](12-contacts.md) | Additional phones / e-mails CRUD |
-| 13 | [13-booking-wizard-core.md](13-booking-wizard-core.md) | Reservation flow: steps, step POST contract, server responses, confirmation |
-| 14 | [14-booking-passenger-time.md](14-booking-passenger-time.md) | Step 1 — passenger, "reservation for", ride date/time |
-| 15 | [15-booking-locations.md](15-booking-locations.md) | Step 2 — pickup & drop-off (address search, saved, airport, landmark, as-directed, zone) |
-| 16 | [16-booking-billing-payment.md](16-booking-billing-payment.md) | Step 3 — account / account+card / credit card, requirements, card authorisation |
-| 17 | [17-booking-preferences-contact.md](17-booking-preferences-contact.md) | Step 4 — car type, confirmation, phones, e-mail/CC, passengers, stops |
-| 18 | [18-ride-history-search.md](18-ride-history-search.md) | Search past rides by date / payment method |
-| 19 | [19-open-reservations-cancel.md](19-open-reservations-cancel.md) | Open reservations list + cancel reservation |
-| 20 | [20-reservation-details.md](20-reservation-details.md) | Full reservation/ride detail incl. charges, driver, vehicle |
-| 21 | [21-ride-tracking-live-status.md](21-ride-tracking-live-status.md) | Track your route, live status, ask a question |
-| 22 | [22-round-trip-repeat.md](22-round-trip-repeat.md) | Create return / repeat trip from an existing ride |
-| 23 | [23-vouchers-receipts.md](23-vouchers-receipts.md) | Voucher image, print voucher, receipts & invoices |
-| 24 | [24-feedback-rating-complaints.md](24-feedback-rating-complaints.md) | Rate a ride, complaint, contact, open-account requests |
-| 25 | [25-system-pages-errors.md](25-system-pages-errors.md) | Timeout, error, not-allowed, locked/expired messages |
-| 26 | [26-validation-rules.md](26-validation-rules.md) | All field validators & messages (shared reference) |
-| 27 | [27-api-catalog.md](27-api-catalog.md) | Every endpoint in one table |
+Implemented modules have moved to [`../reverse-engineer-implemented/guide/`](../reverse-engineer-implemented/00-README.md). This folder keeps only the modules that are not built yet, are partly built, or are shared references. Module numbers are unchanged.
+
+| # | File | Module | Status |
+|---|---|---|---|
+| 01 | [01-platform-conventions.md](01-platform-conventions.md) | Session, response envelopes, errors, input filter, help content (shared by all modules) | Reference |
+| 02 | [02-authentication.md](../reverse-engineer-implemented/guide/02-authentication.md) | Login, logout, lockout/expiry, session timeout | ✅ Implemented |
+| 03 | [03-forgot-password.md](../reverse-engineer-implemented/guide/03-forgot-password.md) | Password recovery | ✅ Implemented |
+| 04 | [04-registration.md](../reverse-engineer-implemented/guide/04-registration.md) | New member registration (4 steps) | ✅ Implemented |
+| 05 | [05-lookup-services.md](../reverse-engineer-implemented/guide/05-lookup-services.md) | Country/State/City/Street/Cross-street, Airport, Airline, Landmark, Contact-type lookups, Zone checks | ✅ Implemented |
+| 06 | [06-member-home-express-ride.md](../reverse-engineer-implemented/guide/06-member-home-express-ride.md) | Member home data + "I am ready for pickup" express ride | ✅ Implemented |
+| 07 | [07-profile-personal-info.md](../reverse-engineer-implemented/guide/07-profile-personal-info.md) | Update personal info | ✅ Implemented |
+| 08 | [08-profile-mailing-address.md](08-profile-mailing-address.md) | Update billing/mailing address | 🟡 Not wired |
+| 09 | [09-profile-preferences.md](09-profile-preferences.md) | Confirmation & subscription preferences | 🟡 Not wired |
+| 10 | [10-change-password.md](../reverse-engineer-implemented/guide/10-change-password.md) | Change password | ✅ Implemented |
+| 11 | [11-address-book.md](../reverse-engineer-implemented/guide/11-address-book.md) | Saved locations CRUD | ✅ Implemented |
+| 12 | [12-contacts.md](../reverse-engineer-implemented/guide/12-contacts.md) | Additional phones / e-mails CRUD | ✅ Implemented |
+| 13 | [13-booking-wizard-core.md](../reverse-engineer-implemented/guide/13-booking-wizard-core.md) | Reservation flow: steps, step POST contract, server responses, confirmation | ✅ Implemented |
+| 14 | [14-booking-passenger-time.md](../reverse-engineer-implemented/guide/14-booking-passenger-time.md) | Step 1 — passenger, "reservation for", ride date/time | ✅ Implemented |
+| 15 | [15-booking-locations.md](../reverse-engineer-implemented/guide/15-booking-locations.md) | Step 2 — pickup & drop-off (address search, saved, airport, landmark, as-directed, zone) | ✅ Implemented |
+| 16 | [16-booking-billing-payment.md](../reverse-engineer-implemented/guide/16-booking-billing-payment.md) | Step 3 — account / account+card / credit card, requirements, card authorisation | ✅ Implemented |
+| 17 | [17-booking-preferences-contact.md](../reverse-engineer-implemented/guide/17-booking-preferences-contact.md) | Step 4 — car type, confirmation, phones, e-mail/CC, passengers, stops | ✅ Implemented |
+| 18 | [18-ride-history-search.md](../reverse-engineer-implemented/guide/18-ride-history-search.md) | Search past rides by date / payment method | ✅ Implemented |
+| 19 | [19-open-reservations-cancel.md](../reverse-engineer-implemented/guide/19-open-reservations-cancel.md) | Open reservations list + cancel reservation | ✅ Implemented |
+| 20 | [20-reservation-details.md](../reverse-engineer-implemented/guide/20-reservation-details.md) | Full reservation/ride detail incl. charges, driver, vehicle | ✅ Implemented |
+| 21 | [21-ride-tracking-live-status.md](../reverse-engineer-implemented/guide/21-ride-tracking-live-status.md) | Track your route, live status, ask a question | ✅ Implemented |
+| 22 | [22-round-trip-repeat.md](../reverse-engineer-implemented/guide/22-round-trip-repeat.md) | Create return / repeat trip from an existing ride | ✅ Implemented |
+| 23 | [23-vouchers-receipts.md](23-vouchers-receipts.md) | Voucher image, print voucher, receipts & invoices | 🔵 Partial |
+| 24 | [24-feedback-rating-complaints.md](24-feedback-rating-complaints.md) | Rate a ride, complaint, contact, open-account requests | 🔴 Missing |
+| 25 | [25-system-pages-errors.md](25-system-pages-errors.md) | Timeout, error, not-allowed, locked/expired messages | 🔴 Missing |
+| 26 | [26-validation-rules.md](26-validation-rules.md) | All field validators & messages (shared reference) | Reference |
+| 27 | [27-api-catalog.md](27-api-catalog.md) | Every endpoint in one table | Reference |
 
 ## 3. Global facts every module relies on
 

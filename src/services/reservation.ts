@@ -38,7 +38,7 @@ import { digitsOnly } from '@/utils/payment';
 import { findCountryByDial, toIntlDigits } from '@/utils/phone';
 
 /**
- * A reservation in both directions (reverse-engineer-guide/13–20):
+ * A reservation in both directions (reverse-engineer-implemented/guide/13–20):
  *
  * - the wizard's draft → `RES.I.RESERVATION` / `RES.U.RESERVATION` JData;
  * - a `RES.S.LOAD_RESERVATION` row → {@link ReservationRecord} for the details,

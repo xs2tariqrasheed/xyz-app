@@ -5,7 +5,7 @@ import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { hasColumn, parseGatewayDate, pick, recordSet } from '@/services/gatewayRows';
 
 /**
- * Where a car has been and where it is now (reverse-engineer-guide/21):
+ * Where a car has been and where it is now (reverse-engineer-implemented/guide/21):
  * `RES.S.VEHICLE_LOG` for the route and its timeline, and
  * `RES.S.LATITUDE_LONGITUDE_FOR_CAR` for the car's current position.
  *

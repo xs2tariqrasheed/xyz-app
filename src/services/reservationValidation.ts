@@ -36,7 +36,7 @@ import { isValidEmail } from '@/utils/phone';
 
 /**
  * Client-side checks for each booking step, from the old site's rules
- * (reverse-engineer-guide/14–17, 26). They catch typos before a round trip;
+ * (reverse-engineer-implemented/guide/14–17, reverse-engineer-guide/26). They catch typos before a round trip;
  * the server still validates everything itself.
  */
 

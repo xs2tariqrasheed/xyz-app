@@ -1,4 +1,4 @@
-> ✅ **Implemented** in the XYZ app
+> 🔵 **Partly implemented** in the XYZ app. Voucher view / print is built (`voucher.tsx`). Receipts & invoices are not: see [missing 13](../reverse-engineer-missing-screens/13-receipts-invoices.md).
 
 # Module 23 — Vouchers, Print Voucher, Receipts & Invoices
 

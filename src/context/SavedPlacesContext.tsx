@@ -20,7 +20,7 @@ import { toSavedSuggestions, userAddressesJData } from '@/services/savedPlaces';
 /**
  * The customer's saved addresses (`PROF.S.USER_ADDRESSES`), loaded once per
  * login and shared by My Addresses, the Express Checkout panel on Home and the
- * address fields of the booking form (reverse-engineer-guide/05, 06, 11).
+ * address fields of the booking form (reverse-engineer-implemented/guide/05, 06, 11).
  * Adding, changing or deleting one reloads the list for all of them.
  */
 

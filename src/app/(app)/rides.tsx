@@ -33,7 +33,7 @@ const DEFAULT_FROM_OFFSET = -90;
 type Notice = { tone: 'success' | 'danger'; message: string } | null;
 
 /**
- * The customer's rides (reverse-engineer-guide/18, 19): open reservations
+ * The customer's rides (reverse-engineer-implemented/guide/18, 19): open reservations
  * that can still be changed or cancelled (`RES.S.UPDATABLE_ORDERS`), and the
  * ride history search (`RES.S.ALL_ORDERS`). Each ride opens its details.
  */

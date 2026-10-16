@@ -26,7 +26,7 @@ import type { GatewayResponse } from '@/services/gateway';
 import { vipJData } from '@/services/registration';
 
 /**
- * Step 3 with the account's own rules (reverse-engineer-guide/16):
+ * Step 3 with the account's own rules (reverse-engineer-implemented/guide/16):
  *
  * - `RES.S.BILLING_METHOD` — which billing methods the account allows;
  * - `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` — whether the account is accepted;

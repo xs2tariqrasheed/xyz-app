@@ -31,7 +31,7 @@ export type RideQuestionSheetProps = {
 };
 
 /**
- * "Ask about this ride" (reverse-engineer-guide/21, 24): one of the
+ * "Ask about this ride" (reverse-engineer-implemented/guide/21, reverse-engineer-guide/24): one of the
  * predefined questions (`RES.S.ALL_PREDEFINED_QUESTIONS`) plus an optional
  * note, sent with `RES.I.ASKED_QUESTIONS`.
  */

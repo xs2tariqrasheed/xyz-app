@@ -2,16 +2,16 @@
 
 This folder holds **only** the reverse-engineering files whose feature is built in `xyz-app` and wired to the gateway. Anything not here is still to build, or only partly built.
 
-- [`guide/`](guide/) — copies from [`../reverse-engineer-guide/`](../reverse-engineer-guide/00-README.md)
-- [`missing-screens/`](missing-screens/) — copies from [`../reverse-engineer-missing-screens/`](../reverse-engineer-missing-screens/00-README.md)
+- [`guide/`](guide/) — moved from [`../reverse-engineer-guide/`](../reverse-engineer-guide/00-README.md)
+- [`missing-screens/`](missing-screens/) — moved from [`../reverse-engineer-missing-screens/`](../reverse-engineer-missing-screens/00-README.md)
 
-The source folders stay the master copies. Files here are snapshots with their relative links rewritten to keep working. When a module is finished, copy its file here and move its row in the tables below.
+Each implemented file lives only here. The two source folders keep only what is not built yet, is partly built, or is a shared reference. Module numbers are unchanged, so `guide/11` is still module 11. When a module is finished, move its file into the matching subfolder here, update links that point to it, and move its row in the tables below.
 
 Audited against the code on **2026-10-16**: routes in `src/app`, action codes used by `src/context`, `src/services` and `src/components`, and the remaining placeholders (`ComingSoon`, `DEFAULT_PREFERENCES`, `SAVED_MAILING_ADDRESS`).
 
 ---
 
-## 1. ✅ Implemented (copied here)
+## 1. ✅ Implemented (in this folder)
 
 | File | Module | Where in the app | Action codes | Known gaps tracked in |
 |---|---|---|---|---|
@@ -37,17 +37,17 @@ Audited against the code on **2026-10-16**: routes in `src/app`, action codes us
 | [missing-screens/02](missing-screens/02-address-book.md) | My Addresses gateway CRUD | `addresses.tsx` | `PROF.S.USER_ADDRESSES`, `PROF.I/U/D.USER_ADDRESS` | — |
 | [missing-screens/03](missing-screens/03-my-contacts.md) | My Contacts gateway CRUD | `contacts.tsx` | `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.I/U/D.PROFILE_COLUMN_VALUE` | — |
 
-Guide 07 had no "✅ Implemented" banner in its source, although `/profile` is wired. The copy here adds one.
+Guide 07 had no "✅ Implemented" banner, although `/profile` is wired. It has one now.
 
-## 2. 🔵 Partly implemented (not copied)
+## 2. 🔵 Partly implemented (still in `reverse-engineer-guide/`)
 
 | File | Module | Built | Still missing |
 |---|---|---|---|
 | [guide/23](../reverse-engineer-guide/23-vouchers-receipts.md) | Vouchers, receipts & invoices | Voucher view / print (`voucher.tsx`, `RES.S.LOAD_RESERVATION`) | Receipts & invoices: `receipts.tsx` is `ComingSoon` → [missing 13](../reverse-engineer-missing-screens/13-receipts-invoices.md) |
 
-## 3. 🔴 Not implemented (not copied)
+## 3. 🔴 Not implemented (still in the source folders)
 
-The source for guide 24 says "✅ Implemented", but the code does not back that up. Only Ask a Question exists, and that belongs to guide 21.
+Guide 24 used to say "✅ Implemented", but the code does not back that up. Only Ask a Question exists, and that belongs to guide 21. Its banner now says "Not implemented".
 
 | File | Module | App today | Tracked in |
 |---|---|---|---|
@@ -57,7 +57,7 @@ The source for guide 24 says "✅ Implemented", but the code does not back that 
 | [guide/25](../reverse-engineer-guide/25-system-pages-errors.md) | System pages & errors | No status routes or error boundary | [missing 01](../reverse-engineer-missing-screens/01-system-status-screens.md) |
 | [missing 01](../reverse-engineer-missing-screens/01-system-status-screens.md), [04](../reverse-engineer-missing-screens/04-preferences.md)–[21](../reverse-engineer-missing-screens/21-home-registration-misc-gaps.md) | Everything else in `reverse-engineer-missing-screens/` | 🔴 / 🟠 / 🟡 / 🔵 | see [its index](../reverse-engineer-missing-screens/00-README.md#3-module-index) |
 
-## 4. Shared references (not features, not copied)
+## 4. Shared references (not features, still in `reverse-engineer-guide/`)
 
 | File | Content |
 |---|---|

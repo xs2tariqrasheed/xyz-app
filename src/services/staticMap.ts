@@ -32,7 +32,7 @@ export type TrailMapOptions = {
 };
 
 /**
- * URL for a map of a car's logged trail (reverse-engineer-guide/21): the
+ * URL for a map of a car's logged trail (reverse-engineer-implemented/guide/21): the
  * path through every point, a pin where it started and one where it is now.
  * `null` without a key or without a point to draw.
  */

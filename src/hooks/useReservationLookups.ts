@@ -11,7 +11,7 @@ import { toSavedSuggestions, userAddressesJData } from '@/services/savedPlaces';
 import { toVehicleTypes, type VehicleType } from '@/services/vehicleTypes';
 
 /**
- * Read-only lookups behind the booking steps (reverse-engineer-guide/05,
+ * Read-only lookups behind the booking steps (reverse-engineer-implemented/guide/05,
  * 14–17). Each is a single-screen read through `useFetchData`, mapped once
  * here. A lookup the gateway refuses or cannot answer leaves its list empty:
  * the step then simply offers nothing extra, never local stand-in data.

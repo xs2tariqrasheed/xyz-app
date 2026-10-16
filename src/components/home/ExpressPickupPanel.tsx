@@ -19,7 +19,7 @@ export type ExpressPickupPanelProps = {
 
 /**
  * Express checkout for riders who always travel between the same places
- * (reverse-engineer-guide/06): pick both ends from the saved addresses
+ * (reverse-engineer-implemented/guide/06): pick both ends from the saved addresses
  * (`PROF.S.USER_ADDRESSES`) and a ready-now ride opens on Reservation 2's
  * preview, zoned and filled from the profile — one more tap books it.
  */

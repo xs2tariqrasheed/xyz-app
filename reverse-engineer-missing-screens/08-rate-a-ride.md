@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **App today** | 🔴 Missing. In `rides.tsx`, `RideCard` and `RideResultsTable` have a "Leave feedback" link that opens **Ask a Question** (`RideQuestionSheet`, `RES.I.ASKED_QUESTIONS`). That is a different feature: a dispatch question, not a rating. |
-| **Legacy reference** | [`../reverse-engineer-guide/24-feedback-rating-complaints.md`](../reverse-engineer-guide/24-feedback-rating-complaints.md) §2; ride-history "Feedback" column in [`18-ride-history-search.md`](../reverse-engineer-guide/18-ride-history-search.md) §5 |
+| **Legacy reference** | [`../reverse-engineer-guide/24-feedback-rating-complaints.md`](../reverse-engineer-guide/24-feedback-rating-complaints.md) §2; ride-history "Feedback" column in [`18-ride-history-search.md`](../reverse-engineer-implemented/guide/18-ride-history-search.md) §5 |
 | **Gateway** | ⛔ No action code. **Blocked on backend** (suggested `RES.I.RIDE_RATING`). |
 | **Priority** | P2 |
 
