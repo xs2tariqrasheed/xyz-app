@@ -145,8 +145,10 @@ running on your machine, so code changes show up instantly without a rebuild.
 
 `adb reverse` is lost when the device reconnects or reboots; run it again. On
 Wi-Fi without USB, open the dev menu → *Settings → Debug server host & port*
-and enter `<your-LAN-IP>:8081`, and point `EXPO_PUBLIC_RECAPTCHA_VERIFY_URL`
-in `.env` at `http://<your-LAN-IP>:3009/api/verify-recaptcha`.
+and enter `<your-LAN-IP>:8081`. Leave `EXPO_PUBLIC_RECAPTCHA_VERIFY_URL` at
+`http://localhost:3009/...`: in development the app sends the check to the
+host it loaded its JS from, and the reCAPTCHA key's domain list has
+`localhost`, not your LAN IP.
 
 ### 3.2 When to rebuild
 
@@ -381,7 +383,7 @@ npx expo doctor
 | `Unsupported class file major version` / `Unsupported Java version` | Wrong JDK picked up by a manual Gradle run. Use the npm commands, or point `JAVA_HOME` at JDK 17. |
 | `SDK location not found` | Manual `./gradlew` run without `ANDROID_HOME`. Use the npm commands, or export it. |
 | Dev app: red screen *Unable to load script* | Metro is not reachable. Run `npm start`, then `adb reverse tcp:8081 tcp:8081` — [§3.1](#31-use-it). |
-| Dev app: *Verification is unavailable* / reCAPTCHA fails | `adb reverse tcp:3009 tcp:3009`, and keep `npm start` running (it serves the verify endpoint). |
+| Dev app: *Could not reach verification* | Restart Metro (`npm start` — it serves the verify endpoint on 3009; check its log for `[reCAPTCHA] verify server`). Over USB also `adb reverse tcp:3009 tcp:3009`; over Wi-Fi keep the phone on the same network. |
 | Prod app: reCAPTCHA fails | `EXPO_PUBLIC_RECAPTCHA_VERIFY_URL` is not the deployed endpoint, or its host isn't on the site key's domain list. Fix `.env.production` and rebuild. |
 | Map is blank / grey | The Maps key lacks *Maps SDK for Android*, or its Android restriction doesn't list `com.xyzcar.app` with the signing SHA-1 ([§4.5](#45-signing)). The key is baked in at prebuild — rebuild with `-- --clean` after changing it. |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | An APK signed with a different key (e.g. an EAS build) is installed. `adb uninstall com.xyzcar.app` (deletes the app's data), then install. |

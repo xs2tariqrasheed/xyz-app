@@ -1,7 +1,7 @@
 /**
  * Local stand-in for the Vercel deploy of `api/verify-recaptcha.ts`, so the
- * "I'm not a robot" check works in development. `npm start` / `npm run web` /
- * `ios` / `android` start it alongside Expo (scripts/expo-dev.mjs); on its own:
+ * "I'm not a robot" check works in development. The Expo dev server starts it
+ * (metro.config.js); on its own:
  *
  *     npm run recaptcha:dev
  *
@@ -52,19 +52,25 @@ async function handle(req, res) {
     response = new Response('Method not allowed', { status: 405 });
   }
 
-  console.log(`[reCAPTCHA] ${req.method} ${url.pathname} → ${response.status}`);
+  console.log(`[reCAPTCHA] ${req.method} ${url.pathname} → ${response.status} (from ${req.socket.remoteAddress})`);
   res.writeHead(response.status, Object.fromEntries(response.headers));
   res.end(Buffer.from(await response.arrayBuffer()));
 }
 
+/** How often a server whose port was taken tries again to claim it. */
+const RETRY_MS = 3_000;
+
 /**
- * Starts the server. Resolves once it is listening, or straight away when the
- * port is taken — another copy is assumed to be serving it already.
+ * Starts the server on all interfaces, so phones on the same network reach it
+ * too. Resolves with the server once it is listening — or straight away when
+ * the port is taken: another copy is serving it, and this one keeps trying to
+ * take over, so the endpoint survives that copy stopping.
  */
 export function startRecaptchaDevServer() {
   loadServerEnv();
 
   return new Promise((resolve, reject) => {
+    let announced = false;
     const server = createServer((req, res) => {
       handle(req, res).catch((error) => {
         console.error('[reCAPTCHA] verify server error', error);
@@ -72,21 +78,29 @@ export function startRecaptchaDevServer() {
         res.end();
       });
     });
-    server.once('error', (error) => {
-      if (error.code === 'EADDRINUSE') {
-        console.log(`[reCAPTCHA] port ${PORT} is in use — using the verify server already running there.`);
-        resolve(null);
-      } else {
+    server.on('error', (error) => {
+      if (error.code !== 'EADDRINUSE') {
         reject(error);
+        return;
       }
+      if (!announced) {
+        announced = true;
+        console.log(`[reCAPTCHA] port ${PORT} is in use — using that verify server, and taking over if it stops.`);
+        resolve(server);
+      }
+      setTimeout(() => server.listen(PORT), RETRY_MS).unref();
     });
-    server.listen(PORT, () => {
+    server.on('listening', () => {
       console.log(`[reCAPTCHA] verify server: http://localhost:${PORT}${ROUTE}`);
       if (!process.env.RECAPTCHA_SECRET_KEY) {
         console.warn('[reCAPTCHA] RECAPTCHA_SECRET_KEY is not set in .env — every check will fail.');
       }
-      resolve(server);
+      if (!announced) {
+        announced = true;
+        resolve(server);
+      }
     });
+    server.listen(PORT);
   });
 }
 

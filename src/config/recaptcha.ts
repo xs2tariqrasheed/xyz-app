@@ -43,6 +43,6 @@ if (__DEV__ && !hasRecaptchaConfig) {
   ].filter(Boolean);
   console.warn(
     `[reCAPTCHA] The checkbox is hidden — set ${missing.join(' and ')} in .env, then restart Expo. ` +
-      'Locally, use http://localhost:3009/api/verify-recaptcha (served by `npm run web`).',
+      'Locally, use http://localhost:3009/api/verify-recaptcha (served by the Expo dev server).',
   );
 }

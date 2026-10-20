@@ -1,3 +1,6 @@
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
 import { recaptchaVerifyUrl } from '@/config/recaptcha';
 
 /**
@@ -9,6 +12,21 @@ import { recaptchaVerifyUrl } from '@/config/recaptcha';
  */
 
 const VERIFY_TIMEOUT_MS = 15_000;
+
+const LOOPBACK_URL = /^(https?:\/\/)(localhost|127\.0\.0\.1)(?=[:/]|$)/i;
+
+/**
+ * Where to send the token. In development a phone's (or emulator's) `localhost`
+ * is the device itself, not the computer running `npm start`, so a localhost
+ * verify URL is pointed at the host the app loaded its JS bundle from — the
+ * same machine, reachable from the device. The widget's page origin
+ * (`recaptchaBaseUrl`) stays localhost, which is what the key's domain list has.
+ */
+function verifyEndpoint(): string {
+  if (!__DEV__ || Platform.OS === 'web') return recaptchaVerifyUrl;
+  const devHost = Constants.expoConfig?.hostUri?.split(':')[0];
+  return devHost ? recaptchaVerifyUrl.replace(LOOPBACK_URL, `$1${devHost}`) : recaptchaVerifyUrl;
+}
 
 /** The verify endpoint could not be reached, so the user should simply retry. */
 export class RecaptchaNetworkError extends Error {
@@ -25,6 +43,7 @@ export class RecaptchaNetworkError extends Error {
  */
 export async function verifyRecaptchaToken(token: string): Promise<boolean> {
   if (!recaptchaVerifyUrl) return false;
+  const endpoint = verifyEndpoint();
 
   // AbortSignal.timeout is not available on every runtime the app targets.
   const controller = new AbortController();
@@ -32,7 +51,7 @@ export async function verifyRecaptchaToken(token: string): Promise<boolean> {
 
   let response: Response;
   try {
-    response = await fetch(recaptchaVerifyUrl, {
+    response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -41,8 +60,10 @@ export async function verifyRecaptchaToken(token: string): Promise<boolean> {
   } catch {
     if (__DEV__) {
       console.warn(
-        `[reCAPTCHA] ${recaptchaVerifyUrl} could not be reached` +
-          (recaptchaVerifyUrl.includes('localhost') ? ' — start the app with `npm run web` (or `npm run recaptcha:dev`).' : ''),
+        `[reCAPTCHA] ${endpoint} could not be reached` +
+          (LOOPBACK_URL.test(recaptchaVerifyUrl)
+            ? ' — restart the Expo dev server (it serves this endpoint), and keep a phone on the same Wi-Fi as this computer.'
+            : ''),
       );
     }
     throw new RecaptchaNetworkError();
