@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **App today** | 🔴 Missing. In `rides.tsx`, `RideCard` and `RideResultsTable` have a "Leave feedback" link that opens **Ask a Question** (`RideQuestionSheet`, `RES.I.ASKED_QUESTIONS`). That is a different feature: a dispatch question, not a rating. |
+| **App today** | 🟡 Interim (§4.2). Completed rides (`RideCard`, `RideResultsTable` "Feedback" column, receipts list, reservation details) have "Leave feedback", which opens the live form via `openRateRide` (`src/services/rateRide.ts`, URL from `src/config/rateRide.ts`). Open rides have "Ask about this ride" (`RideQuestionSheet`, `RES.I.ASKED_QUESTIONS`), a separate dispatch-question feature (guide 21). The in-app rating screen (§5) is blocked until the gateway adds a code such as `RES.I.RIDE_RATING`. |
 | **Legacy reference** | [`../reverse-engineer-guide/24-feedback-rating-complaints.md`](../reverse-engineer-guide/24-feedback-rating-complaints.md) §2; ride-history "Feedback" column in [`18-ride-history-search.md`](../reverse-engineer-implemented/guide/18-ride-history-search.md) §5 |
 | **Gateway** | ⛔ No action code. **Blocked on backend** (suggested `RES.I.RIDE_RATING`). |
 | **Priority** | P2 |
@@ -62,7 +62,7 @@ type RideRating = {
 
 Response: `o_code` / `o_message`.
 
-### 4.2 Interim (until 4.1 exists; product decision)
+### 4.2 Interim (until 4.1 exists; product decision) — ✅ Implemented
 - Open the live form with `expo-web-browser` (`WebBrowser.openBrowserAsync('https://www.xyzcar.com/rate-a-ride/?rideno=' + encodeURIComponent(rideNo))`). Keep the URL in config (`EXPO_PUBLIC_RATE_A_RIDE_URL`).
 - Do **not** post to the WordPress endpoint from the app: it needs a reCAPTCHA v3 token for that origin.
 
@@ -71,7 +71,7 @@ Response: `o_code` / `o_message`.
 - **Entry points:**
   - ride history row (completed / billed rides)
   - reservation details action bar
-- Rename today's "Leave feedback" link to what it really is ("Ask a question"), or point it at this screen. Do not keep two features behind one label.
+- ✅ Done: Ask a Question is labelled "Ask about this ride" and shown on open rides only. "Leave feedback" on completed rides opens the live form (§4.2); point it at this screen once it is built. Do not keep two features behind one label.
 - Five star rows (accessible: each star is a button with an `accessibilityLabel` like "3 of 5"), a Suggestions text area, and Submit. "Reset" is optional on mobile.
 - **Success:** "Thank you for your feedback." Then close. **Error:** `o_message`.
 - Offer "Block this driver" (file 07) when the driver ratings are ≤ 2 (optional).
@@ -79,7 +79,7 @@ Response: `o_code` / `o_message`.
 ## 6. Acceptance criteria
 - [ ] The ride number is pre-filled and read-only when opened from a ride.
 - [ ] Ratings are sent as 1–5; unset ratings are sent as empty.
-- [ ] Interim mode opens the live page with the ride number pre-filled on web, iOS and Android.
+- [x] Interim mode opens the live page with the ride number pre-filled on web, iOS and Android.
 - [ ] Copy is in `messages.ts` → `RATING_MESSAGES`; star colours come from the theme.
 
 ## 7. Unknowns

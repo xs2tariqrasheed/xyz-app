@@ -31,32 +31,45 @@ export type RideQuestionSheetProps = {
 };
 
 /**
- * "Ask about this ride" (reverse-engineer-implemented/guide/21, reverse-engineer-guide/24): one of the
+ * "Ask about this ride" (reverse-engineer-implemented/guide/21): one of the
  * predefined questions (`RES.S.ALL_PREDEFINED_QUESTIONS`) plus an optional
  * note, sent with `RES.I.ASKED_QUESTIONS`.
  */
 export function RideQuestionSheet({ reservationNumber, onClose, onSent }: RideQuestionSheetProps) {
+  // Mounted only while open: the questions load, and the form starts empty, on every open.
+  if (reservationNumber === null) return null;
+  return <QuestionForm reservationNumber={reservationNumber} onClose={onClose} onSent={onSent} />;
+}
+
+function QuestionForm({
+  reservationNumber,
+  onClose,
+  onSent,
+}: RideQuestionSheetProps & { reservationNumber: string }) {
   const { session } = useAuth();
   const ask = usePostData();
+  const questions = useFetchData(ACTION_CODES.ALL_PREDEFINED_QUESTIONS, GATEWAY_VIEW_NAME, {});
   const [questionId, setQuestionId] = useState('');
   const [message, setMessage] = useState('');
   const [touched, setTouched] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
+  let options: PredefinedQuestion[] = [];
+  let refused = false;
+  if (questions.data) {
+    try {
+      options = toPredefinedQuestions(questions.data);
+    } catch {
+      refused = true;
+    }
+  }
+
   const messageError = validateQuestionMessage(message);
   const questionError = touched && !questionId ? FEEDBACK_MESSAGES.QUESTION_REQUIRED : undefined;
 
-  const close = () => {
-    setQuestionId('');
-    setMessage('');
-    setTouched(false);
-    setFailure(null);
-    onClose();
-  };
-
   const send = async () => {
     setTouched(true);
-    if (!questionId || messageError || !reservationNumber || !session || ask.isLoading) return;
+    if (!questionId || messageError || !session || ask.isLoading) return;
     setFailure(null);
     try {
       const response = await ask.mutateAsync(
@@ -66,29 +79,49 @@ export function RideQuestionSheet({ reservationNumber, onClose, onSent }: RideQu
         { retry: false },
       );
       assertQuestionSent(response);
-      close();
+      onClose();
       onSent(FEEDBACK_MESSAGES.SENT);
     } catch (error) {
       setFailure(error instanceof FeedbackError ? error.message : getErrorDisplay(error).customDescription);
     }
   };
 
+  let picker: React.ReactNode;
+  if (questions.isLoading && !questions.data) {
+    picker = <ActivityIndicator color={colors.primary[600]} />;
+  } else if (options.length === 0) {
+    picker = (
+      <Text style={styles.muted}>
+        {questions.isError || refused ? FEEDBACK_MESSAGES.QUESTIONS_FAILED : FEEDBACK_MESSAGES.QUESTIONS_EMPTY}
+      </Text>
+    );
+  } else {
+    picker = (
+      <SelectField
+        label={FEEDBACK_MESSAGES.QUESTION_LABEL}
+        required
+        value={questionId}
+        options={options.map((question) => ({ value: question.id, label: question.text }))}
+        onChange={setQuestionId}
+        error={questionError}
+      />
+    );
+  }
+
   return (
     <Sheet
-      visible={reservationNumber !== null}
+      visible
       title={FEEDBACK_MESSAGES.SHEET_TITLE}
-      subtitle={reservationNumber ?? undefined}
-      onClose={close}
+      subtitle={reservationNumber}
+      onClose={onClose}
       onConfirm={() => void send()}
       confirmLabel={ask.isLoading ? FEEDBACK_MESSAGES.SENDING : FEEDBACK_MESSAGES.SEND}
-      confirmDisabled={ask.isLoading}
+      // A question is required (`P_QUESTION_ID`), so there is nothing to send without one.
+      confirmDisabled={ask.isLoading || !questionId}
     >
       <View style={styles.body}>
         {failure ? <Alert tone="danger" title={FEEDBACK_MESSAGES.FAILED_TITLE} message={failure} /> : null}
-        {/* Mounted only while open: the questions load when the sheet does. */}
-        {reservationNumber ? (
-          <QuestionPicker value={questionId} onChange={setQuestionId} error={questionError} />
-        ) : null}
+        {picker}
         <TextArea
           label={FEEDBACK_MESSAGES.MESSAGE_LABEL}
           value={message}
@@ -100,48 +133,6 @@ export function RideQuestionSheet({ reservationNumber, onClose, onSent }: RideQu
         />
       </View>
     </Sheet>
-  );
-}
-
-function QuestionPicker({
-  value,
-  onChange,
-  error,
-}: {
-  value: string;
-  onChange: (id: string) => void;
-  error?: string;
-}) {
-  const { data, isLoading, isError } = useFetchData(ACTION_CODES.ALL_PREDEFINED_QUESTIONS, GATEWAY_VIEW_NAME, {});
-
-  let questions: PredefinedQuestion[] = [];
-  let refused = false;
-  if (data) {
-    try {
-      questions = toPredefinedQuestions(data);
-    } catch {
-      refused = true;
-    }
-  }
-
-  if (isLoading && !data) return <ActivityIndicator color={colors.primary[600]} />;
-  if (questions.length === 0) {
-    return (
-      <Text style={styles.muted}>
-        {isError || refused ? FEEDBACK_MESSAGES.QUESTIONS_FAILED : FEEDBACK_MESSAGES.QUESTIONS_EMPTY}
-      </Text>
-    );
-  }
-
-  return (
-    <SelectField
-      label={FEEDBACK_MESSAGES.QUESTION_LABEL}
-      required
-      value={value}
-      options={questions.map((question) => ({ value: question.id, label: question.text }))}
-      onChange={onChange}
-      error={error}
-    />
   );
 }
 

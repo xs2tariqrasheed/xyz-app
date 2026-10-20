@@ -14,6 +14,7 @@ import { RIDES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { useOpenReservation } from '@/hooks/useReservationActions';
+import { openRateRide } from '@/services/rateRide';
 import {
   allOrdersJData,
   filterRides,
@@ -60,7 +61,10 @@ export default function RideSearchScreen() {
     else if (action === 'receipt') router.push({ pathname: '/receipt', params: { rideno: ride.id } });
     else if (action === 'modify') void opener.open(ride.id, 'edit');
     else if (action === 'cancel') setCancelling(ride.id);
-    else setAsking(ride.id);
+    else if (action === 'ask') setAsking(ride.id);
+    else if (action === 'feedback') {
+      void openRateRide(ride.id).then((failure) => failure && setNotice({ tone: 'danger', message: failure }));
+    }
   };
 
   return (

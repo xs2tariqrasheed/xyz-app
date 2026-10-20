@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { RECEIPTS_MESSAGES } from '@/constants/messages';
+import { RECEIPTS_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import {
+  canAskAboutRide,
   canLeaveFeedback,
   canModifyRide,
   hasReceipt,
@@ -24,6 +25,7 @@ export type RideCardProps = {
 /** One ride on a phone: the same ten fields, stacked instead of columned. */
 export function RideCard({ ride, now, onAction }: RideCardProps) {
   const modifiable = canModifyRide(ride, now);
+  const askable = canAskAboutRide(ride);
   const feedback = canLeaveFeedback(ride);
   const receipt = hasReceipt(ride);
 
@@ -56,7 +58,7 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
         </View>
       </View>
 
-      {modifiable || feedback || receipt ? (
+      {modifiable || askable || receipt || feedback ? (
         <View style={styles.actions}>
           {modifiable ? (
             <>
@@ -72,7 +74,10 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
             <RideActionLink label={RECEIPTS_MESSAGES.VIEW} onPress={() => onAction('receipt', ride)} />
           ) : null}
           {feedback ? (
-            <RideActionLink label="Leave feedback" onPress={() => onAction('feedback', ride)} />
+            <RideActionLink label={RIDES_MESSAGES.LEAVE_FEEDBACK} onPress={() => onAction('feedback', ride)} />
+          ) : null}
+          {askable ? (
+            <RideActionLink label={RIDES_MESSAGES.ASK} onPress={() => onAction('ask', ride)} />
           ) : null}
         </View>
       ) : null}

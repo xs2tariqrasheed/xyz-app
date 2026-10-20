@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { RECEIPTS_MESSAGES } from '@/constants/messages';
+import { RECEIPTS_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import {
+  canAskAboutRide,
   canLeaveFeedback,
   canModifyRide,
   hasReceipt,
@@ -52,7 +53,7 @@ export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps
         <HeaderCell label="Payment" weight={COLUMNS.payment} />
         <HeaderCell label="Voucher" weight={COLUMNS.voucher} />
         <HeaderCell label="Actions" weight={COLUMNS.actions} />
-        <HeaderCell label="Feedback" weight={COLUMNS.feedback} />
+        <HeaderCell label={RIDES_MESSAGES.FEEDBACK_COLUMN} weight={COLUMNS.feedback} />
       </View>
 
       {rides.map((ride, index) => (
@@ -96,7 +97,10 @@ export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps
               <>
                 <RideActionLink label="Modify" onPress={() => onAction('modify', ride)} />
                 <RideActionLink label="Cancel" tone="danger" onPress={() => onAction('cancel', ride)} />
+                <RideActionLink label={RIDES_MESSAGES.ASK_SHORT} onPress={() => onAction('ask', ride)} />
               </>
+            ) : canAskAboutRide(ride) ? (
+              <RideActionLink label={RIDES_MESSAGES.ASK_SHORT} onPress={() => onAction('ask', ride)} />
             ) : hasReceipt(ride) ? (
               <RideActionLink label={RECEIPTS_MESSAGES.VIEW_SHORT} onPress={() => onAction('receipt', ride)} />
             ) : (
@@ -105,9 +109,9 @@ export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps
           </View>
           <View style={[styles.cell, { flex: COLUMNS.feedback }]}>
             {canLeaveFeedback(ride) ? (
-              <RideActionLink label="Feedback" onPress={() => onAction('feedback', ride)} />
+              <RideActionLink label={RIDES_MESSAGES.FEEDBACK_SHORT} onPress={() => onAction('feedback', ride)} />
             ) : (
-              <Text style={styles.cellEmpty}>{ride.feedbackLeft ? 'Sent' : '—'}</Text>
+              <Text style={styles.cellEmpty}>{ride.feedbackLeft ? RIDES_MESSAGES.FEEDBACK_SENT : '—'}</Text>
             )}
           </View>
         </View>

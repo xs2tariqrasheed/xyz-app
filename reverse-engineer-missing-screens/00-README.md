@@ -57,7 +57,7 @@ Action-code availability:
 | 05 | [05-mailing-address.md](../reverse-engineer-implemented/missing-screens/05-mailing-address.md) | Change Billing / Mailing Address | ✅ Implemented 2026-10-16 | ✅ `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | **P1** |
 | 06 | [06-authorized-access-management.md](06-authorized-access-management.md) | Authorise colleagues to book on my behalf (grant / revoke / grant-to-all / list / search) | 🔴 Missing | ✅ 7 `PROF.*ACCESS_RIGHTS*` codes | **P2** |
 | 07 | [07-blocked-drivers.md](07-blocked-drivers.md) | Block / unblock a driver (car #) | 🔴 Missing | ✅ `PROF.U.BLOCK_DRIVER`, `PROF.U.UNBLOCK_DRIVER` | P3 |
-| 08 | [08-rate-a-ride.md](08-rate-a-ride.md) | Rate a Ride: 5 star ratings + suggestions | 🔴 Missing (the "Leave feedback" link opens Ask-a-Question instead) | ⛔ | **P2** |
+| 08 | [08-rate-a-ride.md](08-rate-a-ride.md) | Rate a Ride: 5 star ratings + suggestions | 🔵 Partial (2026-10-20: "Leave feedback" links out to the live form, §4.2; in-app rating screen blocked) | ⛔ | **P2** |
 | 09 | [09-complaint.md](09-complaint.md) | Complaint form | 🔴 Missing | ⛔ | P2 |
 | 10 | [10-contact-us-customer-service.md](10-contact-us-customer-service.md) | Contact Us / Customer Service (contact card + message form) | 🔴 Missing | ⛔ | P2 |
 | 11 | [11-open-corporate-account.md](11-open-corporate-account.md) | Open an Account (corporate lead form) | 🔴 Missing | ⛔ | P3 |

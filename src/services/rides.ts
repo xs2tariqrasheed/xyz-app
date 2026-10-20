@@ -1,3 +1,4 @@
+import { hasRateRideUrl } from '@/config/rateRide';
 import { RIDES_MESSAGES } from '@/constants/messages';
 import type { GatewayJData, GatewayResponse } from '@/services/gateway';
 import { type GatewayRow, isYes, parseGatewayDate, pick, recordSet } from '@/services/gatewayRows';
@@ -74,9 +75,17 @@ export function canModifyRide(ride: Ride, now: Date): boolean {
   return ride.status === 'confirmed' && ride.pickupAt.getTime() > now.getTime();
 }
 
-/** Feedback is offered once the ride is over, not while it is still running. */
+/**
+ * A finished ride links to the live rate-a-ride form (guide 18's Feedback
+ * column), unless the gateway says feedback was already left.
+ */
 export function canLeaveFeedback(ride: Ride): boolean {
-  return (ride.status === 'completed' || ride.status === 'canceled') && !ride.feedbackLeft;
+  return ride.status === 'completed' && !ride.feedbackLeft && hasRateRideUrl;
+}
+
+/** Questions go to dispatch about a ride that is still open (guide 21), not one that is over. */
+export function canAskAboutRide(ride: Ride): boolean {
+  return ride.status === 'confirmed' || ride.status === 'in-progress';
 }
 
 /** Every completed (billed) ride has a receipt (guide 23). */

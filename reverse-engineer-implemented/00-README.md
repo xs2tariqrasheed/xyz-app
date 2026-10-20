@@ -48,14 +48,14 @@ Guide 07 had no "✅ Implemented" banner, although `/profile` is wired. It has o
 
 | File | Module | Built | Still missing |
 |---|---|---|---|
+| [guide/24](../reverse-engineer-guide/24-feedback-rating-complaints.md) | Rating, complaint, contact, account requests | Rate a ride: "Leave feedback" on completed rides opens the live form with `?rideno=` (`services/rateRide.ts`; [external-redirects 13](../reverse-engineer-external-redirects/13-contact-rate-a-ride.md)) | In-app rating screen (no `RES.I.RIDE_RATING` code); complaint, contact, account: missing [09](../reverse-engineer-missing-screens/09-complaint.md)–[11](../reverse-engineer-missing-screens/11-open-corporate-account.md) |
 
 ## 3. 🔴 Not implemented (still in the source folders)
 
-Guide 24 used to say "✅ Implemented", but the code does not back that up. Only Ask a Question exists, and that belongs to guide 21. Its banner now says "Not implemented".
+Guide 24 is now in §2: only its rate-a-ride link-out is built. Ask a Question belongs to guide 21.
 
 | File | Module | App today | Tracked in |
 |---|---|---|---|
-| [guide/24](../reverse-engineer-guide/24-feedback-rating-complaints.md) | Rating, complaint, contact, account requests | No screens | missing [08](../reverse-engineer-missing-screens/08-rate-a-ride.md), [09](../reverse-engineer-missing-screens/09-complaint.md), [10](../reverse-engineer-missing-screens/10-contact-us-customer-service.md), [11](../reverse-engineer-missing-screens/11-open-corporate-account.md) |
 | [guide/25](../reverse-engineer-guide/25-system-pages-errors.md) | System pages & errors | No status routes or error boundary | [missing 01](../reverse-engineer-missing-screens/01-system-status-screens.md) |
 | [missing 01](../reverse-engineer-missing-screens/01-system-status-screens.md), [06](../reverse-engineer-missing-screens/06-authorized-access-management.md)–[21](../reverse-engineer-missing-screens/21-home-registration-misc-gaps.md) | Everything else in `reverse-engineer-missing-screens/` | 🔴 / 🟠 / 🟡 / 🔵 | see [its index](../reverse-engineer-missing-screens/00-README.md#3-module-index) |
 

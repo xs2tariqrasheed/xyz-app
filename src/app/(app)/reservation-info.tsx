@@ -11,6 +11,7 @@ import { RideQuestionSheet } from '@/components/rides/RideQuestionSheet';
 import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { hasRateRideUrl } from '@/config/rateRide';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
 import { RECEIPTS_MESSAGES, RESERVATION_INFO_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
@@ -29,6 +30,7 @@ import {
   toSingleColumnValue,
 } from '@/services/reservation';
 import { hasRideReceipt, hasVoucherNumber } from '@/services/rideDocument';
+import { openRateRide } from '@/services/rateRide';
 import { PAYMENT_METHOD_LABELS } from '@/services/rides';
 import { carJData, toCarInfo } from '@/services/tracking';
 import { breakpoints, colors, radii, space } from '@/theme';
@@ -296,7 +298,21 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
           disabled={opener.openingId !== null}
           onPress={() => void opener.open(record.reservationNumber, 'repeat')}
         />
-        <Button label={RESERVATION_INFO_MESSAGES.ASK} variant="outline" onPress={() => setAsking(true)} />
+        {finished && hasRateRideUrl ? (
+          <Button
+            label={RESERVATION_INFO_MESSAGES.LEAVE_FEEDBACK}
+            variant="outline"
+            onPress={() => {
+              setNotice(null);
+              void openRateRide(record.reservationNumber).then(
+                (failure) => failure && setNotice({ tone: 'danger', message: failure }),
+              );
+            }}
+          />
+        ) : null}
+        {cancelled || finished ? null : (
+          <Button label={RESERVATION_INFO_MESSAGES.ASK} variant="outline" onPress={() => setAsking(true)} />
+        )}
       </View>
 
       <CancelReservationSheet

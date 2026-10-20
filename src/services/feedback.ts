@@ -31,13 +31,27 @@ const QUESTION_COLUMNS = {
   text: ['question_text', 'question', 'description', 'o_question'],
 } as const;
 
+/**
+ * TEMPORARY (product decision, 2026-10-20): the gateway stub answers
+ * `RES.S.ALL_PREDEFINED_QUESTIONS` with no question rows, which leaves Ask a
+ * Question unusable. Until it returns real rows, offer the live site's two
+ * questions (guide 21: `questionid` 1 and 2) so `RES.I.ASKED_QUESTIONS` can be
+ * sent. Used only for an accepted, empty answer — a failed or refused call
+ * still shows its error. Delete this once the gateway returns questions.
+ */
+const FALLBACK_QUESTIONS: readonly PredefinedQuestion[] = [
+  { id: '1', text: FEEDBACK_MESSAGES.QUESTION_CONTACT_DRIVER },
+  { id: '2', text: FEEDBACK_MESSAGES.QUESTION_VEHICLE_LATE },
+];
+
 export function toPredefinedQuestions(response: GatewayResponse): PredefinedQuestion[] {
   const rows = recordSet(response, (message) => new FeedbackError(message), FEEDBACK_MESSAGES.QUESTIONS_FAILED);
-  return rows.flatMap((row) => {
+  const questions = rows.flatMap((row) => {
     const id = pick(row, QUESTION_COLUMNS.id);
     const text = pick(row, QUESTION_COLUMNS.text);
     return id && text ? [{ id, text }] : [];
   });
+  return questions.length > 0 ? questions : [...FALLBACK_QUESTIONS];
 }
 
 /** `JData` for {@link ACTION_CODES.ASK_QUESTION}. `P_QUESTION_ID` is a number in the contract. */

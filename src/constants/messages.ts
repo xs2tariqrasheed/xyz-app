@@ -638,6 +638,13 @@ export const RIDES_MESSAGES = {
   CANCEL_REJECTED: 'The reservation could not be cancelled.',
   HOME_RIDES_FAILED_TITLE: 'Your rides could not be loaded',
   HOME_RIDES_FAILED: 'The dispatch service did not answer. Booking still works.',
+  ASK: 'Ask about this ride',
+  ASK_SHORT: 'Ask',
+  LEAVE_FEEDBACK: 'Leave feedback',
+  FEEDBACK_SHORT: 'Feedback',
+  FEEDBACK_COLUMN: 'Feedback',
+  FEEDBACK_SENT: 'Sent',
+  FEEDBACK_OPEN_FAILED: 'The feedback page could not be opened. Try again.',
 } as const;
 
 /** Home dashboard: greeting, stat tiles, next-ride card, ride lists and quick links. */
@@ -705,6 +712,7 @@ export const RESERVATION_INFO_MESSAGES = {
   RETURN_TRIP: 'Book return trip',
   REPEAT: 'Book again',
   ASK: 'Ask about this ride',
+  LEAVE_FEEDBACK: 'Leave feedback',
   NOT_ISSUED: 'Not issued',
   AS_DIRECTED: 'As Directed',
   DRIVER_TITLE: 'Driver & Vehicle Info',
@@ -774,13 +782,16 @@ export const TRACKING_MESSAGES = {
   MAP_UNAVAILABLE: 'The map needs a Google Maps key.',
 } as const;
 
-/** "Ask about this ride" / in-app feedback (guides 21, 24). */
+/** "Ask about this ride" (guide 21). Ride ratings (guide 24) wait on a gateway code. */
 export const FEEDBACK_MESSAGES = {
   SHEET_TITLE: 'Ask about this ride',
   QUESTION_LABEL: 'Question',
   QUESTION_REQUIRED: 'Choose a question.',
   QUESTIONS_EMPTY: 'There are no questions to choose from right now.',
   QUESTIONS_FAILED: 'The questions could not be loaded.',
+  // The live site's questions (guide 21), used while the gateway returns none.
+  QUESTION_CONTACT_DRIVER: 'How can I contact the driver?',
+  QUESTION_VEHICLE_LATE: 'Why is the vehicle late?',
   MESSAGE_LABEL: 'Message',
   MESSAGE_PLACEHOLDER: 'Anything we should know',
   MESSAGE_INVALID: 'Use 200 characters at most: letters, digits, spaces and full stops.',

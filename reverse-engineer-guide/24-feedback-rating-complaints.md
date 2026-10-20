@@ -1,4 +1,4 @@
-> 🔴 **Not implemented** in the XYZ app. Rate a ride, complaint, contact and account requests have no screens. Ask a Question is built, but it belongs to [guide 21](../reverse-engineer-implemented/guide/21-ride-tracking-live-status.md). See missing [08](../reverse-engineer-missing-screens/08-rate-a-ride.md)–[11](../reverse-engineer-missing-screens/11-open-corporate-account.md).
+> 🔵 **Partly implemented** in the XYZ app. Rate a ride links out to the live form from completed rides ("Leave feedback", missing [08](../reverse-engineer-missing-screens/08-rate-a-ride.md) §4.2); there is no in-app rating screen or action code. Complaint, contact and account requests have no screens. Ask a Question is built, but it belongs to [guide 21](../reverse-engineer-implemented/guide/21-ride-tracking-live-status.md). See missing [08](../reverse-engineer-missing-screens/08-rate-a-ride.md)–[11](../reverse-engineer-missing-screens/11-open-corporate-account.md).
 
 # Module 24 — Ride Rating, Complaints, Contact & Account Requests
 

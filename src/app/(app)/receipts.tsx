@@ -5,10 +5,12 @@ import { Screen } from '@/components/layout/Screen';
 import type { RideAction } from '@/components/rides/RideActionLink';
 import { RideResults } from '@/components/rides/RideResults';
 import { RideSearchForm, type RideSearchFormValue } from '@/components/rides/RideSearchForm';
+import { Alert } from '@/components/ui/Alert';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
 import { RECEIPTS_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
+import { openRateRide } from '@/services/rateRide';
 import {
   allOrdersJData,
   filterRides,
@@ -19,6 +21,8 @@ import {
   toRides,
 } from '@/services/rides';
 import { addDays, startOfDay } from '@/utils/datetime';
+
+type Notice = { tone: 'success' | 'danger'; message: string } | null;
 
 /**
  * Receipts for completed rides (guide 23, missing-screens/13): the ride
@@ -40,6 +44,7 @@ export default function ReceiptsScreen() {
   }));
   // The search that ran — the list and its header only follow the form on Search.
   const [searched, setSearched] = useState(filters);
+  const [notice, setNotice] = useState<Notice>(null);
 
   const { data, isLoading, isError, refetch } = useFetchData(
     ACTION_CODES.ALL_ORDERS,
@@ -57,7 +62,10 @@ export default function ReceiptsScreen() {
 
   const onAction = (action: RideAction, ride: Ride) => {
     const params = { rideno: ride.id };
-    if (action === 'receipt') router.push({ pathname: '/receipt', params });
+    setNotice(null);
+    if (action === 'feedback') {
+      void openRateRide(ride.id).then((failure) => failure && setNotice({ tone: 'danger', message: failure }));
+    } else if (action === 'receipt') router.push({ pathname: '/receipt', params });
     else if (action === 'voucher') router.push({ pathname: '/voucher', params });
     else router.push({ pathname: '/reservation-info', params });
   };
@@ -78,6 +86,8 @@ export default function ReceiptsScreen() {
         earliest={earliest}
         searching={isLoading}
       />
+
+      {notice ? <Alert tone={notice.tone} message={notice.message} /> : null}
 
       <RideResults
         title={RECEIPTS_MESSAGES.LIST_TITLE}
