@@ -24,18 +24,16 @@ A reservation app. Customers book services either for a future date/time or righ
 - **Targets:** web, iOS, and Android from a single codebase. Every feature must work on all three — no platform-only assumptions unless guarded with `Platform.select` / `.native.tsx` / `.web.tsx`.
 - **Design:** mobile first. Build the phone layout first, then scale up.
 - **Responsive:** must work on mobile, tablet, and desktop. Use `useWindowDimensions` / breakpoints rather than fixed pixel layouts; avoid hardcoded widths.
-- **State management:** React Context for state shared across screens; single-screen state stays local, and single-screen server data uses `useFetchData`. Each context lives in `src/context/` together with its `use<Name>` hook (the context itself is not exported); the provider is mounted in `src/app/_layout.tsx`.
-  - `AuthContext` — session, `signIn` / `signOut`, route guard. *(exists)*
-  - `ProfileContext` — customer profile (`PROF.S.LOAD_PROFILE`), loaded after login; `updatePersonalInfo` and `updatePreferences` save through `PROF.U.PROFILE`. *(exists)*
-  - `ReservationContext` — reservation draft across create, express, preview, update, return trip and repeat; place lookups, zone checks, billing checks, card approval and submit (`RES.I` / `RES.U.RESERVATION`). *(exists — wired on Reservation 2, `/reserver-2`)*
-  - `SavedPlacesContext` — saved addresses (`PROF.S.USER_ADDRESSES`) for My Addresses, Express Checkout and the booking form, plus the address-book writes (`PROF.I/U/D.USER_ADDRESS`). *(exists)* My Contacts loads and writes its own list (`PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.I/U/D.PROFILE_COLUMN_VALUE`).
+- **State management:** React Context for state shared across screens; single-screen state stays local, and single-screen server data uses `useFetchData`.
+  - Before adding state for a feature, check `src/context/` and reuse a context that already owns that data.
+  - If the feature needs shared state and no context fits, create one: `src/context/<Name>Context.tsx` with its `use<Name>` hook (export the provider and the hook, not the context itself), and mount the provider in `src/app/_layout.tsx`.
+  - A context loads and writes its data through its action codes (see **API gateway**), and exposes loading and error state for screens to render.
 - **API gateway:** read `docs/XYZ_INTEGRATION_GUIDE.md` before wiring any action code (envelope, hooks, errors, auth, checklist). Call it through `usePostData` / `useFetchData`, never `fetch`. Action codes are constants in `src/constants/actionCodes.ts` — never hardcoded strings. Mark each wired code `— ✅ Implemented` in `docs/XYZ Action Codes.md`.
-- **Gateway returns dummy data (current phase):** we are integrating action codes one by one against the gateway at `EXPO_PUBLIC_DBAPI_URL`, which is currently a stub that returns dummy data, not real backend records (e.g. login accepts any password; some codes return only `o_code` / `o_message` or placeholder rows).
-  - **Use the dummy data the gateway returns, not data from our codebase.** Every feature you implement must call its action code and render the gateway's response — even though that response is dummy for now.
-  - Never add new local sample, mock or seed data, and never fall back to it when a gateway call fails or comes back empty; show the screen's error or empty state instead.
-  - No local placeholder data remains: the reservation flow's samples, the address book / contacts seed lists, the Preferences defaults and the Mailing Address stub are gone.
-  - Code to the contract in `docs/XYZ Action Codes.md`, not to the shape of today's dummy response. Map defensively (default missing columns, fail closed on a missing `o_code`) so the same code keeps working once real data arrives.
-  - Never branch on, hardcode, or test for specific dummy values, and don't treat a stub "success" as proof that a business rule works.
+- **Gateway data is the source of truth:** every value a screen shows or a flow relies on (lists, profile fields, options, statuses, amounts, server messages) comes from the response of its action code. Never hardcode or derive it on the client as a stand-in.
+  - The gateway at `EXPO_PUBLIC_DBAPI_URL` is a stub for now and returns dummy data. Wire every feature to its action code and render whatever the gateway returns, so nothing has to change when real data arrives.
+  - Never add local sample, mock or seed data, and never fall back to it when a call fails or comes back empty. Show the screen's error or empty state.
+  - Code to the contract in `docs/XYZ Action Codes.md`, not to the shape of today's response. Map defensively (default missing columns, fail closed on a missing `o_code`).
+  - Never branch on, hardcode or test for specific dummy values, and don't treat a stub "success" as proof that a business rule works.
 - **Environment config:** gateway settings come from env vars, never hardcoded. Keep `.env.example` in sync.
 
 ### Layout
