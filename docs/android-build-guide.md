@@ -96,6 +96,7 @@ Nothing to do here; this is what the build relies on.
 | File | What matters for Android |
 |---|---|
 | `app.json` | `expo.android.package` = **`com.xyzcar.app`** (permanent — the Google Maps key restriction and any Play Store listing are tied to it), `expo.version`, `expo.android.versionCode`, plugins, permissions, `extra.eas.projectId` |
+| `assets/images/` | App icon (`icon.png`), Android adaptive icon (`adaptive-icon.png` on a white background), splash (`splash-icon.png`) and web favicon, all rendered from `logo.svg`. After replacing one, rebuild with `-- --clean` |
 | `app.config.ts` | Injects `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` into the Android manifest for `react-native-maps` at prebuild time |
 | `scripts/build-android-apk.sh` | The build (§3, §4) |
 | `eas.json` | Profiles for the optional EAS build (§5). Not used by the npm commands |

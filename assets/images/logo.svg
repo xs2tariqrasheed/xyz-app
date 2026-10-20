@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="212 0 600 612" width="600" height="612">
+  <polygon fill="#231F20" points="512,0 812,92 812,520 512,612 212,520 212,92"/>
+  <polygon fill="#FFFFFF" points="512,48 766,126 766,429.5 512,507.4 258,429.5 258,126"/>
+  <g fill="#231F20" transform="translate(292 150)">
+    <polygon points="0,0 47,0 64,55.6 81,0 128,0 87.5,132.5 128,265 81,265 64,209.4 47,265 0,265 40.5,132.5"/>
+    <polygon transform="translate(156 0)" points="0,0 47,0 64,64.5 81,0 128,0 86,148 86,265 42,265 42,148"/>
+    <polygon transform="translate(312 0)" points="0,0 128,0 128,42 48,223 128,223 128,265 0,265 0,223 80,42 0,42"/>
+  </g>
+  <g fill="#FFFFFF" font-family="'DIN Condensed', 'Arial Narrow', Arial, sans-serif" font-weight="700" font-size="50" letter-spacing="3" text-anchor="middle">
+    <text transform="translate(402 541) rotate(17.05)">TWO WAY</text>
+    <text transform="translate(610 547) rotate(-17.05)">RADIO</text>
+  </g>
+  <rect fill="#FFFFFF" x="503" y="553" width="18" height="7"/>
+</svg>
