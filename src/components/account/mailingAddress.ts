@@ -26,7 +26,7 @@ export type MailingAddress = {
   addressType: AddressType;
 };
 
-/** Field limits from the legacy mailing address page (reverse-engineer-guide/08 §3). */
+/** Field limits from the legacy mailing address page (reverse-engineer-implemented/guide/08 §3). */
 export const MAILING_ADDRESS_LIMITS = {
   city: 30,
   zip: 5,
@@ -78,7 +78,7 @@ export function mailingAddressEqual(a: MailingAddress, b: MailingAddress): boole
 
 /**
  * Validates the whole address at once, to the legacy site's rules
- * (reverse-engineer-guide/08, 26): a complete street address, and at least
+ * (reverse-engineer-implemented/guide/08, reverse-engineer-guide/26): a complete street address, and at least
  * one phone at it — US, or a full international code + number pair.
  */
 export function validateMailingAddress(value: MailingAddress): MailingAddressErrors {

@@ -153,7 +153,7 @@ export const PREFERENCES_MESSAGES = {
 
 /**
  * Mailing address: the Update Mailing Address screen and the registration
- * address step, which share the form (reverse-engineer-guide/08).
+ * address step, which share the form (reverse-engineer-implemented/guide/08).
  */
 export const MAILING_ADDRESS_MESSAGES = {
   SCREEN_TITLE: 'Update Mailing Address',

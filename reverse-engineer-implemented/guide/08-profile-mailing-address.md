@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app (2026-10-16). `/mailing-address` loads the address columns from `PROF.S.LOAD_PROFILE` and saves the 11 address parameters with `PROF.U.PROFILE` through `ProfileContext.updateMailingAddress`; registration's address step uses the same validator.
+
 # Module 08 — Profile: Update Billing / Mailing Address
 
 ## 1. Purpose

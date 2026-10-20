@@ -7,7 +7,7 @@ This folder holds **only** the reverse-engineering files whose feature is built 
 
 Each implemented file lives only here. The two source folders keep only what is not built yet, is partly built, or is a shared reference. Module numbers are unchanged, so `guide/11` is still module 11. When a module is finished, move its file into the matching subfolder here, update links that point to it, and move its row in the tables below.
 
-Audited against the code on **2026-10-16**: routes in `src/app`, action codes used by `src/context`, `src/services` and `src/components`, and the remaining placeholders (`ComingSoon`, `SAVED_MAILING_ADDRESS`).
+Audited against the code on **2026-10-16**: routes in `src/app`, action codes used by `src/context`, `src/services` and `src/components`, and the remaining placeholders (`ComingSoon`).
 
 ---
 
@@ -21,6 +21,7 @@ Audited against the code on **2026-10-16**: routes in `src/app`, action codes us
 | [guide/05](guide/05-lookup-services.md) | Lookups & zone checks | `services/zones.ts`, `services/places.ts` | `RES.S.ZONE_THE_LOCATION`, `RES.S.GOOGLE_ZONE_NUM` | missing 20 (airport / airline / landmark lookups) |
 | [guide/06](guide/06-member-home-express-ride.md) | Member home + express ride | `(app)/index.tsx`, `ExpressPickupPanel` | `RES.S.ALL_ORDERS`, `RES.I.RESERVATION` | missing 21 |
 | [guide/07](guide/07-profile-personal-info.md) | Profile → personal info | `profile.tsx`, `ProfileContext` | `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | — |
+| [guide/08](guide/08-profile-mailing-address.md) | Billing / mailing address | `mailing-address.tsx`, `ProfileContext.updateMailingAddress` | `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | — |
 | [guide/09](guide/09-profile-preferences.md) | Preferences (confirm by phone, special offers) | `preferences.tsx`, `ProfileContext.updatePreferences` | `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | — |
 | [guide/10](guide/10-change-password.md) | Change password | `change-password.tsx` | `PROF.U.PASSWORD` | — |
 | [guide/11](guide/11-address-book.md) | Address book | `addresses.tsx`, `SavedPlacesContext` | `PROF.S.USER_ADDRESSES`, `PROF.I/U/D.USER_ADDRESS` | missing 02 §4.6, missing 20 |
@@ -38,6 +39,7 @@ Audited against the code on **2026-10-16**: routes in `src/app`, action codes us
 | [missing-screens/02](missing-screens/02-address-book.md) | My Addresses gateway CRUD | `addresses.tsx` | `PROF.S.USER_ADDRESSES`, `PROF.I/U/D.USER_ADDRESS` | — |
 | [missing-screens/03](missing-screens/03-my-contacts.md) | My Contacts gateway CRUD | `contacts.tsx` | `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.I/U/D.PROFILE_COLUMN_VALUE` | — |
 | [missing-screens/04](missing-screens/04-preferences.md) | Preferences gateway load & save | `preferences.tsx` | `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | — |
+| [missing-screens/05](missing-screens/05-mailing-address.md) | Mailing address gateway load & save | `mailing-address.tsx` | `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | — |
 
 Guide 07 had no "✅ Implemented" banner, although `/profile` is wired. It has one now.
 
@@ -53,10 +55,9 @@ Guide 24 used to say "✅ Implemented", but the code does not back that up. Only
 
 | File | Module | App today | Tracked in |
 |---|---|---|---|
-| [guide/08](../reverse-engineer-guide/08-profile-mailing-address.md) | Billing / mailing address | Local `SAVED_MAILING_ADDRESS`, no gateway call | [missing 05](../reverse-engineer-missing-screens/05-mailing-address.md) |
 | [guide/24](../reverse-engineer-guide/24-feedback-rating-complaints.md) | Rating, complaint, contact, account requests | No screens | missing [08](../reverse-engineer-missing-screens/08-rate-a-ride.md), [09](../reverse-engineer-missing-screens/09-complaint.md), [10](../reverse-engineer-missing-screens/10-contact-us-customer-service.md), [11](../reverse-engineer-missing-screens/11-open-corporate-account.md) |
 | [guide/25](../reverse-engineer-guide/25-system-pages-errors.md) | System pages & errors | No status routes or error boundary | [missing 01](../reverse-engineer-missing-screens/01-system-status-screens.md) |
-| [missing 01](../reverse-engineer-missing-screens/01-system-status-screens.md), [05](../reverse-engineer-missing-screens/05-mailing-address.md)–[21](../reverse-engineer-missing-screens/21-home-registration-misc-gaps.md) | Everything else in `reverse-engineer-missing-screens/` | 🔴 / 🟠 / 🟡 / 🔵 | see [its index](../reverse-engineer-missing-screens/00-README.md#3-module-index) |
+| [missing 01](../reverse-engineer-missing-screens/01-system-status-screens.md), [06](../reverse-engineer-missing-screens/06-authorized-access-management.md)–[21](../reverse-engineer-missing-screens/21-home-registration-misc-gaps.md) | Everything else in `reverse-engineer-missing-screens/` | 🔴 / 🟠 / 🟡 / 🔵 | see [its index](../reverse-engineer-missing-screens/00-README.md#3-module-index) |
 
 ## 4. Shared references (not features, still in `reverse-engineer-guide/`)
 

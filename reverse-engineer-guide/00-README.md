@@ -34,7 +34,7 @@ Implemented modules have moved to [`../reverse-engineer-implemented/guide/`](../
 | 05 | [05-lookup-services.md](../reverse-engineer-implemented/guide/05-lookup-services.md) | Country/State/City/Street/Cross-street, Airport, Airline, Landmark, Contact-type lookups, Zone checks | ✅ Implemented |
 | 06 | [06-member-home-express-ride.md](../reverse-engineer-implemented/guide/06-member-home-express-ride.md) | Member home data + "I am ready for pickup" express ride | ✅ Implemented |
 | 07 | [07-profile-personal-info.md](../reverse-engineer-implemented/guide/07-profile-personal-info.md) | Update personal info | ✅ Implemented |
-| 08 | [08-profile-mailing-address.md](08-profile-mailing-address.md) | Update billing/mailing address | 🟡 Not wired |
+| 08 | [08-profile-mailing-address.md](../reverse-engineer-implemented/guide/08-profile-mailing-address.md) | Update billing/mailing address | ✅ Implemented |
 | 09 | [09-profile-preferences.md](../reverse-engineer-implemented/guide/09-profile-preferences.md) | Confirmation & subscription preferences | ✅ Implemented |
 | 10 | [10-change-password.md](../reverse-engineer-implemented/guide/10-change-password.md) | Change password | ✅ Implemented |
 | 11 | [11-address-book.md](../reverse-engineer-implemented/guide/11-address-book.md) | Saved locations CRUD | ✅ Implemented |

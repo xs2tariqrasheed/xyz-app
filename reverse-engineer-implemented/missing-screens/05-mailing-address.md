@@ -1,9 +1,11 @@
+> ✅ **Implemented** in the XYZ app (2026-10-16). `ProfileContext.updateMailingAddress` saves through `PROF.U.PROFILE` (`updateMailingAddressJData` in `src/services/profile.ts`); `SAVED_MAILING_ADDRESS` is gone. Still open: the column names and values in §6.
+
 # Missing 05 — Change Billing / Mailing Address — Gateway Load & Save
 
 | | |
 |---|---|
 | **App today** | ✅ Wired. `src/app/(app)/mailing-address.tsx` reads `profile.mailingAddress` from `useProfile()` and saves through `updateMailingAddress()` (`PROF.U.PROFILE`). Mapping lives in `src/services/profile.ts` (`toMailingAddress`, `mailingAddressParams`, `updateMailingAddressJData`). Reachable only from Profile (product decision). |
-| **Legacy reference** | [`../reverse-engineer-guide/08-profile-mailing-address.md`](../reverse-engineer-guide/08-profile-mailing-address.md) |
+| **Legacy reference** | [`../guide/08-profile-mailing-address.md`](../guide/08-profile-mailing-address.md) |
 | **Gateway** | ✅ `PROF.S.LOAD_PROFILE` (load), `PROF.U.PROFILE` (save) |
 | **Priority** | P1 |
 
