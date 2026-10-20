@@ -108,7 +108,8 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
   const cancelled = record.status === 'canceled';
   const upcoming = record.status === 'confirmed' && (record.rideAt?.getTime() ?? 0) > now.getTime();
   const finished = record.status === 'completed';
-  const trackable = record.status === 'in-progress' || finished || record.driver.carNumber.length > 0;
+  // The old site offers Track Your Route on every ride; one with no log yet shows the empty state.
+  const trackable = !cancelled;
   const hasVoucher = hasVoucherNumber(record);
   const hasReceipt = hasRideReceipt(record);
   const editSection = upcoming ? () => void opener.open(record.reservationNumber, 'edit') : undefined;
@@ -262,12 +263,7 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
           <Button
             label={RESERVATION_INFO_MESSAGES.TRACK}
             variant="outline"
-            onPress={() =>
-              router.push({
-                pathname: '/track-ride',
-                params: { rideno: record.reservationNumber, car: record.driver.carNumber },
-              })
-            }
+            onPress={() => router.push({ pathname: '/track-ride', params: { rideno: record.reservationNumber } })}
           />
         ) : null}
         {hasVoucher ? (

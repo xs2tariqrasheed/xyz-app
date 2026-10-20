@@ -7,9 +7,8 @@ import { hasColumn, parseGatewayDate, pick, recordSet } from '@/services/gateway
 /**
  * Where a car has been and where it is now (reverse-engineer-implemented/guide/21):
  * `RES.S.VEHICLE_LOG` for the route and its timeline, and
- * `RES.S.LATITUDE_LONGITUDE_FOR_CAR` for the car's current position.
- *
- * The old site refreshed the position only when asked, so this does too.
+ * `RES.S.LATITUDE_LONGITUDE_FOR_CAR` for the car's current position — looked up
+ * as the screen opens, as the old site did behind the scenes, and again on Refresh.
  */
 
 /** Thrown when the server refuses a tracking lookup, as opposed to failing. */

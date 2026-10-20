@@ -18,6 +18,8 @@ Observed status vocabulary (vehicle events):
 
 Example row: `1 | 09/10/2026 | 12:39:09 PM | Driver accepted the call. | -74.0886 | 40.5913`.
 
+App: Rides / Home / Receipts → Reservation detail → "Track your route" (every ride except cancelled). The interactive map shows the pickup (A) → drop-off (B) drive, the logged trail and, on an open ride with a car, the car (C) — located as the screen opens and again on Refresh.
+
 ## 3. Live status & locate car [C]
 From open reservations (module 19): live-status window (`#divlivestatus`, refreshable) and "Locate Car" map dialog; content is server-rendered for the ride. Endpoint names are not exposed in static code **[U]**; the live-status panel embeds the Ask-a-Question view below.
 

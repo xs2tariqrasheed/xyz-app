@@ -667,7 +667,8 @@ function maskStoredCard(value: string): string {
 
 // ── Record → draft (edit, return trip, repeat) ─────────────────────────────
 
-function stopToSuggestion(stop: RecordStop, id: string): AddressSuggestion {
+/** One end of a loaded ride as an address the maps and the wizard can use. */
+export function stopToSuggestion(stop: RecordStop, id: string): AddressSuggestion {
   return toSuggestion(id, { ...stop.place, directions: stop.directions });
 }
 

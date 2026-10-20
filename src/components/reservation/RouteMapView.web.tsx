@@ -45,10 +45,23 @@ function boundsOf(points: readonly LatLngPoint[]) {
   return { north: Math.max(...lats), south: Math.min(...lats), east: Math.max(...lngs), west: Math.min(...lngs) };
 }
 
-export function RouteMapView({ start, end, path, startTitle, endTitle, accessibilityLabel }: RouteMapViewProps) {
+const NO_TRAIL: readonly LatLngPoint[] = [];
+
+export function RouteMapView({
+  start,
+  end,
+  path,
+  startTitle,
+  endTitle,
+  accessibilityLabel,
+  trail = NO_TRAIL,
+  car = null,
+  carTitle = '',
+}: RouteMapViewProps) {
   const containerRef = useRef<View>(null);
   const mapRef = useRef<JsMap | null>(null);
-  const route = { start, end, path, startTitle, endTitle, framed: path.length > 1 ? path : [start, end] };
+  const framed = [...(path.length > 1 ? path : [start, end]), ...trail, ...(car ? [car] : [])];
+  const route = { start, end, path, startTitle, endTitle, trail, car, carTitle, framed };
   // The latest route, read by the map build and the fit button. Declared before
   // the build effect, so it is current when that effect runs.
   const routeRef = useRef(route);
@@ -57,7 +70,18 @@ export function RouteMapView({ start, end, path, startTitle, endTitle, accessibi
   });
 
   // Rebuilt only when the route itself changes (or its labels).
-  const routeKey = JSON.stringify([start, end, path.length, path[Math.floor(path.length / 2)] ?? null, startTitle, endTitle]);
+  const routeKey = JSON.stringify([
+    start,
+    end,
+    path.length,
+    path[Math.floor(path.length / 2)] ?? null,
+    startTitle,
+    endTitle,
+    trail.length,
+    trail[trail.length - 1] ?? null,
+    car,
+    carTitle,
+  ]);
 
   useEffect(() => {
     // react-native-web renders a View as a DOM element, which is what the map mounts into.
@@ -71,7 +95,7 @@ export function RouteMapView({ start, end, path, startTitle, endTitle, accessibi
         const { Map, Polyline } = await googleLibrary<MapsLibrary>('maps', ADDRESS_FIELD_MESSAGES.ROUTE_UNAVAILABLE);
         const { Marker } = await googleLibrary<MarkerLibrary>('marker', ADDRESS_FIELD_MESSAGES.ROUTE_UNAVAILABLE);
         if (cancelled) return;
-        const { start, end, path, startTitle, endTitle, framed } = routeRef.current;
+        const { start, end, path, startTitle, endTitle, trail, car, carTitle, framed } = routeRef.current;
 
         const map = new Map(element, {
           // Our own + / − / fit buttons replace Google's, so the control matches iOS and Android.
@@ -95,10 +119,23 @@ export function RouteMapView({ start, end, path, startTitle, endTitle, accessibi
             }),
           );
         }
-        for (const [point, title, label, color] of [
+        if (trail.length > 1) {
+          overlays.push(
+            new Polyline({
+              map,
+              path: trail.map(toLiteral),
+              strokeColor: colors.accent,
+              strokeOpacity: 1,
+              strokeWeight: 4,
+            }),
+          );
+        }
+        const pins: [LatLngPoint, string, string, string][] = [
           [start, startTitle, 'A', colors.success],
           [end, endTitle, 'B', colors.danger],
-        ] as const) {
+        ];
+        if (car) pins.push([car, carTitle, 'C', colors.accent]);
+        for (const [point, title, label, color] of pins) {
           overlays.push(
             new Marker({
               map,

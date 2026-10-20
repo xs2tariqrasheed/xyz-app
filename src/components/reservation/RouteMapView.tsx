@@ -14,7 +14,13 @@ export type RouteMapViewProps = {
   startTitle: string;
   endTitle: string;
   accessibilityLabel: string;
+  /** Where the car has been (Track your route), drawn over the planned drive. */
+  trail?: readonly LatLngPoint[];
+  /** Where the car is now. */
+  car?: LatLngPoint | null;
+  carTitle?: string;
 };
+
 
 /** Room left around the route when it is framed, so the pins never sit on the edge. */
 const EDGE = { top: 48, right: 64, bottom: 48, left: 48 };
@@ -28,12 +34,22 @@ const ZOOM_STEP = 2;
  * buttons. The web build draws the same map with the Maps JavaScript API
  * (`RouteMapView.web.tsx`).
  */
-export function RouteMapView({ start, end, path, startTitle, endTitle, accessibilityLabel }: RouteMapViewProps) {
+export function RouteMapView({
+  start,
+  end,
+  path,
+  startTitle,
+  endTitle,
+  accessibilityLabel,
+  trail = [],
+  car,
+  carTitle,
+}: RouteMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const region = useRef<Region | null>(null);
 
   const fit = (animated: boolean) =>
-    mapRef.current?.fitToCoordinates(path.length > 1 ? [...path] : [start, end], {
+    mapRef.current?.fitToCoordinates([...(path.length > 1 ? path : [start, end]), ...trail, ...(car ? [car] : [])], {
       edgePadding: EDGE,
       animated,
     });
@@ -72,6 +88,10 @@ export function RouteMapView({ start, end, path, startTitle, endTitle, accessibi
         ) : null}
         <Marker coordinate={start} title={startTitle} pinColor={colors.success} />
         <Marker coordinate={end} title={endTitle} pinColor={colors.danger} />
+        {trail.length > 1 ? (
+          <Polyline coordinates={[...trail]} strokeColor={colors.accent} strokeWidth={4} />
+        ) : null}
+        {car ? <Marker coordinate={car} title={carTitle} pinColor={colors.accent} /> : null}
       </MapView>
 
       <MapZoomControls

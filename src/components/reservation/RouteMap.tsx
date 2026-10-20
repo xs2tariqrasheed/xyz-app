@@ -6,7 +6,7 @@ import { hasGoogleMapsKey } from '@/config/maps';
 import type { AddressSuggestion } from '@/services/places';
 import { formatDistance, formatDuration, type RouteSummary } from '@/services/routes';
 import { breakpoints, colors, radii, space } from '@/theme';
-import { decodePolyline } from '@/utils/polyline';
+import { decodePolyline, type LatLngPoint } from '@/utils/polyline';
 
 export type RouteMapProps = {
   origin: AddressSuggestion | null;
@@ -14,6 +14,14 @@ export type RouteMapProps = {
   route: RouteSummary | null;
   loading: boolean;
   error: string | null;
+  /** Where the car has been and where it is now (Track your route). */
+  trail?: readonly LatLngPoint[];
+  car?: LatLngPoint | null;
+  carTitle?: string;
+  /** Distance and drive time under the map; the booking form shows them. */
+  showStats?: boolean;
+  /** Replaces the stand-in's note when there is no route to draw. */
+  emptyNote?: string;
 };
 
 /**
@@ -21,7 +29,18 @@ export type RouteMapProps = {
  * pan (`RouteMapView`: react-native-maps on iOS / Android, the Maps
  * JavaScript API on web), with the distance and drive time under it.
  */
-export function RouteMap({ origin, destination, route, loading, error }: RouteMapProps) {
+export function RouteMap({
+  origin,
+  destination,
+  route,
+  loading,
+  error,
+  trail,
+  car,
+  carTitle,
+  showStats = true,
+  emptyNote,
+}: RouteMapProps) {
   const path = useMemo(() => (route ? decodePolyline(route.encodedPolyline) : []), [route]);
   // A taller frame on phones leaves room to pinch and drag.
   const { width } = useWindowDimensions();
@@ -38,9 +57,12 @@ export function RouteMap({ origin, destination, route, loading, error }: RouteMa
             startTitle={origin?.primary ?? ''}
             endTitle={destination?.primary ?? ''}
             accessibilityLabel={`Route from ${origin?.primary} to ${destination?.primary}`}
+            trail={trail}
+            car={car}
+            carTitle={carTitle}
           />
         ) : (
-          <Schematic origin={origin} destination={destination} error={error} />
+          <Schematic origin={origin} destination={destination} error={error} emptyNote={emptyNote} />
         )}
 
         {loading ? (
@@ -51,7 +73,7 @@ export function RouteMap({ origin, destination, route, loading, error }: RouteMa
         ) : null}
       </View>
 
-      {route ? (
+      {route && showStats ? (
         <View style={styles.stats}>
           <Stat label="Distance" value={formatDistance(route.distanceMeters)} />
           <View style={styles.statDivider} />
@@ -76,18 +98,22 @@ function Schematic({
   origin,
   destination,
   error,
+  emptyNote,
 }: {
   origin: AddressSuggestion | null;
   destination: AddressSuggestion | null;
   error: string | null;
+  emptyNote?: string;
 }) {
   const note = error
     ? error
-    : !hasGoogleMapsKey
-      ? 'Add a Google Maps API key to draw the live route here.'
-      : !origin || !destination
-        ? 'Choose both addresses to preview the route.'
-        : 'No route found between these two addresses.';
+    : emptyNote
+      ? emptyNote
+      : !hasGoogleMapsKey
+        ? 'Add a Google Maps API key to draw the live route here.'
+        : !origin || !destination
+          ? 'Choose both addresses to preview the route.'
+          : 'No route found between these two addresses.';
 
   return (
     <View style={styles.schematic}>

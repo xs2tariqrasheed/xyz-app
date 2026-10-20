@@ -776,10 +776,10 @@ export const TRACKING_MESSAGES = {
   REFRESH: 'Refresh car position',
   REFRESHING: 'Locating…',
   CAR_POSITION: 'Car position',
+  CAR_MARKER: 'Car',
   CAR_UNKNOWN: 'The car’s position is not available right now.',
   CAR_FAILED: 'The car could not be located.',
   NO_CAR: 'A car has not been assigned to this ride yet.',
-  MAP_UNAVAILABLE: 'The map needs a Google Maps key.',
 } as const;
 
 /** "Ask about this ride" (guide 21). Ride ratings (guide 24) wait on a gateway code. */
