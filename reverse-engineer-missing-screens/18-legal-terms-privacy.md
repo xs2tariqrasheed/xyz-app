@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **App today** | 🔴 Missing. Registration does not link to terms, and there is no privacy link anywhere. |
+| **App today** | ✅ Links implemented (2026-10-20): About → Legal, the menu drawer, the footer under login / registration / password reset, and an agreement line above "Create account". URLs come from `EXPO_PUBLIC_WEBSITE_URL` (`src/config/website.ts`). The card-authorization link on the booking billing step (§3 item 4) is not done yet. |
 | **Legacy reference** | Booking-site footer "TERMS AND CONDITIONS \| PRIVACY POLICY". Not in `reverse-engineer-guide/`. |
 | **Gateway** | ⛔ None (legal content). |
 | **Priority** | **P1.** Both stores require a reachable privacy policy for apps that collect personal data. Registration collects name, phone, address and card. |

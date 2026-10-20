@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app (2026-10-20): About → "Our Policies". It opens `https://xyzcar.com/our-policies/` in a new tab on web, or an in-app browser on iOS / Android; see `src/config/website.ts` (`EXPO_PUBLIC_WEBSITE_URL`) and `src/services/website.ts`.
+
 # About → Our Policies
 
 | | |
@@ -10,7 +12,7 @@
 | **Opens in** | The same tab. The `<a>` has no `target` and no `onclick`; it is a plain link. |
 | **Booking pages where it appears** | `/` (login), `/Registration/Index`, `/Misc/Forgot` [O]. Member pages are probably the same, because the menu and footer are in the shared layout [I]. |
 | **Related gap doc** | [15-about-company-services.md](../reverse-engineer-missing-screens/15-about-company-services.md) |
-| **xyz-app today** | Not in the app. |
+| **xyz-app today** | ✅ About → "Our Policies". |
 
 ## What the destination is
 Static policies page (waiting, no-show, cancellation).

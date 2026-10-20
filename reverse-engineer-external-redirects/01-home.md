@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app (2026-10-20): About → "xyzcar.com". It opens `https://xyzcar.com/` in a new tab on web, or an in-app browser on iOS / Android; see `src/config/website.ts` (`EXPO_PUBLIC_WEBSITE_URL`) and `src/services/website.ts`.
+
 # Home (marketing site)
 
 | | |
@@ -10,7 +12,7 @@
 | **Opens in** | The same tab. The `<a>` has no `target` and no `onclick`; it is a plain link. |
 | **Booking pages where it appears** | `/` (login), `/Registration/Index`, `/Misc/Forgot` [O]. Member pages are probably the same, because the menu and footer are in the shared layout [I]. |
 | **Related gap doc** | — |
-| **xyz-app today** | No link to the marketing home page. |
+| **xyz-app today** | ✅ About → "xyzcar.com". |
 
 ## What the destination is
 The marketing site's home page.

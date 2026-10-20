@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app (2026-10-20): About → Legal → "Privacy Policy", the menu drawer footer, the footer under login, registration and password reset, and the agreement line above "Create account". It opens `https://xyzcar.com/privacy-policy/` in a new tab on web, or an in-app browser on iOS / Android; see `src/config/website.ts` (`EXPO_PUBLIC_WEBSITE_URL`) and `src/services/website.ts`.
+
 # Footer → Privacy Policy
 
 | | |
@@ -10,7 +12,7 @@
 | **Opens in** | The same tab. The `<a>` has no `target` and no `onclick`; it is a plain link. |
 | **Booking pages where it appears** | `/` (login), `/Registration/Index`, `/Misc/Forgot` [O]. Member pages are probably the same, because the menu and footer are in the shared layout [I]. |
 | **Related gap doc** | [18-legal-terms-privacy.md](../reverse-engineer-missing-screens/18-legal-terms-privacy.md) |
-| **xyz-app today** | Not in the app. There is no privacy link anywhere. |
+| **xyz-app today** | ✅ About → Legal → "Privacy Policy", the menu drawer footer, the footer under login, registration and password reset, and the agreement line above "Create account". |
 
 ## What the destination is
 Privacy policy (long legal text, section headings in missing-screens 18 §2.2).

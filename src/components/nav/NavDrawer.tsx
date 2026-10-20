@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { XyzLogo } from '@/components/brand/XyzLogo';
 import { ChevronGlyph } from '@/components/ui/Glyph';
+import { LEGAL_LINKS } from '@/components/website/footerLinks';
+import { WebsiteTextLinks } from '@/components/website/WebsiteTextLinks';
 import { useAuth } from '@/context/AuthContext';
 import { colors, radii, space } from '@/theme';
 
@@ -162,6 +164,8 @@ export function NavDrawer({ visible, onClose, pathname }: NavDrawerProps) {
             ) : null}
           </ScrollView>
 
+          <WebsiteTextLinks links={LEGAL_LINKS} tone="dark" style={styles.legal} />
+
           <Text style={styles.footnote}>XYZ Two Way Radio · Book in a few taps</Text>
         </Animated.View>
       </View>
@@ -220,6 +224,8 @@ const styles = StyleSheet.create({
   itemBarActive: { backgroundColor: colors.navActive },
   itemLabel: { flex: 1, color: colors.headerFg, fontSize: 15, fontWeight: '600' },
   itemLabelActive: { color: colors.navActive },
+
+  legal: { alignItems: 'flex-start', paddingBottom: space.md },
 
   footnote: {
     color: colors.headerFgMuted,

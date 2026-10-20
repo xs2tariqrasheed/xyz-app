@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AuthCard } from '@/components/auth/AuthCard';
+import { AuthFooter } from '@/components/website/AuthFooter';
 import { HumanCheck } from '@/components/auth/HumanCheck';
 import { Screen } from '@/components/layout/Screen';
 import { Alert } from '@/components/ui/Alert';
@@ -104,6 +105,7 @@ export default function ForgotPasswordScreen() {
           />
           {backLink}
         </AuthCard>
+        <AuthFooter />
       </Screen>
     );
   }
@@ -165,6 +167,7 @@ export default function ForgotPasswordScreen() {
 
         <View style={inline ? styles.actionsInline : null}>{backLink}</View>
       </AuthCard>
+      <AuthFooter />
     </Screen>
   );
 }

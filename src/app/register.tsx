@@ -5,6 +5,8 @@ import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { MailingAddressForm } from '@/components/account/MailingAddressForm';
 import { validateMailingAddress } from '@/components/account/mailingAddress';
 import { AuthCard } from '@/components/auth/AuthCard';
+import { AuthFooter } from '@/components/website/AuthFooter';
+import { TermsAgreement } from '@/components/website/TermsAgreement';
 import { Screen } from '@/components/layout/Screen';
 import { AccountStep } from '@/components/register/AccountStep';
 import { BillingStep } from '@/components/register/BillingStep';
@@ -342,6 +344,7 @@ export default function RegisterScreen() {
             {REGISTER_MESSAGES.BACK_TO_LOGIN}
           </Link>
         </AuthCard>
+        <AuthFooter />
       </Screen>
     );
   }
@@ -404,6 +407,8 @@ export default function RegisterScreen() {
             />
           ) : null}
 
+          {step === LAST_STEP ? <TermsAgreement /> : null}
+
           <View style={styles.actions}>
             {step > 0 ? (
               <Button
@@ -431,6 +436,7 @@ export default function RegisterScreen() {
             </Link>
           ) : null}
         </AuthCard>
+        <AuthFooter />
       </View>
     </Screen>
   );

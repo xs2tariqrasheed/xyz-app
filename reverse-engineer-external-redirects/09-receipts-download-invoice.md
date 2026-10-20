@@ -1,3 +1,5 @@
+> ✅ **Implemented** in the XYZ app (2026-10-20): Receipts → "Receipts & invoices online" → "Download Invoice". It opens `https://xyzcar.com/download-invoice/` in a new tab on web, or an in-app browser on iOS / Android; see `src/config/website.ts` (`EXPO_PUBLIC_WEBSITE_URL`) and `src/services/website.ts`.
+
 # Receipts & Invoices → Download Invoice
 
 | | |
@@ -10,7 +12,7 @@
 | **Opens in** | The same tab. The `<a>` has no `target` and no `onclick`; it is a plain link. |
 | **Booking pages where it appears** | `/` (login), `/Registration/Index`, `/Misc/Forgot` [O]. Member pages are probably the same, because the menu and footer are in the shared layout [I]. |
 | **Related gap doc** | [13-receipts-invoices.md](../reverse-engineer-missing-screens/13-receipts-invoices.md) |
-| **xyz-app today** | Invoices are blocked (no action code). See missing-screens 13. |
+| **xyz-app today** | ✅ Receipts → "Receipts & invoices online" → "Download Invoice". |
 
 ## What the destination is
 WordPress/Elementor request form with the same fields as Download Receipt.

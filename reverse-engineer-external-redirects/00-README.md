@@ -22,23 +22,23 @@ On every captured page, the footer link **PRIVACY POLICY** has `href="https://ww
 
 | # | File | Where you click | Lands on | Related gap doc |
 |---|---|---|---|---|
-| 01 | [01-home.md](01-home.md) | Header → Home | `xyzcar.com/` | — |
-| 02 | [02-about-company-info.md](02-about-company-info.md) | Header → About → Company Info | `/about-xyz/` | missing-screens 15 |
-| 03 | [03-about-our-services.md](03-about-our-services.md) | Header → About → Our Services | `/our-services/` | 15 |
-| 04 | [04-about-our-policies.md](04-about-our-policies.md) | Header → About → Our Policies | `/our-policies/` | 15 |
-| 05 | [05-rates-sample-rates.md](05-rates-sample-rates.md) | Header → Rates → Sample Rates | `/sample-rates/` | 14 |
-| 06 | [06-rates-services-rates.md](06-rates-services-rates.md) | Header → Rates → Services Rates | `/services-rates/` | 14 |
-| 07 | [07-rates-complete-ratebook-pdf.md](07-rates-complete-ratebook-pdf.md) | Header → Rates → Complete Ratebook | `/wp-content/uploads/XYZ_Rate_Book.pdf` (**PDF**) | 14 |
-| 08 | [08-receipts-download-receipt.md](08-receipts-download-receipt.md) | Header → Receipts & Invoices → Download Receipt | `/download-receipt/` | 13 |
-| 09 | [09-receipts-download-invoice.md](09-receipts-download-invoice.md) | Header → Receipts & Invoices → Download Invoice | `/download-invoice/` | 13 |
-| 10 | [10-contact-customer-service.md](10-contact-customer-service.md) | Header → Contact Us → Customer Service **+** footer CONTACT US | `/contact-us/` | 10 |
-| 11 | [11-contact-open-an-account.md](11-contact-open-an-account.md) | Header → Contact Us → Open an Account | `/open-an-account/` | 11 |
-| 12 | [12-contact-complaint.md](12-contact-complaint.md) | Header → Contact Us → Complaint | `/complaint/` | 09 |
-| 13 | [13-contact-rate-a-ride.md](13-contact-rate-a-ride.md) ✅ Implemented (ride-history Feedback) | Header → Contact Us → Rate a Ride **+** ride history "Feedback" (logged in) | `/rate-a-ride/` (`?rideno={rideNo}` from ride history) | 08 |
-| 14 | [14-faqs.md](14-faqs.md) | Header → Contact Us → FAQs **+** footer FAQs | `/faqs/` | 16 |
-| 15 | [15-contact-drivers-join-xyz.md](15-contact-drivers-join-xyz.md) | Header → Contact Us → Drivers - Join XYZ | `/drivers-join-xyz/` | 17 |
-| 16 | [16-footer-terms-and-conditions.md](16-footer-terms-and-conditions.md) | Footer → TERMS AND CONDITIONS | `/terms-and-conditions/` | 18 |
-| 17 | [17-footer-privacy-policy.md](17-footer-privacy-policy.md) | Footer → PRIVACY POLICY | `/privacy-policy/` | 18 |
+| 01 | [01-home.md](01-home.md) ✅ Implemented | Header → Home | `xyzcar.com/` | — |
+| 02 | [02-about-company-info.md](02-about-company-info.md) ✅ Implemented | Header → About → Company Info | `/about-xyz/` | missing-screens 15 |
+| 03 | [03-about-our-services.md](03-about-our-services.md) ✅ Implemented | Header → About → Our Services | `/our-services/` | 15 |
+| 04 | [04-about-our-policies.md](04-about-our-policies.md) ✅ Implemented | Header → About → Our Policies | `/our-policies/` | 15 |
+| 05 | [05-rates-sample-rates.md](05-rates-sample-rates.md) ✅ Implemented | Header → Rates → Sample Rates | `/sample-rates/` | 14 |
+| 06 | [06-rates-services-rates.md](06-rates-services-rates.md) ✅ Implemented | Header → Rates → Services Rates | `/services-rates/` | 14 |
+| 07 | [07-rates-complete-ratebook-pdf.md](07-rates-complete-ratebook-pdf.md) ✅ Implemented | Header → Rates → Complete Ratebook | `/wp-content/uploads/XYZ_Rate_Book.pdf` (**PDF**) | 14 |
+| 08 | [08-receipts-download-receipt.md](08-receipts-download-receipt.md) ✅ Implemented | Header → Receipts & Invoices → Download Receipt | `/download-receipt/` | 13 |
+| 09 | [09-receipts-download-invoice.md](09-receipts-download-invoice.md) ✅ Implemented | Header → Receipts & Invoices → Download Invoice | `/download-invoice/` | 13 |
+| 10 | [10-contact-customer-service.md](10-contact-customer-service.md) ✅ Implemented | Header → Contact Us → Customer Service **+** footer CONTACT US | `/contact-us/` | 10 |
+| 11 | [11-contact-open-an-account.md](11-contact-open-an-account.md) ✅ Implemented | Header → Contact Us → Open an Account | `/open-an-account/` | 11 |
+| 12 | [12-contact-complaint.md](12-contact-complaint.md) ✅ Implemented | Header → Contact Us → Complaint | `/complaint/` | 09 |
+| 13 | [13-contact-rate-a-ride.md](13-contact-rate-a-ride.md) ✅ Implemented (ride-history Feedback + Contact Us menu) | Header → Contact Us → Rate a Ride **+** ride history "Feedback" (logged in) | `/rate-a-ride/` (`?rideno={rideNo}` from ride history) | 08 |
+| 14 | [14-faqs.md](14-faqs.md) ✅ Implemented | Header → Contact Us → FAQs **+** footer FAQs | `/faqs/` | 16 |
+| 15 | [15-contact-drivers-join-xyz.md](15-contact-drivers-join-xyz.md) ✅ Implemented | Header → Contact Us → Drivers - Join XYZ | `/drivers-join-xyz/` | 17 |
+| 16 | [16-footer-terms-and-conditions.md](16-footer-terms-and-conditions.md) ✅ Implemented | Footer → TERMS AND CONDITIONS | `/terms-and-conditions/` | 18 |
+| 17 | [17-footer-privacy-policy.md](17-footer-privacy-policy.md) ✅ Implemented | Footer → PRIVACY POLICY | `/privacy-policy/` | 18 |
 
 "Related gap doc" numbers point to [`../reverse-engineer-missing-screens/`](../reverse-engineer-missing-screens/00-README.md). Those files describe the content and fields of each destination page.
 

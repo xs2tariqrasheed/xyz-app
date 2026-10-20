@@ -1,4 +1,4 @@
-> ✅ **Implemented** in the XYZ app (2026-10-20): the ride-history **Feedback** link. "Leave feedback" on completed rides opens `https://www.xyzcar.com/rate-a-ride/?rideno={rideNo}` with the ride number pre-filled. It is in the ride cards, the desktop table's "Feedback" column, receipts and reservation details; see `src/services/rateRide.ts` and `EXPO_PUBLIC_RATE_A_RIDE_URL`. The header **Contact Us → Rate a Ride** menu item has no counterpart, because the app has no Contact Us menu.
+> ✅ **Implemented** in the XYZ app (2026-10-20): the ride-history **Feedback** link. "Leave feedback" on completed rides opens `https://www.xyzcar.com/rate-a-ride/?rideno={rideNo}` with the ride number pre-filled. It is in the ride cards, the desktop table's "Feedback" column, receipts and reservation details; see `src/services/rateRide.ts` and `EXPO_PUBLIC_RATE_A_RIDE_URL`. The header **Contact Us → Rate a Ride** menu item is Contact Us → "Rate a Ride" in the app (`rateRidePageUrl()`, no `rideno`).
 
 # Contact Us → Rate a Ride (+ ride-history Feedback)
 

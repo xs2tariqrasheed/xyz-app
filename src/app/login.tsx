@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { AuthCard } from '@/components/auth/AuthCard';
+import { AuthFooter } from '@/components/website/AuthFooter';
 import { HumanCheck } from '@/components/auth/HumanCheck';
 import { Screen } from '@/components/layout/Screen';
 import { Alert } from '@/components/ui/Alert';
@@ -186,6 +187,7 @@ export default function LoginScreen() {
           </Link>
         </View>
       </AuthCard>
+      <AuthFooter />
     </Screen>
   );
 }

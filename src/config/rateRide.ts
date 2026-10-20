@@ -1,3 +1,5 @@
+import { absoluteHttpUrl } from '@/utils/url';
+
 /**
  * The live "Rate a ride" form (reverse-engineer-guide/24, missing-screens/08
  * §4.2), read from `.env`:
@@ -13,20 +15,15 @@
  */
 const rawUrl = process.env.EXPO_PUBLIC_RATE_A_RIDE_URL;
 
-function absoluteHttpUrl(value: string | undefined): string {
-  const trimmed = value?.trim() ?? '';
-  try {
-    const { protocol } = new URL(trimmed);
-    return protocol === 'https:' || protocol === 'http:' ? trimmed : '';
-  } catch {
-    return '';
-  }
-}
-
 const baseUrl = absoluteHttpUrl(rawUrl);
 
 /** False until the URL is set — the feedback link is then hidden. */
 export const hasRateRideUrl = baseUrl.length > 0;
+
+/** The rate-a-ride page itself, for the Contact Us menu. */
+export function rateRidePageUrl(): string {
+  return new URL(baseUrl).toString();
+}
 
 /** The rate-a-ride page with the ride number pre-filled. */
 export function rateRideUrl(rideNo: string): string {

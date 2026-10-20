@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  nav: { flexDirection: 'row', alignItems: 'center', gap: space.xl - 4 },
+  nav: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   navItem: { alignItems: 'center', gap: 5, paddingVertical: space.sm },
   navItemPressed: { opacity: 0.75 },
   navLabel: { color: colors.headerFgMuted, fontSize: 14, fontWeight: '600' },

@@ -1,8 +1,6 @@
-import * as WebBrowser from 'expo-web-browser';
-
 import { rateRideUrl } from '@/config/rateRide';
 import { RIDES_MESSAGES } from '@/constants/messages';
-import { colors } from '@/theme';
+import { openExternalUrl } from '@/services/website';
 
 /**
  * Opens the live "Rate a ride" form for a ride (reverse-engineer-guide/24,
@@ -12,14 +10,6 @@ import { colors } from '@/theme';
  *
  * Resolves to an error message when the page could not be opened, else null.
  */
-export async function openRateRide(rideNo: string): Promise<string | null> {
-  try {
-    await WebBrowser.openBrowserAsync(rateRideUrl(rideNo), {
-      toolbarColor: colors.headerBg,
-      controlsColor: colors.headerFg,
-    });
-    return null;
-  } catch {
-    return RIDES_MESSAGES.FEEDBACK_OPEN_FAILED;
-  }
+export function openRateRide(rideNo: string): Promise<string | null> {
+  return openExternalUrl(rateRideUrl(rideNo), RIDES_MESSAGES.FEEDBACK_OPEN_FAILED);
 }

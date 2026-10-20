@@ -802,6 +802,55 @@ export const FEEDBACK_MESSAGES = {
   REJECTED: 'Error occurred during insertion.',
 } as const;
 
+/**
+ * Links to the marketing site (reverse-engineer-external-redirects/): About,
+ * Rates, Contact Us, Receipts and the legal footer.
+ */
+export const WEBSITE_MESSAGES = {
+  // Group titles
+  ABOUT_TITLE: 'About XYZ',
+  RATES_TITLE: 'Rates',
+  CONTACT_SCREEN_TITLE: 'Contact Us',
+  CONTACT_TITLE: 'How can we help?',
+  LEGAL_TITLE: 'Legal',
+  RECEIPTS_TITLE: 'Receipts & invoices online',
+
+  // About
+  COMPANY_INFO: 'Company Info',
+  OUR_SERVICES: 'Our Services',
+  OUR_POLICIES: 'Our Policies',
+  WEBSITE_HOME: 'xyzcar.com',
+
+  // Rates
+  SAMPLE_RATES: 'Sample Rates',
+  SERVICES_RATES: 'Services Rates',
+  RATE_BOOK: 'Complete Ratebook (PDF)',
+
+  // Receipts & invoices
+  DOWNLOAD_RECEIPT: 'Download Receipt',
+  DOWNLOAD_INVOICE: 'Download Invoice',
+
+  // Contact Us
+  CUSTOMER_SERVICE: 'Customer Service',
+  OPEN_ACCOUNT: 'Open an Account',
+  COMPLAINT: 'Complaint',
+  RATE_A_RIDE: 'Rate a Ride',
+  FAQS: 'FAQs',
+  DRIVERS_JOIN: 'Drivers - Join XYZ',
+  CONTACT_US: 'Contact Us',
+
+  // Legal
+  TERMS: 'Terms and Conditions',
+  PRIVACY: 'Privacy Policy',
+
+  // Registration agreement; the links are separate keys.
+  AGREE_LEAD: 'By creating an account you agree to the',
+  AGREE_AND: 'and',
+  AGREE_TAIL: '.',
+
+  OPEN_FAILED: 'The page could not be opened. Try again.',
+} as const;
+
 /** Itemised charges on a billed ride, in the order guide 20 lists them. */
 export const CHARGE_LABELS = {
   fare: 'Fare',

@@ -6,8 +6,9 @@ import type { RideAction } from '@/components/rides/RideActionLink';
 import { RideResults } from '@/components/rides/RideResults';
 import { RideSearchForm, type RideSearchFormValue } from '@/components/rides/RideSearchForm';
 import { Alert } from '@/components/ui/Alert';
+import { WebsiteLinkList } from '@/components/website/WebsiteLinkList';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { RECEIPTS_MESSAGES } from '@/constants/messages';
+import { RECEIPTS_MESSAGES, WEBSITE_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { openRateRide } from '@/services/rateRide';
@@ -101,6 +102,14 @@ export default function ReceiptsScreen() {
         emptyTitle={RECEIPTS_MESSAGES.EMPTY}
         onRetry={refetch}
         onAction={onAction}
+      />
+
+      <WebsiteLinkList
+        title={WEBSITE_MESSAGES.RECEIPTS_TITLE}
+        links={[
+          { label: WEBSITE_MESSAGES.DOWNLOAD_RECEIPT, page: 'downloadReceipt' },
+          { label: WEBSITE_MESSAGES.DOWNLOAD_INVOICE, page: 'downloadInvoice' },
+        ]}
       />
     </Screen>
   );
