@@ -3,6 +3,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import { ACTION_CODES, type ActionCode } from '../src/constants/actionCodes';
 import { sandboxClientIpLookup } from './support/clientIp';
 import { gatewayRows, waitForGatewayAction } from './support/gateway';
+import { expectRecaptchaUnticked, tickRecaptcha } from './support/recaptcha';
 
 /**
  * Login → Create an account → three-step registration wizard.
@@ -186,13 +187,6 @@ async function completeAccountAndAddress(page: Page, email: string) {
   await expect(page.getByText('Billing Info', { exact: true })).toBeInViewport();
 }
 
-async function tickHumanCheck(page: Page) {
-  // The check "verifies" for a moment before it counts.
-  const humanCheck = visible(page.getByRole('checkbox', { name: "I'm not a robot" }));
-  await humanCheck.click();
-  await expect(humanCheck).toBeChecked();
-}
-
 /** Values every profile in these tests shares, whatever the billing choice. */
 function expectedPersonAndAddress(email: string): Record<string, string> {
   return {
@@ -279,7 +273,7 @@ test('registers with a corporate account and returns to login', async ({ page })
   await field(page, 'VIP number').fill(ACCOUNT.vip);
   await page.getByRole('checkbox', { name: 'Phone', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Send me special offers' }).click();
-  await tickHumanCheck(page);
+  await tickRecaptcha(page);
 
   const companyResponse = waitForGatewayAction(page, ACTION_CODES.IS_VALID_COMPANY_NAME);
   const vipResponse = waitForGatewayAction(page, ACTION_CODES.IS_VALID_VIP);
@@ -341,7 +335,7 @@ test('shows a refused card registration, then succeeds on retry', async ({ page 
   await field(page, 'Card number').fill(TEST_CARD);
   await field(page, 'Expiry').fill('1230');
   await field(page, 'Security code').fill('123');
-  await tickHumanCheck(page);
+  await tickRecaptcha(page);
 
   // The server refuses the first attempt with its own message.
   profile.answer = { o_code: '1', o_message: 'Card could not be verified.' };
@@ -354,7 +348,7 @@ test('shows a refused card registration, then succeeds on retry', async ({ page 
   await expect(page.getByText('Card could not be verified.')).toBeVisible();
   await expect(page.getByText('Billing Info', { exact: true })).toBeVisible();
   // A refusal resets the captcha, as on login.
-  await expect(visible(page.getByRole('checkbox', { name: "I'm not a robot" }))).not.toBeChecked();
+  await expectRecaptchaUnticked(page);
 
   expect(profile.calls).toHaveLength(1);
   expect(profile.calls[0]).toEqual({
@@ -381,7 +375,7 @@ test('shows a refused card registration, then succeeds on retry', async ({ page 
 
   // Retry once the server accepts.
   profile.answer = { o_code: '0', o_message: 'Profile created' };
-  await tickHumanCheck(page);
+  await tickRecaptcha(page);
   const accepted = waitForGatewayAction(page, ACTION_CODES.CREATE_PROFILE);
   await page.getByRole('button', { name: 'Create account' }).click();
   await accepted;
@@ -422,7 +416,7 @@ test('asks for the fields a corporate account requires', async ({ page }) => {
   await expect(field(page, 'Employee ID')).toBeVisible();
 
   await field(page, 'Account name').fill(ACCOUNT.name);
-  await tickHumanCheck(page);
+  await tickRecaptcha(page);
 
   // Unanswered requirements stop the profile from being sent.
   await page.getByRole('button', { name: 'Create account' }).click();
@@ -473,7 +467,7 @@ test('stops at an account the server refuses', async ({ page }) => {
   expect(profile.sent).not.toContain(ACTION_CODES.ACCOUNT_REQUIREMENTS_RS);
 
   // Create account asks again, reports it above the form and sends nothing.
-  await tickHumanCheck(page);
+  await tickRecaptcha(page);
   const retried = waitForGatewayAction(page, ACTION_CODES.ACCOUNT_REQUIREMENTS);
   await page.getByRole('button', { name: 'Create account' }).click();
   await retried;

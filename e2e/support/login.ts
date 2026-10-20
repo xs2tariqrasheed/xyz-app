@@ -1,6 +1,7 @@
-import { expect, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { testCredentials } from './credentials';
+import { tickRecaptcha } from './recaptcha';
 
 /** Fills the login form with the test account; the caller presses Log In. */
 export async function fillLoginForm(page: Page): Promise<{ email: string }> {
@@ -9,11 +10,9 @@ export async function fillLoginForm(page: Page): Promise<{ email: string }> {
   await page.getByPlaceholder('you@example.com').fill(email);
   await page.locator('input[type="password"]').fill(password);
 
-  // The check "verifies" for a moment before it counts; submitting earlier
-  // fails validation.
-  const humanCheck = page.getByRole('checkbox', { name: "I'm not a robot" });
-  await humanCheck.click();
-  await expect(humanCheck).toBeChecked();
+  // The box counts only once its token is verified; submitting earlier fails
+  // validation.
+  await tickRecaptcha(page);
 
   return { email };
 }

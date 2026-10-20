@@ -44,10 +44,11 @@ A reservation app. Customers book services either for a future date/time or righ
 ### Commands
 
 ```bash
-npm start        # expo start
-npm run ios      # expo start --ios
-npm run android  # expo start --android
-npm run web      # expo start --web
+npm start        # expo start + local reCAPTCHA verify server (scripts/expo-dev.mjs)
+npm run ios      # same, --ios
+npm run android  # same, --android
+npm run web      # same, --web
+npm run recaptcha:dev  # the reCAPTCHA verify server on its own (localhost:3009)
 npm run lint     # expo lint
 ```
 

@@ -21,10 +21,12 @@ export const COMMON_MESSAGES = {
 export const CAPTCHA_MESSAGES = {
   LABEL: 'Captcha',
   CHECKBOX_LABEL: "I'm not a robot",
-  CHECKBOX_HINT: 'Confirms you are a person before continuing',
   VERIFYING: 'Verifying…',
-  BADGE: 'Verification',
   REQUIRED: 'Confirm you are not a robot.',
+  UNAVAILABLE: 'Verification is unavailable right now. Please try again later.',
+  FAILED: 'Verification failed. Please try again.',
+  EXPIRED: 'Verification expired. Check the box again.',
+  NETWORK: 'Could not reach verification. Check your connection and try again.',
 } as const;
 
 export const LOGIN_MESSAGES = {
