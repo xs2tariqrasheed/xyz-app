@@ -50,6 +50,8 @@ npm run android  # same, --android
 npm run web      # same, --web
 npm run recaptcha:dev  # the reCAPTCHA verify server on its own (localhost:3009)
 npm run lint     # expo lint
+npm run build:android:dev           # debug APK (JS from Metro) → ~/xyz-builds/
+npm run build:android:prod -- --clean  # release APK from .env.production (docs/android-build-guide.md)
 ```
 
 ### Conventions

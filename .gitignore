@@ -30,9 +30,9 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (.env.production holds the release build's values)
 .env
-.env*.local
+.env.*
 !.env.example
 
 # typescript

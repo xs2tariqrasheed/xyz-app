@@ -7,6 +7,8 @@
     "scheme": "xyzapp",
     "userInterfaceStyle": "automatic",
     "android": {
+      "package": "com.xyzcar.app",
+      "versionCode": 1,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -25,6 +27,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "85796328-783f-44db-91e7-5248e8e4d195"
+      }
     }
   }
 }
