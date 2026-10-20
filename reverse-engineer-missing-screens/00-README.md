@@ -31,7 +31,7 @@ Reverse engineered on **2026-10-16**. Inputs:
   - Download Receipt / Invoice pages
   - the help files
 
-The booking guides 13–17 are implemented, but sub-features are still missing; those gaps are in files 19 and 20 below. Guide 23 (vouchers & receipts) is only partly built, and guide 24 (feedback) is not built. Their gaps are in files 08–11 and 13.
+The booking guides 13–17 are implemented, but sub-features are still missing; those gaps are in files 19 and 20 below. Guide 23 (vouchers & receipts) is built except account invoices, and guide 24 (feedback) is not built. Their gaps are in files 13 and 08–11.
 
 ## 2. Status legend
 
@@ -62,7 +62,7 @@ Action-code availability:
 | 10 | [10-contact-us-customer-service.md](10-contact-us-customer-service.md) | Contact Us / Customer Service (contact card + message form) | 🔴 Missing | ⛔ | P2 |
 | 11 | [11-open-corporate-account.md](11-open-corporate-account.md) | Open an Account (corporate lead form) | 🔴 Missing | ⛔ | P3 |
 | 12 | [12-request-profile-deletion.md](12-request-profile-deletion.md) | Request Profile Deletion *(new; not in the old guides)* | 🔴 Missing | ⛔ | **P1** (store requirement) |
-| 13 | [13-receipts-invoices.md](13-receipts-invoices.md) | Receipts & Invoices (Download Receipt / Download Invoice) | 🟠 Placeholder | ⛔ | P2 |
+| 13 | [13-receipts-invoices.md](13-receipts-invoices.md) | Receipts & Invoices (Download Receipt / Download Invoice) | 🔵 Partial (receipts built, invoices blocked) | ⛔ | P2 |
 | 14 | [14-rates.md](14-rates.md) | Rates: sample airport / out-of-town rates, service rates, rate book | 🟠 Placeholder | ⛔ | P2 |
 | 15 | [15-about-company-services.md](15-about-company-services.md) | About: company info, our services, our policies, airport pickups | 🟠 Placeholder | ⛔ (static content) | P3 |
 | 16 | [16-faqs-and-page-help.md](16-faqs-and-page-help.md) | FAQs + per-page help content | 🔴 Missing | ⛔ (static content) | P3 |
@@ -114,7 +114,7 @@ These screens therefore cannot be wired yet. Request these action codes from the
 | Contact message | `PROF.I.CONTACT_MESSAGE` | 10 |
 | Corporate-account lead | `PROF.I.ACCOUNT_REQUEST` | 11 |
 | Profile deletion request | `PROF.I.DELETION_REQUEST` | 12 |
-| Receipts / invoices | `RES.S.RECEIPT`, `PROF.S.INVOICES` | 13 |
+| Invoices (and an official receipt document) | `PROF.S.INVOICES`, `PROF.S.INVOICE_FILE`, `RES.S.RECEIPT` | 13 |
 | Rates tables | `RES.S.RATES` (or a CMS) | 14 |
 | What's New announcements | `PROF.S.ANNOUNCEMENTS` | 21 |
 | Static content (About, FAQ, help, Terms, Privacy) | CMS or a bundled content file (agree with product) | 15–18 |

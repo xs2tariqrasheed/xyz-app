@@ -1,8 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { RECEIPTS_MESSAGES } from '@/constants/messages';
 import {
   canLeaveFeedback,
   canModifyRide,
+  hasReceipt,
   PAYMENT_METHOD_LABELS,
   type Ride,
 } from '@/services/rides';
@@ -95,6 +97,8 @@ export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps
                 <RideActionLink label="Modify" onPress={() => onAction('modify', ride)} />
                 <RideActionLink label="Cancel" tone="danger" onPress={() => onAction('cancel', ride)} />
               </>
+            ) : hasReceipt(ride) ? (
+              <RideActionLink label={RECEIPTS_MESSAGES.VIEW_SHORT} onPress={() => onAction('receipt', ride)} />
             ) : (
               <Text style={styles.cellEmpty}>—</Text>
             )}

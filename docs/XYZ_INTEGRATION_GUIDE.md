@@ -262,7 +262,7 @@ On success the screen links back to login; the user is not signed in automatical
 
 ## 7a. Reservations
 
-Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens; specs `reverse-engineer-implemented/guide/05`, `06`, `13`–`22` and `reverse-engineer-guide/23`, `24`. The original `/reserve` layout stays in the menu unwired; every other entry point opens `/reserver-2`.
+Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens; specs `reverse-engineer-implemented/guide/05`, `06`, `13`–`23` and `reverse-engineer-guide/24`. The original `/reserve` layout stays in the menu unwired; every other entry point opens `/reserver-2`.
 
 | Piece | File |
 |---|---|
@@ -288,7 +288,8 @@ Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens
 | Details | `RES.S.LOAD_RESERVATION`, `PROF.S.CAR_INFO`, `RES.S.COMMUNICATION_LOG`, `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | Edit / return trip / repeat reload the record and open the wizard. |
 | Cancel (rides, details) | `RES.U.CANCEL_RESERVATION` | Reason required, ≤ 50 characters, `retry: false`. |
 | Track your route | `RES.S.VEHICLE_LOG`, `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | Position refreshes on demand only, as on the old site. |
-| Voucher | `RES.S.LOAD_RESERVATION` | Drawn from the record — never the old internal image server. |
+| Voucher | `RES.S.LOAD_RESERVATION` | Drawn from the record — never the old internal image server. Shown once the record has a voucher #. |
+| Receipts list / receipt | `RES.S.ALL_ORDERS`, `RES.S.LOAD_RESERVATION` | Completed rides; card shown as brand + last 4. Printed with `expo-print` (native) or a hidden frame (web). No invoice code exists yet. |
 | Ask about this ride | `RES.S.ALL_PREDEFINED_QUESTIONS`, `RES.I.ASKED_QUESTIONS` | Message ≤ 200 characters. |
 
 **Mapping notes**

@@ -1,8 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { RECEIPTS_MESSAGES } from '@/constants/messages';
 import {
   canLeaveFeedback,
   canModifyRide,
+  hasReceipt,
   PAYMENT_METHOD_LABELS,
   type Ride,
 } from '@/services/rides';
@@ -23,6 +25,7 @@ export type RideCardProps = {
 export function RideCard({ ride, now, onAction }: RideCardProps) {
   const modifiable = canModifyRide(ride, now);
   const feedback = canLeaveFeedback(ride);
+  const receipt = hasReceipt(ride);
 
   return (
     <View style={styles.card}>
@@ -53,7 +56,7 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
         </View>
       </View>
 
-      {modifiable || feedback ? (
+      {modifiable || feedback || receipt ? (
         <View style={styles.actions}>
           {modifiable ? (
             <>
@@ -64,6 +67,9 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
                 onPress={() => onAction('cancel', ride)}
               />
             </>
+          ) : null}
+          {receipt ? (
+            <RideActionLink label={RECEIPTS_MESSAGES.VIEW} onPress={() => onAction('receipt', ride)} />
           ) : null}
           {feedback ? (
             <RideActionLink label="Leave feedback" onPress={() => onAction('feedback', ride)} />

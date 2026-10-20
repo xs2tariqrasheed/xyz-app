@@ -330,6 +330,17 @@ test('opens a ride from history: details, messages, tracking, voucher, return tr
   await page.goto(`/voucher?rideno=${encodeURIComponent(record.reservation_num)}`);
   await voucher;
   await expect(visibleText(page, 'Voucher')).toBeVisible();
+
+  // The receipt of the same ride, then the receipts list (history narrowed to completed rides).
+  const receipt = waitForGatewayAction(page, ACTION_CODES.LOAD_RESERVATION);
+  await page.goto(`/receipt?rideno=${encodeURIComponent(record.reservation_num)}`);
+  expectContract(await receipt, ACTION_CODES.LOAD_RESERVATION);
+  await expect(visibleText(page, 'Receipt')).toBeVisible();
+
+  const receipts = waitForGatewayAction(page, ACTION_CODES.ALL_ORDERS);
+  await page.goto('/receipts');
+  expectContract(await receipts, ACTION_CODES.ALL_ORDERS);
+  await expect(visibleText(page, 'Completed rides')).toBeVisible();
 });
 
 test('authorises a card before booking with it', async ({ page }) => {

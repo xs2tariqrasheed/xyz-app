@@ -12,24 +12,23 @@ import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { RESERVATION_INFO_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
+import { RECEIPTS_MESSAGES, RESERVATION_INFO_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
-import { actionErrorMessage, useOpenReservation } from '@/hooks/useReservationActions';
-import { getErrorDisplay } from '@/services/gateway';
+import { useOpenReservation } from '@/hooks/useReservationActions';
+import { useReservationRecord } from '@/hooks/useReservationRecord';
 import { placeLocalityLine } from '@/services/places';
 import {
   AIRPORT_PICKUP_OPTIONS,
   columnReadJData,
   communicationLogJData,
-  loadReservationJData,
   type RecordStop,
   type ReservationRecord,
   RESERVATION_COLUMN_IDS,
   toCommunicationLog,
-  toReservationRecord,
   toSingleColumnValue,
 } from '@/services/reservation';
+import { hasRideReceipt, hasVoucherNumber } from '@/services/rideDocument';
 import { PAYMENT_METHOD_LABELS } from '@/services/rides';
 import { carJData, toCarInfo } from '@/services/tracking';
 import { breakpoints, colors, radii, space } from '@/theme';
@@ -82,21 +81,9 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
   const [asking, setAsking] = useState(false);
   const opener = useOpenReservation();
 
-  const { data, isLoading, isError, error, refetch } = useFetchData(
-    ACTION_CODES.LOAD_RESERVATION,
-    GATEWAY_VIEW_NAME,
-    loadReservationJData(loginId, reservationNumber),
-  );
-  const loaded = useMemo((): { record: ReservationRecord | null; failure: string | null } => {
-    if (!data) return { record: null, failure: null };
-    try {
-      return { record: toReservationRecord(data), failure: null };
-    } catch (failure) {
-      return { record: null, failure: actionErrorMessage(failure) };
-    }
-  }, [data]);
+  const { record, failureMessage, isLoading, refetch } = useReservationRecord(reservationNumber);
 
-  if (isLoading && !data) {
+  if (isLoading) {
     return (
       <View style={styles.state}>
         <ActivityIndicator color={colors.primary[600]} />
@@ -104,11 +91,10 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
     );
   }
 
-  if (isError || loaded.failure || !loaded.record) {
-    const message = loaded.failure ?? (isError ? getErrorDisplay(error).customDescription : RIDES_MESSAGES.LOAD_RESERVATION_FAILED);
+  if (failureMessage || !record) {
     return (
       <>
-        <Alert tone="danger" title={RESERVATION_INFO_MESSAGES.LOAD_FAILED_TITLE} message={message} />
+        <Alert tone="danger" title={RESERVATION_INFO_MESSAGES.LOAD_FAILED_TITLE} message={failureMessage ?? ''} />
         <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
           <Button label={RESERVATION_INFO_MESSAGES.BACK} variant="outline" onPress={onBack} />
           <Button label={RESERVATION_INFO_MESSAGES.RETRY} onPress={refetch} />
@@ -117,12 +103,12 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
     );
   }
 
-  const record = loaded.record;
   const cancelled = record.status === 'canceled';
   const upcoming = record.status === 'confirmed' && (record.rideAt?.getTime() ?? 0) > now.getTime();
   const finished = record.status === 'completed';
   const trackable = record.status === 'in-progress' || finished || record.driver.carNumber.length > 0;
-  const hasVoucher = finished || record.voucherNumber.length > 0;
+  const hasVoucher = hasVoucherNumber(record);
+  const hasReceipt = hasRideReceipt(record);
   const editSection = upcoming ? () => void opener.open(record.reservationNumber, 'edit') : undefined;
   const { preferences, billing } = record;
 
@@ -287,6 +273,13 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
             label={RESERVATION_INFO_MESSAGES.VOUCHER}
             variant="outline"
             onPress={() => router.push({ pathname: '/voucher', params: { rideno: record.reservationNumber } })}
+          />
+        ) : null}
+        {hasReceipt ? (
+          <Button
+            label={RECEIPTS_MESSAGES.VIEW}
+            variant="outline"
+            onPress={() => router.push({ pathname: '/receipt', params: { rideno: record.reservationNumber } })}
           />
         ) : null}
         {record.destination ? (

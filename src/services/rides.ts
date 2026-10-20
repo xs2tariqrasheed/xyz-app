@@ -79,6 +79,16 @@ export function canLeaveFeedback(ride: Ride): boolean {
   return (ride.status === 'completed' || ride.status === 'canceled') && !ride.feedbackLeft;
 }
 
+/** Every completed (billed) ride has a receipt (guide 23). */
+export function hasReceipt(ride: Ride): boolean {
+  return ride.status === 'completed';
+}
+
+/** The rides a receipt can be opened for, in list order. */
+export function receiptRides(rides: readonly Ride[]): Ride[] {
+  return rides.filter(hasReceipt);
+}
+
 /** Sorts by pickup time — ascending for what is coming, descending for history. */
 const byPickupAsc = (a: Ride, b: Ride) => a.pickupAt.getTime() - b.pickupAt.getTime();
 const byPickupDesc = (a: Ride, b: Ride) => b.pickupAt.getTime() - a.pickupAt.getTime();
@@ -136,6 +146,9 @@ export function toRideOverview(rides: readonly Ride[], now: Date): RideOverview 
 
 /** How many rides one history search asks for (`P_TOTAL_RECORDS`). */
 export const HISTORY_PAGE_SIZE = 100;
+
+/** Default history range: the last three months up to today (guide 18). */
+export const HISTORY_DEFAULT_DAYS = 90;
 
 /** How far back and ahead a history search may reach (guide 18: three months each way). */
 export const HISTORY_REACH_DAYS = 92;

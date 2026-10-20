@@ -13,7 +13,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'About', href: '/about', match: '/about' },
   { label: 'Rates', href: '/rates', match: '/rates' },
   { label: 'Rides', href: '/rides', match: '/rides' },
-  { label: 'Receipts & Invoices', href: '/receipts', match: '/receipts' },
+  { label: 'Receipts', href: '/receipts', match: '/receipts' },
   { label: 'Profile', href: '/profile', match: '/profile' },
   { label: 'Addresses', href: '/addresses', match: '/addresses' },
   { label: 'Contacts', href: '/contacts', match: '/contacts' },

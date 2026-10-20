@@ -36,6 +36,7 @@ Audited against the code on **2026-10-16**: routes in `src/app`, action codes us
 | [guide/20](guide/20-reservation-details.md) | Reservation details | `reservation-info.tsx` | `RES.S.LOAD_RESERVATION`, `PROF.S.CAR_INFO`, `RES.S.COMMUNICATION_LOG` | missing 07 (block driver) |
 | [guide/21](guide/21-ride-tracking-live-status.md) | Ride tracking + ask a question | `track-ride.tsx`, `RideQuestionSheet` | `RES.S.VEHICLE_LOG`, `RES.S.LATITUDE_LONGITUDE_FOR_CAR`, `RES.S.ALL_PREDEFINED_QUESTIONS`, `RES.I.ASKED_QUESTIONS` | missing 19 |
 | [guide/22](guide/22-round-trip-repeat.md) | Return / repeat trip | `reservation-info.tsx` → `reserver-2` | `RES.S.LOAD_RESERVATION` + booking codes | — |
+| [guide/23](guide/23-vouchers-receipts.md) | Voucher, print, receipts | `voucher.tsx`, `receipt.tsx`, `receipts.tsx` | `RES.S.LOAD_RESERVATION`, `RES.S.ALL_ORDERS` | missing 13 (invoices: no gateway code) |
 | [missing-screens/02](missing-screens/02-address-book.md) | My Addresses gateway CRUD | `addresses.tsx` | `PROF.S.USER_ADDRESSES`, `PROF.I/U/D.USER_ADDRESS` | — |
 | [missing-screens/03](missing-screens/03-my-contacts.md) | My Contacts gateway CRUD | `contacts.tsx` | `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.I/U/D.PROFILE_COLUMN_VALUE` | — |
 | [missing-screens/04](missing-screens/04-preferences.md) | Preferences gateway load & save | `preferences.tsx` | `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | — |
@@ -47,7 +48,6 @@ Guide 07 had no "✅ Implemented" banner, although `/profile` is wired. It has o
 
 | File | Module | Built | Still missing |
 |---|---|---|---|
-| [guide/23](../reverse-engineer-guide/23-vouchers-receipts.md) | Vouchers, receipts & invoices | Voucher view / print (`voucher.tsx`, `RES.S.LOAD_RESERVATION`) | Receipts & invoices: `receipts.tsx` is `ComingSoon` → [missing 13](../reverse-engineer-missing-screens/13-receipts-invoices.md) |
 
 ## 3. 🔴 Not implemented (still in the source folders)
 

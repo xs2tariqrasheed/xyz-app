@@ -686,7 +686,7 @@ export const HOME_MESSAGES = {
   // Quick links
   QUICK_LINKS_TITLE: 'Quick links',
   LINK_REVIEW_RIDE: 'Review a booked ride',
-  LINK_RECEIPTS: 'Receipts & invoices',
+  LINK_RECEIPTS: 'Receipts',
   LINK_ADDRESSES: 'Saved addresses',
   LINK_THEME: 'Color theme',
 } as const;
@@ -716,11 +716,48 @@ export const RESERVATION_INFO_MESSAGES = {
   CANCEL_REASON: 'Cancellation reason',
 } as const;
 
+/** What the voucher and the receipt share: the letterhead, the route rows and printing (guide 23). */
+export const RIDE_DOCUMENT_MESSAGES = {
+  BRAND: 'XYZ Two Way Radio Service',
+  PASSENGER: 'Passenger',
+  FROM: 'From',
+  TO: 'To',
+  PRINT_FAILED: 'The document could not be printed. Please try again.',
+} as const;
+
 export const VOUCHER_MESSAGES = {
   SCREEN_TITLE: 'Voucher',
   NOT_BILLED: 'A voucher is issued once the ride has been billed.',
   PRINT: 'Print voucher',
-  PRINT_WEB_ONLY: 'Printing is available in the web app.',
+  ACCOUNT: 'Account No.',
+  JOB: 'Job#',
+  DRIVER: 'Driver#',
+  CAR: 'Car#',
+  SCHEDULED: 'Scheduled pick-up',
+  STOPS: 'Stops',
+} as const;
+
+/** Receipts list and the receipt of one finished ride (guide 23, missing-screens/13). */
+export const RECEIPTS_MESSAGES = {
+  SCREEN_TITLE: 'Receipts',
+  RECEIPT_TITLE: 'Receipt',
+  VIEW: 'View receipt',
+  VIEW_SHORT: 'Receipt',
+  PRINT: 'Print receipt',
+  LIST_TITLE: 'Completed rides',
+  EMPTY: 'No receipts in this period',
+  FAILED: 'We could not load your receipts',
+  NOT_COMPLETED: 'A receipt is available once the ride is completed.',
+  RESERVATION: 'Reservation#',
+  RIDE_DATE: 'Ride date',
+  PAYMENT: 'Payment',
+  CARD: 'Card',
+  CARD_ENDING: (cardType: string, last4: string) => `${cardType ? `${cardType} ` : ''}ending ${last4}`.trim(),
+  ACCOUNT: 'Account No.',
+  VOUCHER: 'Voucher#',
+  INVOICE: 'Invoice#',
+  APPROVAL_DATE: 'Approval date',
+  TRANSACTION_DATE: 'Transaction date',
 } as const;
 
 export const TRACKING_MESSAGES = {

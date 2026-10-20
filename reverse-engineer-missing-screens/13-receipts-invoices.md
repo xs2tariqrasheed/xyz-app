@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **App today** | 🟠 Placeholder. `src/app/(app)/receipts.tsx` renders `ComingSoon` ("Receipts for past rides and monthly account invoices will appear here."). It is linked from the nav, from Home QuickLinks, and from the unwired `/reserve` receipt. |
-| **Legacy reference** | [`../reverse-engineer-guide/23-vouchers-receipts.md`](../reverse-engineer-guide/23-vouchers-receipts.md) §4 (only the menu links; the pages themselves were not documented) |
-| **Gateway** | ⛔ No receipt or invoice action code. **Blocked on backend** (suggested `RES.S.RECEIPT`, `PROF.S.INVOICES`). The ride charges themselves are available today via `RES.S.LOAD_RESERVATION` (module 20). |
+| **App today** | 🔵 Partial. **Receipts are built:** `receipts.tsx` lists completed rides from `RES.S.ALL_ORDERS` (date range + payment filter), and `receipt.tsx?rideno=` shows and prints one receipt from `RES.S.LOAD_RESERVATION` (also linked from ride rows and reservation details). **Invoices are not built** — no gateway code. |
+| **Legacy reference** | [`23-vouchers-receipts.md`](../reverse-engineer-implemented/guide/23-vouchers-receipts.md) §4 (only the menu links; the pages themselves were not documented) |
+| **Gateway** | ⛔ No invoice action code — invoices are **blocked on backend** (suggested `PROF.S.INVOICES`, `PROF.S.INVOICE_FILE`). Receipts use `RES.S.ALL_ORDERS` + `RES.S.LOAD_RESERVATION`; an official receipt document/number (`RES.S.RECEIPT`) would replace the record-drawn view. |
 | **Priority** | P2 |
 
 ## 1. Purpose
@@ -64,10 +64,10 @@ Both receipt and invoice live in **separate legacy portals** with their own logi
 | Invoice file | `PROF.S.INVOICE_FILE` (`P_INVOICE_NUM`, `P_FORMAT` PDF/CSV) | ⛔ |
 
 ## 6. Acceptance criteria
-- [ ] `ComingSoon` is removed. The Receipts tab lists the gateway's billed card rides (dummy OK), with empty and error states.
-- [ ] The receipt view shows card brand / last 4 only, never a full card number.
-- [ ] Invoices are visible only to account members, and use either the real code or the agreed interim link.
-- [ ] Copy is in `messages.ts` → `RECEIPTS_MESSAGES`.
+- [x] `ComingSoon` is removed. The Receipts screen lists the gateway's completed rides (every completed ride has a receipt — agreed 2026-10-20), with empty and error states.
+- [x] The receipt view shows card brand / last 4 only, never a full card number.
+- [ ] Invoices are visible only to account members, and use the real code. Agreed 2026-10-20: no interim portal link; the nav says "Receipts" until `PROF.S.INVOICES` exists.
+- [x] Copy is in `messages.ts` → `RECEIPTS_MESSAGES`.
 
 ## 7. Unknowns
 - [U] Whether the legacy ccinfo / billinfo portals will be replaced by gateway codes.

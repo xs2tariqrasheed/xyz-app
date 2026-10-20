@@ -17,6 +17,7 @@ import { useOpenReservation } from '@/hooks/useReservationActions';
 import {
   allOrdersJData,
   filterRides,
+  HISTORY_DEFAULT_DAYS,
   HISTORY_REACH_DAYS,
   type Ride,
   toRides,
@@ -26,9 +27,6 @@ import { colors, radii, space } from '@/theme';
 import { addDays, startOfDay } from '@/utils/datetime';
 
 type Tab = 'upcoming' | 'history';
-
-/** Default history range: the last three months up to today (guide 18). */
-const DEFAULT_FROM_OFFSET = -90;
 
 type Notice = { tone: 'success' | 'danger'; message: string } | null;
 
@@ -59,6 +57,7 @@ export default function RideSearchScreen() {
     opener.clearError();
     if (action === 'view') router.push({ pathname: '/reservation-info', params: { rideno: ride.id } });
     else if (action === 'voucher') router.push({ pathname: '/voucher', params: { rideno: ride.id } });
+    else if (action === 'receipt') router.push({ pathname: '/receipt', params: { rideno: ride.id } });
     else if (action === 'modify') void opener.open(ride.id, 'edit');
     else if (action === 'cancel') setCancelling(ride.id);
     else setAsking(ride.id);
@@ -156,7 +155,7 @@ function RideHistory({
   onAction: (action: RideAction, ride: Ride) => void;
 }) {
   const [filters, setFilters] = useState<RideSearchFormValue>(() => ({
-    from: addDays(startOfDay(today), DEFAULT_FROM_OFFSET),
+    from: addDays(startOfDay(today), -HISTORY_DEFAULT_DAYS),
     to: startOfDay(today),
     paymentMethod: 'all',
   }));

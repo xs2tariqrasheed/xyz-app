@@ -1,4 +1,4 @@
-> 🔵 **Partly implemented** in the XYZ app. Voucher view / print is built (`voucher.tsx`). Receipts & invoices are not: see [missing 13](../reverse-engineer-missing-screens/13-receipts-invoices.md).
+> ✅ **Implemented** in the XYZ app — voucher, print voucher and receipts. Account **invoices** are still blocked on the backend (no `PROF.S.INVOICES` code): see [missing 13](../../reverse-engineer-missing-screens/13-receipts-invoices.md).
 
 # Module 23 — Vouchers, Print Voucher, Receipts & Invoices
 
@@ -34,3 +34,13 @@ Handled manually by staff **[I]**.
 - `GET /reservations/{rideNo}/voucher` → signed voucher image/PDF served by the API (proxy/storage), never from a LAN host in the browser.
 - `GET /reservations/{rideNo}/voucher/print` → printable HTML/PDF.
 - Self-service `GET /reservations/{rideNo}/receipt` (card rides) and `GET /me/invoices` (account rides) to replace the manual forms; charges come from module 20.
+
+## 6. In the app
+
+| Feature | Where | Action code | Notes |
+|---|---|---|---|
+| Voucher | `voucher.tsx?rideno=` (`RideDocumentScreen`) | `RES.S.LOAD_RESERVATION` | Shown once the record carries a voucher # (the server's sign that the ride was billed on a voucher). Never fetched from the old LAN image server. Linked from the ride rows (voucher #) and reservation details. |
+| Print voucher / receipt | `RideDocumentView` → `src/utils/printRideDocument(.web).ts` | — | One HTML document (`rideDocumentHtml` in `src/services/rideDocument.ts`). iOS / Android: `expo-print` print sheet. Web: printed from a hidden frame, so only the document reaches the paper. |
+| Receipt | `receipt.tsx?rideno=` | `RES.S.LOAD_RESERVATION` | Every completed ride. Payment method, card brand + last 4 only, account / voucher / invoice # and dates when the server sends them, and the server's itemised charges and total. Linked from ride rows ("View receipt"), reservation details and the Receipts list. |
+| Receipts list | `receipts.tsx` | `RES.S.ALL_ORDERS` | History search (date range, payment filter) narrowed to completed rides. |
+| Invoices | — | ⛔ `PROF.S.INVOICES` | Not in the contract yet; tracked in missing 13. |

@@ -49,7 +49,7 @@ Implemented modules have moved to [`../reverse-engineer-implemented/guide/`](../
 | 20 | [20-reservation-details.md](../reverse-engineer-implemented/guide/20-reservation-details.md) | Full reservation/ride detail incl. charges, driver, vehicle | ✅ Implemented |
 | 21 | [21-ride-tracking-live-status.md](../reverse-engineer-implemented/guide/21-ride-tracking-live-status.md) | Track your route, live status, ask a question | ✅ Implemented |
 | 22 | [22-round-trip-repeat.md](../reverse-engineer-implemented/guide/22-round-trip-repeat.md) | Create return / repeat trip from an existing ride | ✅ Implemented |
-| 23 | [23-vouchers-receipts.md](23-vouchers-receipts.md) | Voucher image, print voucher, receipts & invoices | 🔵 Partial |
+| 23 | [23-vouchers-receipts.md](../reverse-engineer-implemented/guide/23-vouchers-receipts.md) | Voucher image, print voucher, receipts & invoices | ✅ Implemented (invoices blocked on backend) |
 | 24 | [24-feedback-rating-complaints.md](24-feedback-rating-complaints.md) | Rate a ride, complaint, contact, open-account requests | 🔴 Missing |
 | 25 | [25-system-pages-errors.md](25-system-pages-errors.md) | Timeout, error, not-allowed, locked/expired messages | 🔴 Missing |
 | 26 | [26-validation-rules.md](26-validation-rules.md) | All field validators & messages (shared reference) | Reference |
