@@ -151,6 +151,81 @@ export const PREFERENCES_MESSAGES = {
   RETRY: 'Try again',
 } as const;
 
+/**
+ * Mailing address: the Update Mailing Address screen and the registration
+ * address step, which share the form (reverse-engineer-guide/08).
+ */
+export const MAILING_ADDRESS_MESSAGES = {
+  SCREEN_TITLE: 'Update Mailing Address',
+  PANEL_TITLE: 'Mailing Address',
+
+  COUNTRY_LABEL: 'Country',
+  COUNTRY_PLACEHOLDER: 'Select a country',
+  COUNTRY_SEARCH: 'Search countries',
+  STATE_LABEL: 'State',
+  STATE_PLACEHOLDER: 'Select a state',
+  STATE_SEARCH: 'Search states',
+  REGION_LABEL: 'State / Province',
+  REGION_PLACEHOLDER: 'Region',
+  CITY_LABEL: 'City',
+  CITY_PLACEHOLDER: 'e.g. Manhattan',
+  ZIP_LABEL: 'ZIP',
+  ZIP_PLACEHOLDER: '10103',
+  POSTAL_CODE_LABEL: 'Postal code',
+  POSTAL_CODE_PLACEHOLDER: 'Postal code',
+  BUILDING_LABEL: 'Building no.',
+  BUILDING_PLACEHOLDER: '666',
+  STREET_LABEL: 'Street name',
+  STREET_PLACEHOLDER: '5 Ave',
+  CROSS_STREET_LABEL: 'Cross street',
+  CROSS_STREET_PLACEHOLDER: '53 St',
+  UNIT_LABEL: 'Apt # / Mail stop',
+  UNIT_PLACEHOLDER: 'Apt 4B',
+  PHONE_LABEL: 'Phone at this address (US)',
+  PHONE_PLACEHOLDER: '(212) 555-0134',
+  INTL_PHONE_TITLE: 'International phone',
+  INTL_DIAL_LABEL: 'Country + city code',
+  INTL_DIAL_PLACEHOLDER: '+44 20',
+  INTL_NUMBER_LABEL: 'Phone number',
+  INTL_NUMBER_PLACEHOLDER: '7123 456789',
+  ADDRESS_TYPE_LABEL: 'Address type',
+  ADDRESS_TYPE_HOME: 'This is my home address',
+  ADDRESS_TYPE_OFFICE: 'This is my office address',
+
+  COUNTRY_REQUIRED: 'Pick a country.',
+  STATE_REQUIRED: 'Pick a state.',
+  REGION_REQUIRED: 'Enter a state, province or region.',
+  CITY_REQUIRED: 'Enter a city.',
+  ZIP_REQUIRED: 'Enter a ZIP code.',
+  ZIP_INVALID: 'Invalid zip code.',
+  POSTAL_CODE_REQUIRED: 'Enter a postal code.',
+  BUILDING_REQUIRED: 'Enter a building number.',
+  BUILDING_INVALID: 'A building number is up to 6 digits.',
+  STREET_REQUIRED: 'Enter a street name.',
+  STREET_CHARACTERS: 'Street Name contains invalid character(s).',
+  STREET_INVALID: 'Invalid Street Name specified.',
+  UNIT_INVALID: 'Invalid apartment # specified.',
+  PHONE_INVALID: 'A US number needs 10 digits, area code first, not starting with 0 or 1.',
+  PHONE_REQUIRED: 'Please enter at least one Address Phone number.',
+  INTL_NUMBER_REQUIRED: 'Please enter at least one Address Phone International number.',
+  INTL_DIAL_REQUIRED: 'Please enter at least one Address Phone International Country+City Code.',
+  INTL_NUMBER_INVALID: 'Add the full international number: country + city code, then at least 4 digits.',
+
+  ONE_FIELD_NEEDS_ATTENTION: '1 field needs a look.',
+  /** Follows the count: "3 fields need a look." */
+  FIELDS_NEED_ATTENTION: 'fields need a look.',
+  DISCARD: 'Discard changes',
+  UPDATE: 'Update',
+  UPDATING: 'Updating…',
+  UPDATE_SUCCESS: 'Mailing address updated.',
+  UPDATE_FAILED_TITLE: 'Mailing address not updated',
+  /** Server refused the update without saying why. */
+  UPDATE_REJECTED: "We couldn't update your mailing address.",
+  LOAD_FAILED_TITLE: 'Your mailing address could not be loaded',
+  RETRY: 'Try again',
+  BACK_TO_PROFILE: 'Back to profile',
+} as const;
+
 /** Card inputs, shared by registration and the reservation billing step. */
 export const CARD_MESSAGES = {
   HOLDER_LABEL: 'Name on card',

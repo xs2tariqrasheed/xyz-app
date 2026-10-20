@@ -5,9 +5,9 @@ import {
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { normalizeLoginId } from '@/services/auth';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
-import { CONFIRMATION_CODES, SPECIAL_OFFER_CODES } from '@/services/profile';
+import { CONFIRMATION_CODES, mailingAddressParams, SPECIAL_OFFER_CODES } from '@/services/profile';
 import { detectBrand, digitsOnly, type CardBrand } from '@/utils/payment';
-import { COUNTRIES, toIntlDigits } from '@/utils/phone';
+import { toIntlDigits } from '@/utils/phone';
 
 /**
  * New-account registration against the API gateway
@@ -32,9 +32,6 @@ export class RegistrationError extends Error {
  * backend.
  */
 export const PAYMENT_TYPE_CODES = { corporate: 'CA', card: 'CC' } as const;
-
-/** `P_ADDRESS_TYPE`. "H" is the documented sample; "O" mirrors it for office. */
-export const ADDRESS_TYPE_CODES = { home: 'H', office: 'O' } as const;
 
 /** `P_CC_TYPE` per detected brand, in the old site's spelling. */
 export const CARD_TYPE_CODES: Record<CardBrand, string> = {
@@ -146,10 +143,6 @@ function requirementLabel(row: Record<string, string>): string {
   return text ? text[1].trim() : '';
 }
 
-/** The `P_COUNTRY` code for a country name from the address form. */
-function countryCode(name: string): string {
-  return COUNTRIES.find((country) => country.name === name)?.code ?? name.trim();
-}
 
 /** `MM/YY` → ['MM', 'YYYY'], or blanks while incomplete. */
 function splitExpiry(expiry: string): [string, string] {
@@ -182,19 +175,7 @@ export function createProfileJData(draft: RegistrationDraft, requirementCount: n
     P_PHONE_NUMBER_US: personal.usPhone.number,
     P_PHONE_EXT_US: personal.usPhone.number ? personal.usPhone.ext : '',
     P_FAX: toIntlDigits(personal.fax),
-    P_COUNTRY: countryCode(address.country),
-    P_STATE: address.state.trim(),
-    P_CITY: address.city.trim(),
-    P_ZIP: address.postalCode.trim(),
-    P_BUILDING_NUM: address.buildingNumber.trim(),
-    P_STREET_NAME: address.streetName.trim(),
-    P_CROSS_STREET1: address.crossStreet.trim(),
-    // Apt # / Mail stop has no parameter of its own, so it uses the second
-    // cross-street slot, which the form does not otherwise fill.
-    P_CROSS_STREET2: address.unit.trim(),
-    P_ADDRESS_PHONE: digitsOnly(`${address.intlDialCode}${address.intlPhone}`),
-    P_ADDRESS_PHONE_US: digitsOnly(address.phone),
-    P_ADDRESS_TYPE: ADDRESS_TYPE_CODES[address.addressType],
+    ...mailingAddressParams(address),
     P_PAYMENT_TYPE: PAYMENT_TYPE_CODES[billing.method],
     P_ACCOUNT_NUM: corporate ? billing.accountNumber.trim() : '',
     P_VIP_NUM: corporate ? billing.vipNumber.trim() : '',

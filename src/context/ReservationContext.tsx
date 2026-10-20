@@ -232,6 +232,35 @@ const delay = (ms: number, signal: AbortSignal) =>
     });
   });
 
+/**
+ * Fills the blanks of a new booking's draft from the profile — never anything
+ * the customer already typed. Returns `current` itself when nothing changes.
+ */
+function fillBlanksFromProfile(current: DraftState, profile: CustomerProfile): DraftState {
+  if (!current.draft || current.mode !== 'new') return current;
+  const { info, billing, preferences } = current.draft;
+  const fresh = freshDraft(current.createdAt, profile);
+  const namesBlank = !info.firstName && !info.lastName;
+  const next: ReservationDraft = {
+    ...current.draft,
+    info: namesBlank ? { ...info, firstName: fresh.info.firstName, lastName: fresh.info.lastName } : info,
+    billing: billing.accountNumber ? billing : { ...billing, accountNumber: fresh.billing.accountNumber },
+    preferences: {
+      ...preferences,
+      email: preferences.email || fresh.preferences.email,
+      callbackUs: preferences.callbackUs.number ? preferences.callbackUs : fresh.preferences.callbackUs,
+      callbackIntl: preferences.callbackIntl.number ? preferences.callbackIntl : fresh.preferences.callbackIntl,
+    },
+  };
+  const changed =
+    next.info !== info ||
+    next.billing !== billing ||
+    next.preferences.email !== preferences.email ||
+    next.preferences.callbackUs !== preferences.callbackUs ||
+    next.preferences.callbackIntl !== preferences.callbackIntl;
+  return changed ? { ...current, draft: next } : current;
+}
+
 function SignedInReservationProvider({ loginId, children }: { loginId: string; children: ReactNode }) {
   const { profile } = useProfile();
 
@@ -272,34 +301,13 @@ function SignedInReservationProvider({ loginId, children }: { loginId: string; c
   });
 
   // A profile that lands after the draft was first touched still fills the
-  // blanks of a new booking — never anything the customer already typed.
-  useEffect(() => {
-    if (!profile) return;
-    setState((current) => {
-      if (!current.draft || current.mode !== 'new') return current;
-      const { info, billing, preferences } = current.draft;
-      const fresh = freshDraft(current.createdAt, profile);
-      const namesBlank = !info.firstName && !info.lastName;
-      const next: ReservationDraft = {
-        ...current.draft,
-        info: namesBlank ? { ...info, firstName: fresh.info.firstName, lastName: fresh.info.lastName } : info,
-        billing: billing.accountNumber ? billing : { ...billing, accountNumber: fresh.billing.accountNumber },
-        preferences: {
-          ...preferences,
-          email: preferences.email || fresh.preferences.email,
-          callbackUs: preferences.callbackUs.number ? preferences.callbackUs : fresh.preferences.callbackUs,
-          callbackIntl: preferences.callbackIntl.number ? preferences.callbackIntl : fresh.preferences.callbackIntl,
-        },
-      };
-      const changed =
-        next.info !== info ||
-        next.billing !== billing ||
-        next.preferences.email !== preferences.email ||
-        next.preferences.callbackUs !== preferences.callbackUs ||
-        next.preferences.callbackIntl !== preferences.callbackIntl;
-      return changed ? { ...current, draft: next } : current;
-    });
-  }, [profile]);
+  // blanks of a new booking. Adjusted during render rather than in an effect,
+  // so the filled draft is what the next paint shows.
+  const [seenProfile, setSeenProfile] = useState(profile);
+  if (profile !== seenProfile) {
+    setSeenProfile(profile);
+    if (profile) setState((current) => fillBlanksFromProfile(current, profile));
+  }
 
   /** Only the latest pick of each stop may write its lookup back. */
   const legSeq = useRef<Record<Leg, number>>({ pickup: 0, destination: 0 });

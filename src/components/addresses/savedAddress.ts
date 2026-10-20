@@ -1,5 +1,6 @@
 import { ADDRESS_BOOK_MESSAGES } from '@/constants/messages';
 import { formatUsPhone, isCompleteUsPhone, MAX_INTL_DIGITS, toDigits, withExtension } from '@/utils/phone';
+import { hasValidStreetChars } from '@/utils/validation';
 
 /**
  * A saved pickup location, as the address form collects it.
@@ -63,8 +64,6 @@ export function toDraft({ id: _id, ...draft }: SavedAddress): AddressDraft {
   return draft;
 }
 
-/** Street and cross street: letters, digits, space and `. , - ( ) / &` (guide 26 `isValidStreets`). */
-const STREET_CHARS = /^[A-Za-z0-9 .,\-()/&]+$/;
 /** Pickup point: letters, digits, space and `. , ~ & / - ( ) \ #` (guide 26). */
 const PICKUP_POINT_CHARS = /^[A-Za-z0-9 .,~&/\-()\\#]+$/;
 
@@ -75,7 +74,7 @@ const DIRECTIONS_MAX = 500;
 const INTL_NUMBER_MIN = 4;
 
 function isValidStreet(value: string): boolean {
-  return value.length >= STREET_MIN && value.length <= STREET_MAX && STREET_CHARS.test(value);
+  return value.length >= STREET_MIN && value.length <= STREET_MAX && hasValidStreetChars(value);
 }
 
 /**

@@ -1,9 +1,10 @@
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
 
+import type { MailingAddress } from '@/components/account/mailingAddress';
 import type { PreferencesValue } from '@/components/preferences/preferences';
 import type { PersonalInfoValue } from '@/components/profile/PersonalInfoSection';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { PREFERENCES_MESSAGES } from '@/constants/messages';
+import { MAILING_ADDRESS_MESSAGES, PREFERENCES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { usePostData } from '@/hooks/usePostData';
@@ -12,6 +13,7 @@ import {
   assertProfileUpdated,
   type CustomerProfile,
   toCustomerProfile,
+  updateMailingAddressJData,
   updatePreferencesJData,
   updateProfileJData,
 } from '@/services/profile';
@@ -38,6 +40,8 @@ export type ProfileContextValue = {
   updatePersonalInfo: (personal: PersonalInfoValue) => Promise<void>;
   /** Saves the Preferences screen, then reloads the profile. Throws like `updatePersonalInfo`. */
   updatePreferences: (preferences: PreferencesValue) => Promise<void>;
+  /** Saves the Update Mailing Address screen, then reloads the profile. Throws like `updatePersonalInfo`. */
+  updateMailingAddress: (address: MailingAddress) => Promise<void>;
 };
 
 // Not exported: screens go through useProfile(), which guards a missing provider.
@@ -49,6 +53,7 @@ const SIGNED_OUT: ProfileContextValue = {
   refetch: () => undefined,
   updatePersonalInfo: () => Promise.reject(new Error('No signed-in profile to update.')),
   updatePreferences: () => Promise.reject(new Error('No signed-in profile to update.')),
+  updateMailingAddress: () => Promise.reject(new Error('No signed-in profile to update.')),
 };
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
@@ -102,6 +107,12 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
       PREFERENCES_MESSAGES.UPDATE_REJECTED,
     );
 
+  const updateMailingAddress = (address: MailingAddress) =>
+    saveProfile(
+      (loaded) => updateMailingAddressJData(loginId, loaded, address),
+      MAILING_ADDRESS_MESSAGES.UPDATE_REJECTED,
+    );
+
   const value: ProfileContextValue = {
     profile,
     isLoading,
@@ -109,6 +120,7 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
     refetch,
     updatePersonalInfo,
     updatePreferences,
+    updateMailingAddress,
   };
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;

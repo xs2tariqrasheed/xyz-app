@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **App today** | 🟡 Not wired. `src/app/(app)/mailing-address.tsx` + `src/components/account/{MailingAddressForm.tsx,mailingAddress.ts}` start from the stub `SAVED_MAILING_ADDRESS` (666 5 Ave, Manhattan); save only does `setSaved`. Reachable only from Profile, not from the nav. |
+| **App today** | ✅ Wired. `src/app/(app)/mailing-address.tsx` reads `profile.mailingAddress` from `useProfile()` and saves through `updateMailingAddress()` (`PROF.U.PROFILE`). Mapping lives in `src/services/profile.ts` (`toMailingAddress`, `mailingAddressParams`, `updateMailingAddressJData`). Reachable only from Profile (product decision). |
 | **Legacy reference** | [`../reverse-engineer-guide/08-profile-mailing-address.md`](../reverse-engineer-guide/08-profile-mailing-address.md) |
 | **Gateway** | ✅ `PROF.S.LOAD_PROFILE` (load), `PROF.U.PROFILE` (save) |
 | **Priority** | P1 |
@@ -73,11 +73,12 @@ Add the address columns to `src/services/profile.ts` `COLUMNS`. The names below 
 6. Copy → `messages.ts` `MAILING_ADDRESS_MESSAGES`.
 
 ## 5. Acceptance criteria
-- [ ] The form shows the address from `PROF.S.LOAD_PROFILE` (dummy values are fine), or an empty form if none.
-- [ ] Save sends `PROF.U.PROFILE` with the new address and unchanged personal / billing / preference fields.
-- [ ] Validation messages match §2.
+- [x] The form shows the address from `PROF.S.LOAD_PROFILE` (dummy values are fine), or an empty form if none.
+- [x] Save sends `PROF.U.PROFILE` with the new address and unchanged personal / billing / preference fields.
+- [x] Validation messages match §2. The same validator runs on the registration address step.
 
 ## 6. Unknowns
-- [U] Exact `LOAD_PROFILE` column names for the address.
-- [U] Where apartment / mail stop is stored.
-- [U] `P_ADDRESS_TYPE` values. Registration currently sends `'O'` (unconfirmed).
+- [U] Exact `LOAD_PROFILE` column names for the address. The app assumes the §3.1 names; a missing column maps to a blank field.
+- [U] Where apartment / mail stop is stored. The app sends it as `P_CROSS_STREET2` and reads it from `cross_street2`.
+- [U] `P_ADDRESS_TYPE` values. The app sends `H` / `O`; anything else loads as Office.
+- [U] `address_phone` is one digit run (code + number). The app splits it on the longest known calling code, so a city code loads as part of the number.

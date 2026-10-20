@@ -1,51 +1,117 @@
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  ActivityIndicator,
+  type ScrollView,
   StyleSheet,
+  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AccountPanel } from '@/components/account/AccountPanel';
 import { MailingAddressForm } from '@/components/account/MailingAddressForm';
 import {
   countErrors,
-  formatMailingAddress,
-  SAVED_MAILING_ADDRESS,
+  mailingAddressEqual,
   validateMailingAddress,
   type MailingAddress,
   type MailingAddressErrors,
 } from '@/components/account/mailingAddress';
-import { AppHeader } from '@/components/nav/AppHeader';
-import { Badge } from '@/components/ui/Badge';
+import { Screen } from '@/components/layout/Screen';
+import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Notice } from '@/components/ui/Notice';
-import { breakpoints, colors, formMaxWidth, space } from '@/theme';
+import { Panel } from '@/components/ui/Panel';
+import { Reveal } from '@/components/ui/Reveal';
+import { MAILING_ADDRESS_MESSAGES as M } from '@/constants/messages';
+import { useProfile } from '@/context/ProfileContext';
+import { getErrorDisplay } from '@/services/gateway';
+import { ProfileError } from '@/services/profile';
+import { breakpoints, colors, formMaxWidth, radii, space } from '@/theme';
 
+/** The profile's mailing (billing) address, loaded and saved with the profile. */
 export default function MailingAddressScreen() {
-  const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const roomy = width >= breakpoints.md;
+  const scrollRef = useRef<ScrollView>(null);
+  const { profile, isLoading, errorDisplay, refetch, updateMailingAddress } = useProfile();
 
-  // The address on file. Editing works against a draft so Cancel can restore it.
-  const [saved, setSaved] = useState<MailingAddress>(SAVED_MAILING_ADDRESS);
-  const [draft, setDraft] = useState<MailingAddress>(SAVED_MAILING_ADDRESS);
+  return (
+    <Screen title={M.SCREEN_TITLE} scrollRef={scrollRef}>
+      <View style={styles.column}>
+        {profile ? (
+          <MailingAddressPanel
+            initial={profile.mailingAddress}
+            onSave={updateMailingAddress}
+            onScrollTop={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+          />
+        ) : (
+          <Panel title={M.PANEL_TITLE}>
+            {isLoading ? (
+              <View style={styles.loading}>
+                <ActivityIndicator color={colors.primary[600]} />
+              </View>
+            ) : (
+              <View style={styles.failed}>
+                <Notice tone="danger" title={M.LOAD_FAILED_TITLE} message={errorDisplay?.customDescription} />
+                <Button label={M.RETRY} variant="outline" onPress={refetch} />
+              </View>
+            )}
+          </Panel>
+        )}
+
+        <Button
+          label={M.BACK_TO_PROFILE}
+          variant="ghost"
+          onPress={() => router.navigate('/profile')}
+          style={styles.back}
+        />
+      </View>
+    </Screen>
+  );
+}
+
+type MailingAddressPanelProps = {
+  /** The address as last loaded; a new load (new object) resets the form to it. */
+  initial: MailingAddress;
+  onSave: (address: MailingAddress) => Promise<void>;
+  onScrollTop: () => void;
+};
+
+function describeUpdateError(error: unknown): string {
+  if (error instanceof ProfileError) return error.message;
+  return getErrorDisplay(error).customDescription;
+}
+
+function MailingAddressPanel({ initial, onSave, onScrollTop }: MailingAddressPanelProps) {
+  const { width } = useWindowDimensions();
+  // Phones stretch the actions; anything wider keeps them thumb-sized.
+  const roomy = width >= breakpoints.sm;
+
+  // `saved` is the last committed address, `draft` is what the form is editing.
+  const [loaded, setLoaded] = useState(initial);
+  const [saved, setSaved] = useState(initial);
+  const [draft, setDraft] = useState(initial);
   // Errors stay empty until the first submit — nobody wants to be told a field
   // is required before they have reached it.
   const [errors, setErrors] = useState<MailingAddressErrors>({});
+  const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const scrollRef = useRef<ScrollView>(null);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  // Every load lands as a new object: the form then shows what the server
+  // holds, so an update that did not stick shows.
+  if (initial !== loaded) {
+    setLoaded(initial);
+    setSaved(initial);
+    setDraft(initial);
+  }
+
+  const dirty = !mailingAddressEqual(saved, draft);
   const errorCount = countErrors(errors);
 
   const edit = (next: MailingAddress) => {
     setDraft(next);
+    setFormError(null);
     setJustSaved(false);
     // Re-validate only what was already failing, so messages clear as they are
     // fixed without new ones appearing mid-typing.
@@ -59,117 +125,94 @@ export default function MailingAddressScreen() {
     }
   };
 
-  const submit = () => {
+  const update = async () => {
     const found = validateMailingAddress(draft);
     setErrors(found);
-
+    setFormError(null);
+    setJustSaved(false);
     if (countErrors(found) > 0) {
-      setJustSaved(false);
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      onScrollTop();
       return;
     }
 
-    setSaved(draft);
-    setJustSaved(true);
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
+    setSaving(true);
+    try {
+      await onSave(draft);
+      setSaved(draft);
+      setJustSaved(true);
+    } catch (error) {
+      setFormError(describeUpdateError(error));
+      onScrollTop();
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const cancel = () => {
+  const discard = () => {
     setDraft(saved);
     setErrors({});
-    setJustSaved(false);
+    setFormError(null);
   };
 
   return (
-    <View style={styles.root}>
-      <Stack.Screen options={{ title: 'Update mailing address' }} />
+    <Panel
+      title={M.PANEL_TITLE}
+      footer={
+        <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
+          {dirty ? (
+            <Button label={M.DISCARD} variant="outline" disabled={saving} onPress={discard} fill={!roomy} />
+          ) : null}
+          <Button
+            label={saving ? M.UPDATING : M.UPDATE}
+            size="lg"
+            disabled={!dirty || saving}
+            onPress={() => void update()}
+            fill={!roomy}
+          />
+        </View>
+      }
+    >
+      {formError ? <Alert tone="danger" title={M.UPDATE_FAILED_TITLE} message={formError} /> : null}
 
-      <AppHeader
-        title="Update Mailing Address"
-        trailing={dirty ? <Badge label="UNSAVED" tone="accent" pulse /> : null}
-      />
+      {errorCount > 0 ? (
+        <Notice
+          tone="danger"
+          title={errorCount === 1 ? M.ONE_FIELD_NEEDS_ATTENTION : `${errorCount} ${M.FIELDS_NEED_ATTENTION}`}
+        />
+      ) : null}
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          ref={scrollRef}
-          style={styles.flex}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.scrollContent}
-        >
-          <View style={styles.page}>
-            {justSaved ? (
-              <Notice
-                tone="success"
-                title="Mailing address updated"
-                message={formatMailingAddress(saved)}
-              />
-            ) : null}
+      <MailingAddressForm value={draft} onChange={edit} errors={errors} />
 
-            {errorCount > 0 ? (
-              <Notice
-                tone="danger"
-                title={errorCount === 1 ? 'One field needs a look' : `${errorCount} fields need a look`}
-              />
-            ) : null}
-
-            <AccountPanel
-              title="Mailing Address"
-              trailing={<Badge label="ON FILE" tone="info" />}
-              footer={
-                <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
-                  <Button
-                    label="Cancel"
-                    variant="outline"
-                    size={roomy ? 'md' : 'lg'}
-                    disabled={!dirty}
-                    onPress={cancel}
-                    style={roomy ? null : styles.action}
-                  />
-                  <Button
-                    label="Update"
-                    size={roomy ? 'md' : 'lg'}
-                    onPress={submit}
-                    style={roomy ? null : styles.action}
-                  />
-                </View>
-              }
-            >
-              <MailingAddressForm value={draft} onChange={edit} errors={errors} />
-            </AccountPanel>
-
-            <Button
-              label="Back to profile"
-              variant="ghost"
-              onPress={() => router.navigate('/profile')}
-              style={styles.back}
-            />
+      {justSaved ? (
+        <Reveal>
+          <View style={styles.saved}>
+            <Text style={styles.savedText}>{M.UPDATE_SUCCESS}</Text>
           </View>
-
-          <View style={{ height: insets.bottom + space.xl }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+        </Reveal>
+      ) : null}
+    </Panel>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  flex: { flex: 1 },
+  column: { width: '100%', maxWidth: formMaxWidth, alignSelf: 'center', gap: space.lg },
 
-  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.xl },
-  page: {
-    width: '100%',
-    maxWidth: formMaxWidth,
-    alignSelf: 'center',
-    gap: space.lg,
+  loading: { minHeight: 160, alignItems: 'center', justifyContent: 'center' },
+  failed: { gap: space.md, alignItems: 'flex-start' },
+
+  actions: { gap: space.md },
+  // Centred on wider screens, matching where the panel's content sits.
+  actionsWide: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+
+  saved: {
+    backgroundColor: colors.successBg,
+    borderWidth: 1,
+    borderColor: colors.successBorder,
+    borderRadius: radii.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm + 2,
   },
-
-  actions: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  actionsWide: { justifyContent: 'flex-end' },
-  action: { flex: 1 },
+  savedText: { color: colors.success, fontSize: 13, fontWeight: '600' },
 
   back: { alignSelf: 'flex-start' },
 });

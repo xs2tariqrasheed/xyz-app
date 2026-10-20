@@ -33,7 +33,7 @@ A reservation app. Customers book services either for a future date/time or righ
 - **Gateway returns dummy data (current phase):** we are integrating action codes one by one against the gateway at `EXPO_PUBLIC_DBAPI_URL`, which is currently a stub that returns dummy data, not real backend records (e.g. login accepts any password; some codes return only `o_code` / `o_message` or placeholder rows).
   - **Use the dummy data the gateway returns, not data from our codebase.** Every feature you implement must call its action code and render the gateway's response — even though that response is dummy for now.
   - Never add new local sample, mock or seed data, and never fall back to it when a gateway call fails or comes back empty; show the screen's error or empty state instead.
-  - Remaining local placeholder data (`SAVED_MAILING_ADDRESS` on Mailing Address) is temporary. When you wire that feature, replace it with the gateway call inside its service and delete the placeholder. The reservation flow's samples, the address book / contacts seed lists and the Preferences defaults are gone.
+  - No local placeholder data remains: the reservation flow's samples, the address book / contacts seed lists, the Preferences defaults and the Mailing Address stub are gone.
   - Code to the contract in `docs/XYZ Action Codes.md`, not to the shape of today's dummy response. Map defensively (default missing columns, fail closed on a missing `o_code`) so the same code keeps working once real data arrives.
   - Never branch on, hardcode, or test for specific dummy values, and don't treat a stub "success" as proof that a business rule works.
 - **Environment config:** gateway settings come from env vars, never hardcoded. Keep `.env.example` in sync.

@@ -54,7 +54,7 @@ Action-code availability:
 | 02 | [02-address-book.md](../reverse-engineer-implemented/missing-screens/02-address-book.md) | My Addresses: list / add / edit / delete saved locations | ✅ Implemented 2026-10-16 | ✅ `PROF.S.USER_ADDRESSES`, `PROF.I/U/D.USER_ADDRESS` | **P1** |
 | 03 | [03-my-contacts.md](../reverse-engineer-implemented/missing-screens/03-my-contacts.md) | My Contacts: extra phones / e-mails CRUD | ✅ Implemented 2026-10-16 (stub does not support the codes yet) | ✅ `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.I/U/D.PROFILE_COLUMN_VALUE` | **P1** |
 | 04 | [04-preferences.md](../reverse-engineer-implemented/missing-screens/04-preferences.md) | Change Preferences: confirm by phone, special offers | ✅ Implemented 2026-10-16 | ✅ `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | **P1** |
-| 05 | [05-mailing-address.md](05-mailing-address.md) | Change Billing / Mailing Address | 🟡 Not wired (`SAVED_MAILING_ADDRESS`) | ✅ `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | **P1** |
+| 05 | [05-mailing-address.md](05-mailing-address.md) | Change Billing / Mailing Address | ✅ Wired | ✅ `PROF.S.LOAD_PROFILE`, `PROF.U.PROFILE` | **P1** |
 | 06 | [06-authorized-access-management.md](06-authorized-access-management.md) | Authorise colleagues to book on my behalf (grant / revoke / grant-to-all / list / search) | 🔴 Missing | ✅ 7 `PROF.*ACCESS_RIGHTS*` codes | **P2** |
 | 07 | [07-blocked-drivers.md](07-blocked-drivers.md) | Block / unblock a driver (car #) | 🔴 Missing | ✅ `PROF.U.BLOCK_DRIVER`, `PROF.U.UNBLOCK_DRIVER` | P3 |
 | 08 | [08-rate-a-ride.md](08-rate-a-ride.md) | Rate a Ride: 5 star ratings + suggestions | 🔴 Missing (the "Leave feedback" link opens Ask-a-Question instead) | ⛔ | **P2** |
