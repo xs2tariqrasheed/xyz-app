@@ -24,8 +24,8 @@ export type StepTabsProps = {
 };
 
 /**
- * Horizontal step navigation for the `/reserve-2` layout, where the rail moved
- * from the left column to the top of the page, and for the registration wizard.
+ * Horizontal step navigation for the reservation wizard (`/reserver-2`) and
+ * the registration wizard.
  *
  * It scrolls horizontally rather than wrapping, so the markers keep their
  * order and their connectors on any width.

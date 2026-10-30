@@ -299,7 +299,7 @@ On success the screen links back to login; the user is not signed in automatical
 
 ## 7a. Reservations
 
-Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens; specs `reverse-engineer-implemented/guide/05`, `06`, `13`–`23` and `reverse-engineer-guide/24`. The original `/reserve` layout stays in the menu unwired; every other entry point opens `/reserver-2`.
+Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens; specs `reverse-engineer-implemented/guide/05`, `06`, `13`–`23` and `reverse-engineer-guide/24`. Every entry point opens `/reserver-2`.
 
 | Piece | File |
 |---|---|

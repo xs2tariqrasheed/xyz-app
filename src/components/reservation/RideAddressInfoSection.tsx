@@ -100,11 +100,8 @@ export type RideAddressInfoErrors = Partial<Record<RideAddressInfoField, string>
 export type RideAddressInfoSectionProps = {
   value: RideAddressInfoValue;
   onChange: (next: RideAddressInfoValue) => void;
-  /**
-   * Picks a stop and starts its lookup and zone check. Without it the field
-   * only records the label (the unwired `/reserve` layout).
-   */
-  onSelectPlace?: (leg: Leg, suggestion: AddressSuggestion | null) => void;
+  /** Picks a stop and starts its lookup and zone check. */
+  onSelectPlace: (leg: Leg, suggestion: AddressSuggestion | null) => void;
   /** The customer's saved, profile and company places. */
   savedOptions?: readonly AddressSuggestion[];
   errors?: RideAddressInfoErrors;
@@ -148,9 +145,7 @@ export function RideAddressInfoSection({
           markerColor={colors.success}
           required
           value={value.pickup}
-          onChange={(pickup) =>
-            onSelectPlace ? onSelectPlace("pickup", pickup) : onChange({ ...value, pickup })
-          }
+          onChange={(pickup) => onSelectPlace("pickup", pickup)}
           savedOptions={savedOptions}
           error={errors.pickup}
           {...focusProps("pickup")}
@@ -233,11 +228,7 @@ export function RideAddressInfoSection({
           markerColor={colors.danger}
           required
           value={value.destination}
-          onChange={(destination) =>
-            onSelectPlace
-              ? onSelectPlace("destination", destination)
-              : onChange({ ...value, destination })
-          }
+          onChange={(destination) => onSelectPlace("destination", destination)}
           savedOptions={savedOptions}
           error={errors.destination}
           {...focusProps("destination")}

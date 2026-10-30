@@ -3,18 +3,15 @@ import { expect, type Page, test } from '@playwright/test';
 import { ACTION_CODES } from '../src/constants/actionCodes';
 import { sandboxClientIpLookup, TEST_CLIENT_IP } from './support/clientIp';
 import { gatewayRows, waitForGatewayAction } from './support/gateway';
-import { DESTINATION, PICKUP, sandboxGoogleMaps } from './support/googleMaps';
+import { sandboxGoogleMaps } from './support/googleMaps';
 import { fillLoginForm } from './support/login';
 
 /**
- * Login → book a reservation → booking confirmation.
+ * Protected-page redirect → login → Home greeting → log out.
  *
  * Login and the profile read go through the real API gateway (both are
- * read-only stubs on its side). Google Maps is sandboxed with fixtures, and
- * billing stays on the corporate account, so no card is ever entered.
+ * read-only on its side). Google Maps is sandboxed with fixtures.
  */
-
-const PASSENGER = { firstName: 'Erin', lastName: 'Tester' };
 
 /** Where the test browser reports itself to be (Midtown Manhattan). */
 const DEVICE_POSITION = { latitude: 40.7549, longitude: -73.984 };
@@ -26,9 +23,9 @@ test.beforeEach(async ({ page }) => {
   await sandboxClientIpLookup(page);
 });
 
-test('signs in, books a reservation and reaches the receipt', async ({ page }) => {
+test('signs in, greets the customer from the profile and logs out', async ({ page }) => {
   // A protected page sends a signed-out visitor to login.
-  await page.goto('/reserve');
+  await page.goto('/reserver-2');
   await expect(page).toHaveURL(/\/login$/);
 
   // ── Log in ──────────────────────────────────────────────────────────────
@@ -86,49 +83,10 @@ test('signs in, books a reservation and reaches the receipt', async ({ page }) =
   expect(profile?.first_name).toBeTruthy();
   await expect(page.getByText(`Welcome back, ${profile.first_name}`)).toBeVisible();
 
-  // ── Reservation ("checkout") on the original, unwired layout ─────────────
-  // Home's "Book a ride" opens Reservation 2 (e2e/reservation-2.spec.ts);
-  // this layout stays reachable from the menu.
-  await page.goto('/reserve');
-  await expect(page).toHaveURL(/\/reserve$/);
-
-  // 1. Passenger & ride info
-  await page.getByPlaceholder('e.g. Amara').fill(PASSENGER.firstName);
-  await page.getByPlaceholder('e.g. Okafor').fill(PASSENGER.lastName);
-  await continueTo(page, 'Ride Address Info');
-
-  // 2. Addresses
-  await chooseAddress(page, 'Pickup From', '350 5th', PICKUP);
-  await chooseAddress(page, 'Going To', 'JFK', DESTINATION);
-  await continueTo(page, 'Billing Method');
-
-  // 3. Billing: the corporate account on file — no card details.
-  await continueTo(page, 'Preferences');
-
-  // 4. Preferences: defaults.
-  await continueTo(page, 'Preview');
-
-  // 5. Review shows what was entered.
-  await expect(visibleText(page, PASSENGER.firstName, true)).toBeVisible();
-  await expect(visibleText(page, PASSENGER.lastName, true)).toBeVisible();
-  await expect(visibleText(page, PICKUP.primary)).toBeVisible();
-  await expect(visibleText(page, DESTINATION.primary)).toBeVisible();
-
-  await page.getByRole('button', { name: /^Book and Continue/ }).click();
-
-  // 6. Booking confirmation
-  await expect(sectionTitle(page, 'Ride Receipt')).toBeVisible();
-  await expect(page.getByText(/your reservation number is\s+W\d{10}/i)).toBeVisible();
-
   // ── Log out ─────────────────────────────────────────────────────────────
   await logOut(page);
   await expect(page).toHaveURL(/\/login$/);
 });
-
-/** Labels repeat across the nav, step rail and hidden layouts; take a visible one. */
-function visibleText(page: Page, text: string, exact = false) {
-  return page.getByText(text, { exact }).filter({ visible: true }).first();
-}
 
 type GatewayEnvelope = {
   ActionCode: string;
@@ -136,28 +94,6 @@ type GatewayEnvelope = {
   ClientIP: string;
   JsonReq: { JHeader: Record<string, unknown>; JMetaData: object; JData: object };
 };
-
-function sectionTitle(page: Page, title: string) {
-  return visibleText(page, title, true);
-}
-
-async function continueTo(page: Page, nextTitle: string) {
-  await page.getByRole('button', { name: /^Continue/ }).click();
-  await expect(sectionTitle(page, nextTitle)).toBeVisible();
-}
-
-async function chooseAddress(
-  page: Page,
-  label: string,
-  query: string,
-  place: { primary: string; secondary: string },
-) {
-  const field = page.getByLabel(label, { exact: true });
-  await field.click();
-  await field.fill(query);
-  await page.getByRole('button', { name: `${place.primary}, ${place.secondary}` }).click();
-  await expect(field).toHaveValue(new RegExp(place.primary));
-}
 
 /** The header shows Log out inline on wide screens, in the drawer otherwise. */
 async function logOut(page: Page) {
