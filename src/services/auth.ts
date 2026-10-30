@@ -16,9 +16,11 @@ import { isValidEmail } from '@/utils/validation';
  * accepted the credentials (`o_code` "0" in the first row). Anything missing
  * fails closed.
  *
- * The backend issues no token and no profile, so the session is only a record
- * that this device completed that check for a login ID, and when. It is never
- * re-verified on restore — that needs a server-issued credential.
+ * The backend issues no token, so the session is only a record that this
+ * device completed that check for a login ID, and when — plus the profile's
+ * VIP number, which the procedure returns in `o_message` on success
+ * (docs/XYZ_INTEGRATION_GUIDE.md §10). It is never re-verified on restore —
+ * that needs a server-issued credential.
  */
 
 export type Credentials = {
@@ -36,12 +38,15 @@ export class AuthError extends Error {
   }
 }
 
-const SESSION_VERSION = 1;
+/** 2 added `vipNumber`; a stored v1 session no longer parses and signs out once. */
+const SESSION_VERSION = 2;
 
 export type AuthSession = {
   version: typeof SESSION_VERSION;
   /** Login ID the credentials were checked for (the normalised email). */
   loginId: string;
+  /** The profile's VIP number from the login response's `o_message`; '' when it sent none. */
+  vipNumber: string;
   /** ISO timestamp of the successful credential check. */
   authenticatedAt: string;
 };
@@ -58,6 +63,7 @@ export function loginJData(loginId: string, password: string): GatewayJData {
 /**
  * Turns a login response the gateway accepted into a session, or throws.
  * The procedure's own verdict (`o_code`) decides; a missing one fails closed.
+ * On success `o_message` carries the VIP number; on a refusal, the reason.
  */
 export function sessionFromLoginResponse(
   response: GatewayResponse,
@@ -71,7 +77,7 @@ export function sessionFromLoginResponse(
   if (result.o_code !== DB_SUCCESS_CODE) {
     throw new AuthError(result.o_message || undefined);
   }
-  return createSession(loginId, at);
+  return createSession(loginId, (result.o_message ?? '').trim(), at);
 }
 
 /** `JData` for {@link ACTION_CODES.PASSWORD_RECOVERY}. */
@@ -112,8 +118,8 @@ export function assertPasswordChanged(response: GatewayResponse): void {
   }
 }
 
-export function createSession(loginId: string, at: Date): AuthSession {
-  return { version: SESSION_VERSION, loginId, authenticatedAt: at.toISOString() };
+export function createSession(loginId: string, vipNumber: string, at: Date): AuthSession {
+  return { version: SESSION_VERSION, loginId, vipNumber, authenticatedAt: at.toISOString() };
 }
 
 /**
@@ -131,9 +137,10 @@ export function parseStoredSession(raw: string | null, now: Date): AuthSession |
   }
   if (typeof data !== 'object' || data === null) return null;
 
-  const { version, loginId, authenticatedAt } = data as Record<string, unknown>;
+  const { version, loginId, vipNumber, authenticatedAt } = data as Record<string, unknown>;
   if (version !== SESSION_VERSION) return null;
   if (typeof loginId !== 'string' || !isValidEmail(loginId)) return null;
+  if (typeof vipNumber !== 'string') return null;
   if (typeof authenticatedAt !== 'string') return null;
 
   const at = Date.parse(authenticatedAt);
@@ -142,5 +149,5 @@ export function parseStoredSession(raw: string | null, now: Date): AuthSession |
   const age = now.getTime() - at;
   if (age < 0 || age > sessionMaxAgeMs) return null;
 
-  return { version, loginId, authenticatedAt };
+  return { version, loginId, vipNumber, authenticatedAt };
 }

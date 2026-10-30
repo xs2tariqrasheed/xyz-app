@@ -48,6 +48,7 @@
     "web": "expo start --web",
     "recaptcha:dev": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/recaptcha-dev-server.mjs",
     "lint": "expo lint",
+    "gateway:probe": "node scripts/probe-action-code.mjs",
     "build:web": "expo export -p web && cp dist/+not-found.html dist/404.html",
     "build:android:dev": "bash scripts/build-android-apk.sh dev",
     "build:android:prod": "bash scripts/build-android-apk.sh prod",

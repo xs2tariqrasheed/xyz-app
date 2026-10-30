@@ -6,7 +6,7 @@
  */
 
 export const ACTION_CODES = {
-  /** P_LOGIN_ID, P_PASSWORD → o_code / o_message. */
+  /** P_LOGIN_ID, P_PASSWORD → o_code / o_message (o_message = the profile's VIP number on success). */
   CHECK_LOGIN_CREDENTIALS: 'PROF.S.CHECK_LOGIN_CREDENTIALS',
   /** P_LOGIN_ID → one row: login_id, first_name, last_name, phones (US / intl), fax, …, last_login. */
   LOAD_PROFILE: 'PROF.S.LOAD_PROFILE',
@@ -30,11 +30,11 @@ export const ACTION_CODES = {
   CREATE_PROFILE: 'PROF.I.PROFILE',
 
   // ── Reservation flow: lookups (reverse-engineer-implemented/guide/05) ──────────────────
-  /** P_LOGIN_ID → saved addresses: address_id, country, state, city, zip_code, building_num, street_name, cross_street, pickup_point, …. */
+  /** P_LOGIN_ID → saved addresses: the 17-column address record (oCountry … oePickupCount …), headings do not match — read by position. */
   USER_ADDRESSES: 'PROF.S.USER_ADDRESSES',
-  /** P_LOGIN_ID → the profile's home / office address rows (columns undocumented). */
+  /** P_LOGIN_ID → the profile's home / office addresses: the 17-column address record. */
   USER_PROFILE_ADDRESSES: 'PROF.S.USER_PROFILE_ADDRESSES',
-  /** P_ACCOUNT_NUM → the company's own locations (columns undocumented). */
+  /** P_ACCOUNT_NUM → the company's own locations: the 17-column address record. */
   CORPORATE_ADDRESSES: 'PROF.S.CORPORATE_ADDRESSES',
   /** P_LOGIN_ID, P_COLUMN_ID (contact type) → the profile's contacts of that type. */
   LOAD_PROFILE_COLUMN_VALUES_BY_TYPE: 'PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE',

@@ -13,9 +13,14 @@ import {
   toSavedAddresses,
   updateAddressJData,
 } from '@/services/addressBook';
-import { type ErrorDisplay, mapRows } from '@/services/gateway';
+import { type ErrorDisplay, type GatewayResponse, getErrorDisplay } from '@/services/gateway';
 import type { AddressSuggestion } from '@/services/places';
-import { toSavedSuggestions, userAddressesJData } from '@/services/savedPlaces';
+import {
+  type AddressRecord,
+  toAddressRecords,
+  toSavedSuggestions,
+  userAddressesJData,
+} from '@/services/savedPlaces';
 
 /**
  * The customer's saved addresses (`PROF.S.USER_ADDRESSES`), loaded once per
@@ -77,9 +82,11 @@ function SignedInSavedPlacesProvider({ loginId, children }: { loginId: string; c
   const { mutateAsync: send } = usePostData();
 
   // Keyed on the response, so the lists keep their identity until a load lands.
-  const rows = useMemo(() => (data ? mapRows(data) : []), [data]);
-  const places = useMemo(() => toSavedSuggestions(rows, 'saved'), [rows]);
-  const addresses = useMemo(() => toSavedAddresses(rows), [rows]);
+  // Its headings do not match its rows, so it is read by position (guide §10);
+  // a row outside the verified layout shows as the list's load error.
+  const read = useMemo(() => readRecords(data), [data]);
+  const places = useMemo(() => toSavedSuggestions(read.records, 'saved'), [read]);
+  const addresses = useMemo(() => toSavedAddresses(read.records), [read]);
 
   const saveAddress = async (draft: AddressDraft, id?: string) => {
     const response = id
@@ -107,13 +114,25 @@ function SignedInSavedPlacesProvider({ loginId, children }: { loginId: string; c
     places,
     addresses,
     isLoading,
-    errorDisplay,
+    errorDisplay: errorDisplay ?? read.errorDisplay,
     refetch,
     saveAddress,
     deleteAddress,
   };
 
   return <SavedPlacesContext.Provider value={value}>{children}</SavedPlacesContext.Provider>;
+}
+
+function readRecords(data: GatewayResponse | undefined): {
+  records: AddressRecord[];
+  errorDisplay?: ErrorDisplay;
+} {
+  if (!data) return { records: [] };
+  try {
+    return { records: toAddressRecords(data) };
+  } catch (error) {
+    return { records: [], errorDisplay: getErrorDisplay(error) };
+  }
 }
 
 /** The signed-in customer's saved addresses. Must be used inside `SavedPlacesProvider`. */

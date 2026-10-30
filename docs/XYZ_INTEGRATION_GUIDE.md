@@ -1,6 +1,6 @@
 # XYZ Integration Guide
 
-Everything needed to call the gateway, handle its response and wire a new action code. The list of action codes and their parameters lives in [XYZ Action Codes.md](XYZ%20Action%20Codes.md).
+Everything needed to call the gateway, handle its response and wire a new action code. The list of action codes and their parameters lives in [XYZ Action Codes.md](XYZ%20Action%20Codes.md); what each code **actually returns** is in §10, and which codes are migrated to real data is tracked in [XYZ Real Action Codes.md](XYZ%20Real%20Action%20Codes.md).
 
 | Piece | File |
 |---|---|
@@ -10,6 +10,7 @@ Everything needed to call the gateway, handle its response and wire a new action
 | Action codes & protocol constants | [src/constants/actionCodes.ts](../src/constants/actionCodes.ts) |
 | Env config | [src/config/gateway.ts](../src/config/gateway.ts), [.env.example](../.env.example) |
 | Auth | [src/context/AuthContext.tsx](../src/context/AuthContext.tsx), [src/services/auth.ts](../src/services/auth.ts), `src/services/authStorage(.web).ts` |
+| Inspect a code's real response | [scripts/probe-action-code.mjs](../scripts/probe-action-code.mjs) — `npm run gateway:probe -- <CODE> '<JData JSON>'` |
 
 ---
 
@@ -19,9 +20,10 @@ Everything needed to call the gateway, handle its response and wire a new action
 1. Collect context  →  client IP · device id/info · app version · GPS
 2. Build envelope   →  { ActionCode, ViewName, ClientIP, JsonReq{JHeader, JMetaData, JData}, Notes }
 3. POST             →  EXPO_PUBLIC_DBAPI_URL  (30 s timeout, up to 3 attempts)
-4. Check            →  JHeader.ActionCode == 0 ? gateway OK : GatewayError('api')
-5. Map              →  JMetaData.Headings + JData rows → keyed objects
-6. Check o_code     →  the procedure's own verdict, where the action returns one
+4. Parse           →  the body is a JSON string holding the object; stray backslashes repaired
+5. Check            →  JHeader.ActionCode == 0 ? gateway OK : GatewayError('api')
+6. Map              →  Headings + JData rows → keyed objects (or by position, see §4)
+7. Check o_code     →  the procedure's own verdict — its meaning is per code (§10)
 ```
 
 One endpoint for everything. **`ActionCode` picks the backend operation, `JData` carries its parameters.** Every current code is sent with `ViewName = GATEWAY_VIEW_NAME` (`"LOGIN"`).
@@ -109,22 +111,55 @@ The envelope is built **once** per call; retries resend the same body. A write t
 | Body not JSON / no `JHeader` | `parsing` | No |
 | Caller's `AbortSignal` fired | the abort error | No |
 
-**Response shape** — the body may be an object or that object JSON-encoded again as a string; `parseBody` handles both.
+**Real response structure** (verified against the live gateway, 2026-10-30 — §10 has every code):
+
+The HTTP body is a JSON **string** that holds the response object (double-encoded); `parseBody` decodes both levels. Inside, a successful call looks like this — a **heading list followed by `JData`**:
 
 ```json
 {
-  "JHeader":   { "ActionCode": 0, "Message": "", "SysVersion": "" },
-  "JMetaData": { "Headings": ["login_id", "first_name", "last_login"] },
-  "JData":     [["jdoe@x.com", "John", "10/11/2026 09:20 AM"]]
+  "JHeader":   { "ActionCode": 0, "Message": "Request is parsed and response is generated successfully", "SysVersion": "1.0.0" },
+  "JMetaData": { "Headings": ["o_code", "o_message"] },
+  "JData":     [["0", "9990000001"]]
 }
 ```
 
-Data is column-oriented. `mapRows(response)` pairs each row with the heading keys and returns `Record<string, string>[]` (nulls become `""`). A heading may be a plain key or a `[key, displayName, type, …]` tuple — index 0 is always the key.
+A failed call carries only `JHeader`, with `ActionCode` as a **string** and the reason in `Message`:
 
-- **Single record** (login, profile): use `rows[0]`.
-- **List** (addresses, orders): use every row.
+```json
+{ "JHeader": { "ActionCode": "1", "Message": "Action code is not supported: PROF.S.…", "SysVersion": "1.0.0" } }
+```
 
-**Two levels of success.** `JHeader.ActionCode == 0` only means the gateway executed the procedure. Many procedures also return `o_code` / `o_message` in row 0; `o_code === DB_SUCCESS_CODE` (`"0"`) means the operation itself succeeded. Check it in the service, and fail closed when it is missing.
+Seen so far: `"1"` (code not supported, or an Oracle cursor error), `"9"` (internal DB error). Messages can be raw Oracle text (`ORA-…`), which must never reach the screen.
+
+`JData` is column-oriented: an array of rows, each an array of string values (never `null` so far; empty is `""`). `mapRows(response)` pairs each row with the heading keys and returns `Record<string, string>[]`. A heading may be a plain key or a `[key, displayName, type, …]` tuple — index 0 is always the key.
+
+**Two response shapes.** Check which one a code returns (§10) before mapping it:
+
+| Shape | What it is | Headings | Map with |
+|---|---|---|---|
+| **A — result values** | The procedure's OUT parameters: `o_code`, `o_message` and sometimes more (`o_Latitude`, `o_Longitude`). One row. | Match the row | `mapRows` |
+| **B — record set** | A cursor: one row per record (profile, addresses, orders, reservation, car types, questions). | **Often do not match.** The gateway sends a fixed heading list while the row carries the cursor's real columns — e.g. `LOAD_PROFILE` has 15 headings but 44 values per row, so mapping by name puts the password under `first_name`. | Position: a per-code column list, documented in §10 |
+
+Rule: **trust `Headings` only where §10 marks them accurate for that code.** Everywhere else read the row by position with `mapRowsByPosition(response, columns)` (`src/services/gateway.ts`), passing that code's column list from §10; a missing position becomes `''`. `npm run gateway:probe` flags a mismatch for you.
+
+- **Single record** (login, profile): use row 0.
+- **List** (addresses, orders): use every row. The row count is whatever the procedure returns — `P_TOTAL_RECORDS` is not honoured today.
+
+**Two levels of success.** `JHeader.ActionCode == 0` only means the gateway executed the procedure. The procedure's own verdict, where it returns one, is `o_code` / `o_message` in row 0 — but **their meaning is per code**, not a fixed rule:
+
+- Login: `o_code "0"` = accepted, and `o_message` then carries **data** (the VIP number); `"1"` = refused, `o_message` = the reason.
+- `RES.S.GOOGLE_ZONE_NUM` answers `o_code "1"` with the zone number in `o_message`; `RES.S.BILLING_METHOD` answers `"1"` = "Corporate Account"; `RES.S.LATITUDE_LONGITUDE_FOR_CAR` answers `"5"` = "No Data Found"; `RES.S.ZONE_THE_LOCATION` can answer an empty `o_code`.
+
+So read the code's entry in §10 and decide in its service what each `o_code` means. Where a code does follow "0 = success", check it in the service and fail closed when it is missing (`DB_SUCCESS_CODE`, `assertResultCode`).
+
+**Invalid JSON.** The gateway does not escape every value:
+
+| Problem | Where | Handling |
+|---|---|---|
+| Stray backslashes (`\\192.168.168.19\Receipt_Images\…`) | Order and reservation rows | `parseBody` retries once with them doubled, so the response parses |
+| Unescaped quotes in the message (`("OPTIMA"."WS_…")`) | Oracle error bodies | Can't be repaired; when the non-zero `ActionCode` is readable it becomes `GatewayError('api', COMMON_MESSAGES.REQUEST_NOT_ACCEPTED)`, otherwise `parsing` |
+
+**Dates and times** arrive in several formats: `DD-MON-YY` (`10-SEP-26`), `MM/DD/YYYY` (`09/10/2026`), `MM/DD/YYYY HH24:MI:SS` (`09/10/2026 12:20:16`) and a separate time `hh:mm am|pm` (`03:00 pm`). Parse each column by the format §10 records for it.
 
 ---
 
@@ -181,7 +216,7 @@ const profile = toCustomerProfile(data ? mapRows(data) : undefined);
 **Map once, in a service** (e.g. `toCustomerProfile` in [src/services/profile.ts](../src/services/profile.ts)), never in the screen:
 - rename raw columns (`first_name`) to app names (`firstName`);
 - default missing fields (`''`, `0`, `[]`, `null`);
-- convert types — gateway date-times are `MM/DD/YYYY hh:mm AM|PM` local time.
+- convert types — gateway dates and times come in several formats (§4); each column's format is in §10, and all are local time.
 
 **Every screen handles four states:** loading → error → empty → data. Lists use a stable key (an id, not the index).
 
@@ -204,10 +239,10 @@ There is **no user token**. The gateway verifies credentials and the app keeps a
 **Login** (`useAuth().signIn({ email, password, remember })`):
 1. Normalise the email (trim + lowercase) → `loginId`.
 2. `PROF.S.CHECK_LOGIN_CREDENTIALS` with `{ P_LOGIN_ID, P_PASSWORD }`.
-3. Success only if **both** `JHeader.ActionCode == 0` **and** row 0 `o_code === "0"`.
-   - `o_code` other than `"0"` → `AuthError(o_message)`.
+3. Success only if **both** `JHeader.ActionCode == 0` **and** row 0 `o_code === "0"` (real responses in §10).
+   - `o_code` other than `"0"` → `AuthError(o_message)`. The gateway answers `"1"` / `"User does not exists"` for a wrong password and an unknown login alike, and that text is shown as it comes.
    - No `o_code` → `GatewayError('parsing')` (fail closed).
-4. Save session `{ version: 1, loginId, authenticatedAt }` and set status `signedIn`.
+4. On success `o_message` is the profile's **VIP number**. Save session `{ version: 2, loginId, vipNumber, authenticatedAt }` and set status `signedIn`. `vipNumber` is kept for later codes that need `P_VIP_NUM`; it is never shown.
 
 **Session storage**
 
@@ -218,7 +253,7 @@ There is **no user token**. The gateway verifies credentials and the app keeps a
 
 Storage failures fall back to memory. "Remember me" keeps the **session**, it never stores the password.
 
-**Restore on launch.** `AuthContext` starts in `restoring`; the root layout renders nothing and holds the splash. A stored session is accepted only if it parses, is version 1, has a valid email, isn't dated in the future and is younger than `EXPO_PUBLIC_AUTH_SESSION_MAX_AGE_HOURS`. Otherwise it is wiped → `signedOut`. Sessions are never re-verified with the server.
+**Restore on launch.** `AuthContext` starts in `restoring`; the root layout renders nothing and holds the splash. A stored session is accepted only if it parses, is version 2, has a valid email and a string `vipNumber`, isn't dated in the future and is younger than `EXPO_PUBLIC_AUTH_SESSION_MAX_AGE_HOURS`. Otherwise it is wiped → `signedOut`. Sessions are never re-verified with the server.
 
 **Routing.** `Stack.Protected guard={signedIn}` wraps `(app)`; `login`, `forgot-password` and `register` are guarded by `!signedIn`. Navigation follows the status — no manual redirects.
 
@@ -313,7 +348,7 @@ Specs `reverse-engineer-implemented/guide/11`, `12` and `reverse-engineer-implem
 | Where | Action code | JData / notes |
 |---|---|---|
 | My Addresses list (`addresses.tsx`) | `PROF.S.USER_ADDRESSES` | The **same** request `SavedPlacesContext` makes for Home and the booking form; the context exposes it as `places` (booking suggestions) and `addresses` (editable entries, `toSavedAddresses` in `src/services/addressBook.ts`). |
-| Add / edit / delete a location | `PROF.I.USER_ADDRESS`, `PROF.U.USER_ADDRESS`, `PROF.D.USER_ADDRESS` | Through `useSavedPlaces().saveAddress` / `deleteAddress`, `retry: false`, then the shared list reloads. `P_PICKUP_COUNT` = the row's `address_id` (the old site used the 1-based list position; that is the fallback when a row has no id). The international number goes in `P_PHONE_NUM` as dial code + number (no dial-code parameter). `P_COUNTRY` is the code (`US`). |
+| Add / edit / delete a location | `PROF.I.USER_ADDRESS`, `PROF.U.USER_ADDRESS`, `PROF.D.USER_ADDRESS` | Through `useSavedPlaces().saveAddress` / `deleteAddress`, `retry: false`, then the shared list reloads. `P_PICKUP_COUNT` = the row's `oePickupCount` (position 13, §10). The international number goes in `P_PHONE_NUM` as dial code + number (no dial-code parameter). `P_COUNTRY` is the code (`US`). |
 | My Contacts list (`contacts.tsx`) | `PROF.S.LOAD_PROFILE_COLUMN_VALUES` | `P_LOGIN_ID`. Rows mapped in `src/services/contacts.ts`; only the contact columns 3 home, 4 office, 5 fax, 6 cell, 8 e-mail are shown. |
 | Add / edit / remove a contact | `PROF.I.PROFILE_COLUMN_VALUE`, `PROF.U.PROFILE_COLUMN_VALUE`, `PROF.D.PROFILE_COLUMN_VALUE` | A contact is identified by column id + stored value. Changing a contact's **type** adds it under the new column, then deletes the old one (the contract has no move). |
 
@@ -333,11 +368,114 @@ Specs `reverse-engineer-implemented/guide/11`, `12` and `reverse-engineer-implem
 ## 9. Adding a new action code — checklist
 
 1. Find the code and its parameters in [XYZ Action Codes.md](XYZ%20Action%20Codes.md).
-2. Add it to `ACTION_CODES` in [src/constants/actionCodes.ts](../src/constants/actionCodes.ts) with a one-line comment (`inputs → outputs`). Never hardcode the string.
-3. Write a `…JData(…)` builder in the relevant `src/services/*.ts` with keys spelled exactly as the contract.
-4. Pick the hook: write → `usePostData`, read → `useFetchData`. Shared across screens → put it in the context.
-5. Map `parsedData` to an app type in the service (rename, default, convert types). Check `o_code` if the procedure returns one.
-6. Render loading / error / empty / data; use `errorDisplay` for errors.
-7. New env var? Add it to `src/config/gateway.ts` and `.env.example`.
-8. Mark the code `— ✅ Implemented` in [XYZ Action Codes.md](XYZ%20Action%20Codes.md).
-9. Run `npm run lint` and `npx tsc --noEmit`.
+2. **Inspect the real response first:** `npm run gateway:probe -- <CODE> '<JData JSON>'` (read codes only; a write needs an agreed test record and `--write`). Record its shape, whether the headings match, the column list and what each `o_code` means in §10, and its status in [XYZ Real Action Codes.md](XYZ%20Real%20Action%20Codes.md).
+3. Add it to `ACTION_CODES` in [src/constants/actionCodes.ts](../src/constants/actionCodes.ts) with a one-line comment (`inputs → outputs`). Never hardcode the string.
+4. Write a `…JData(…)` builder in the relevant `src/services/*.ts` with keys spelled exactly as the contract.
+5. Pick the hook: write → `usePostData`, read → `useFetchData`. Shared across screens → put it in the context.
+6. Map the rows to an app type in the service (rename, default, convert types) — by heading only if §10 says the headings match, otherwise by position. Interpret `o_code` as §10 records it for this code.
+7. Render loading / error / empty / data; use `errorDisplay` for errors.
+8. New env var? Add it to `src/config/gateway.ts` and `.env.example`.
+9. Mark the code `— ✅ Implemented` in [XYZ Action Codes.md](XYZ%20Action%20Codes.md).
+10. Run `npm run lint` and `npx tsc --noEmit`.
+
+---
+
+## 10. Actual responses by action code
+
+What each code really returned from the live gateway on **2026-10-30**, probed with `npm run gateway:probe` and a test login. Samples are trimmed and sensitive values replaced with `<…>` — never commit real passwords, card numbers or test credentials. Codes not listed here have not been probed yet; their status is in [XYZ Real Action Codes.md](XYZ%20Real%20Action%20Codes.md).
+
+"Shape" refers to §4: **A** = result values (headings match), **B** = record set. "Positions" marked *to confirm* are read from the values, not from a backend definition — confirm them with the backend before relying on them.
+
+### PROF.S.CHECK_LOGIN_CREDENTIALS — ✅ migrated to real data
+
+Shape **A**, headings match: `["o_code", "o_message"]`, one row of 2 values. `p_LOGIN_ID` / `P_LOGIN_ID` both work (keys are case-insensitive); the app sends the contract's `P_` spelling.
+
+| Case | `JData` | Meaning |
+|---|---|---|
+| Correct login + password | `[["0", "<VIP number>"]]` | Accepted. `o_message` is the profile's **VIP number** (e.g. `9990000001`; `PROF.S.IS_VALID_VIP` with the account number and this value returns the customer's name). |
+| Wrong password | `[["1", "User does not exists"]]` | Refused |
+| Unknown login | `[["1", "User does not exists"]]` | Refused — same answer, so it does not reveal which logins exist |
+
+App: `sessionFromLoginResponse` in `src/services/auth.ts` — `"0"` → session with `vipNumber`, anything else → `AuthError(o_message)`, no `o_code` → `parsing` (§7).
+
+### Shape A codes (headings match)
+
+| Code | Sample `JData` | Observed `o_code` meaning |
+|---|---|---|
+| `PROF.S.IS_UNIQUE_EMAIL` | `[["1", "Duplicate"]]` for a login in use | `"0"` = free (per contract), `"1"` = taken |
+| `PROF.S.IS_VALID_VIP` | `[["0", "LEE, JENNIFER"]]` | `"0"` = valid, `o_message` = customer name `LAST, FIRST` |
+| `PROF.S.IS_VALID_COMPANY_NAME` | `[["0", "Success"]]` | `"0"` = the name matches the account |
+| `PROF.S.ACCOUNT_REQUIREMENTS` | `[["0", "Account ok. No requirements"]]` | `"0"` + message; a requirement-bearing account not yet seen |
+| `PROF.S.ACCOUNT_VIP_NUM` | `[["<account>", "<VIP number>"]]` | No `o_code`: headings `["pAccountNum", "pVIPNum"]` |
+| `RES.S.BILLING_METHOD` | `[["1", "Corporate Account"]]` | `o_code` is the **method**, not an error: `"1"` = Corporate Account |
+| `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` | `[["0", "Corporate Account"]]` | `"0"` + account kind |
+| `RES.S.GOOGLE_ZONE_NUM` | `[["1", "10001331"]]` | `"1"` = found, `o_message` = **zone number** |
+| `RES.S.ZONE_THE_LOCATION` | `[["", ""]]` | Empty for a street address that did not zone |
+| `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | `[["5", "No Data Found", "", ""]]` | Headings `o_code, o_message, o_Latitude, o_Longitude`; `"5"` = no position |
+
+Record sets whose headings also match (17 values, same layout as each other): `PROF.S.USER_PROFILE_ADDRESSES` and `PROF.S.CORPORATE_ADDRESSES` — headings `oCountry, oState, oCity, oStreetNum, oStreetName, oCrossStreet, oPickupPoint, oZip, oDirections, oPhoneNum, oExt, oPhoneNumUS, oExtUS, oePickupCount, oeRowID, oeUsageFrequency, oeLastServiceDate`. `oCountry` is a code (`"01"` = US), `oeLastServiceDate` is `DD-MON-YY`. There is no dial-code or coordinate column. All three address codes are read through `toAddressRecords` (`src/services/savedPlaces.ts`): it fails closed on a row that is not 17 values, and each field is then read by its one verified name, with no fallback names.
+
+### Shape B codes (headings do not match — map by position)
+
+| Code | Headings sent | Values per row | Notes |
+|---|---|---|---|
+| `PROF.S.LOAD_PROFILE` | 15 (`login_id … last_login`) | **44** | Positions below. Returns the **plaintext password** and **full card number** — backend issue. |
+| `PROF.S.USER_ADDRESSES` — ✅ migrated | 16 (`address_id … driver_notes`) | **17** | Same 17-column layout as `USER_PROFILE_ADDRESSES` above, read by position with `ADDRESS_RECORD_COLUMNS` (`src/services/savedPlaces.ts`) in `SavedPlacesContext`. The record id is position 13 (`oePickupCount`), unique per row and sent back as `P_PICKUP_COUNT`. Mapped by heading, every row got the id `01` (the country code) and React reported duplicate keys. |
+| `RES.S.ALL_ORDERS`, `RES.S.UPDATABLE_ORDERS` | 10 (`reservation_num … feedback_left`) | **112** | Positions below. Invalid JSON (receipt-image path). `P_TOTAL_RECORDS` not honoured. |
+| `RES.S.LOAD_RESERVATION` | 39 | **160** | Starts like an order row; positions not mapped yet. Invalid JSON. |
+| `RES.S.VEHICLE_TYPE` | 5 (`car_type, car_type_name, max_passengers, max_luggage, description`) | **2** | `[car_type, car_type_name]`: `["0","No Preference"]`, `["3","Sedan"]`, `["4","SUV"]`, `["H","Standard Wheelchair Vehicle"]`, `["K","Premium Wheelchair Vehicle"]` — the first two headings line up, the rest are absent. |
+| `RES.S.ALL_PREDEFINED_QUESTIONS` | 4 (`o_code, o_message, placeholder_col1, placeholder_col2`) | **2** | `[question_id, question_text]`, e.g. `["1", "How I can contact the driver?"]` — not a verdict. |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` | 4 (`o_code, o_message, placeholder_col1, placeholder_col2`) | **1** | `[["X"]]` for an account without requirements. |
+| `RES.S.COMMUNICATION_LOG`, `RES.S.VEHICLE_LOG` | 4 | — | No rows for the reservation tried. |
+
+**`PROF.S.LOAD_PROFILE` positions** — *to confirm*. The values follow the `PROF.U.PROFILE` parameter order:
+
+| Pos | Field | Sample | Pos | Field | Sample |
+|---|---|---|---|---|---|
+| 0 | login ID (upper case) | `<LOGIN ID>` | 22 | VIP number | `<VIP number>` |
+| 1 | **password** — never read | `<password>` | 23 | card type | `2` |
+| 2 | first name | `JENNIFER` | 24 | card holder name | `JENNIFER LEE` |
+| 3 | last name | `LEE` | 25 | **card number** — never read | `<card number>` |
+| 4–5 | phone number / ext | `212`, `` | 26 | verify code | `` |
+| 6–7 | US phone / ext | `212-`, `` | 27–28 | card month / year | `08`, `23` |
+| 8 | fax | `212-` | 29–32 | account requirements 1–4 | `` |
+| 9–11 | country code / state / city | `01`, `NY`, `MANHATTAN` | 33–39 | preferences (confirmation method, fleet, car year, car phone, special offer, smoking, IVR PIN) — order unclear | ``, ``, `5`, `Y`, `N`, `N`, `0` |
+| 12–16 | ZIP, building #, street, cross streets 1–2 | `` | 40 | e-mail | `<login id>` |
+| 17–18 | address phone / US phone | `<phone>`, `212-` | 41 | created? | `14-MAY-15` |
+| 19 | address type | `` | 42 | ? | `10-SEP-26` |
+| 20 | payment type | `A` | 43 | last login? | `10-SEP-26` |
+| 21 | account number | `<account>` | | | |
+
+**`RES.S.ALL_ORDERS` / `UPDATABLE_ORDERS` positions** — *to confirm*. They broadly follow the `RES.I.RESERVATION` parameter order, with the reservation number and a second date inserted:
+
+| Pos | Field | Sample |
+|---|---|---|
+| 0 | login ID (empty for rides booked by phone) | `<LOGIN ID>` |
+| 1 | reservation number | `W6091020246` |
+| 2–3 | passenger first / last name | `JENNIFER`, `LEE` |
+| 4, 5, 6 | pickup date `DD-MON-YY`, pickup date `MM/DD/YYYY`, pickup time | `10-SEP-26`, `09/10/2026`, `03:00 pm` |
+| 7–17 | pickup: type, country, state, city, ZIP, street #, street, cross street, cross street 2, point, directions / full address | `1`, `01`, `NY`, … |
+| 24 | pickup landmark | `OPERA CAFE LOUNGE` |
+| 25–34 | drop-off: type, country, state, city, ZIP, street #, street, cross streets, directions / full address | `1`, `01`, `NY`, `MANHATTAN`, … |
+| 42 | payment method | `3` |
+| 43 | account number | `<account>` |
+| 54–55 | fleet / car type | `XYZ`, `SND` |
+| 58 | phone | `<phone>` |
+| 60 | e-mail | `<login id>` |
+| 68 | VIP number | `<VIP number>` |
+| 69–71 | dates (booked / pickup / …) | `10-SEP-26` |
+| 72–73 | status code / status text | `6` `Confirmed`, `2` `Canceled`, `0` `Open` |
+| 75 | vehicle state | `UnLoaded` |
+| 76–77 | car # / driver # | `888`, `8888` |
+| 81, 83 | pickup / drop-off zone | `10305000` |
+| 91 | receipt image — an internal UNC path (`\\192.168…`), never usable by the app | |
+| 94–96 | ride timestamps `MM/DD/YYYY HH24:MI:SS` | `09/10/2026 12:20:16` |
+| 107–110 | pickup lat / lon, drop-off lat / lon | `40.5912764`, `-74.0887194`, … |
+
+### Codes that fail on the gateway
+
+| Code | Answer |
+|---|---|
+| `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` | `"1"` Action code is not supported |
+| `PROF.S.CAR_INFO` | `"1"` `ORA-01001: invalid cursor` |
+| `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | `"9"` `ORA-01400: cannot insert NULL into …RESERVATION_COLUMN_VALUES…` — a select code that tries an INSERT; invalid JSON (unescaped quotes) |

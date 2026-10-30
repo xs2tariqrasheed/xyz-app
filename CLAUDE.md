@@ -30,10 +30,29 @@ A reservation app. Customers book services either for a future date/time or righ
   - A context loads and writes its data through its action codes (see **API gateway**), and exposes loading and error state for screens to render.
 - **API gateway:** read `docs/XYZ_INTEGRATION_GUIDE.md` before wiring any action code (envelope, hooks, errors, auth, checklist). Call it through `usePostData` / `useFetchData`, never `fetch`. Action codes are constants in `src/constants/actionCodes.ts` — never hardcoded strings. Mark each wired code `— ✅ Implemented` in `docs/XYZ Action Codes.md`.
 - **Gateway data is the source of truth:** every value a screen shows or a flow relies on (lists, profile fields, options, statuses, amounts, server messages) comes from the response of its action code. Never hardcode or derive it on the client as a stand-in.
-  - The gateway at `EXPO_PUBLIC_DBAPI_URL` is a stub for now and returns dummy data. Wire every feature to its action code and render whatever the gateway returns, so nothing has to change when real data arrives.
+  - The gateway at `EXPO_PUBLIC_DBAPI_URL` now returns **real data**. Codes move from the old dummy responses to real ones one at a time; `docs/XYZ Real Action Codes.md` tracks which are migrated, ready, blocked or not probed.
   - Never add local sample, mock or seed data, and never fall back to it when a call fails or comes back empty. Show the screen's error or empty state.
-  - Code to the contract in `docs/XYZ Action Codes.md`, not to the shape of today's response. Map defensively (default missing columns, fail closed on a missing `o_code`).
-  - Never branch on, hardcode or test for specific dummy values, and don't treat a stub "success" as proof that a business rule works.
+  - Parameters follow the contract in `docs/XYZ Action Codes.md`. Outputs follow the code's **actual** response as recorded in guide §10. Fail closed where a code's verdict is missing.
+  - Never branch on, hardcode or test for specific sample values, and don't treat one "success" as proof that a business rule works.
+- **Actual gateway responses** (guide §4 and §10):
+  - The body is a JSON string holding `{ JHeader, JMetaData: { Headings }, JData }`: a heading list followed by rows of string values. An error carries only `JHeader`, with a non-zero `ActionCode` and `Message`.
+  - Shape A (result values: `o_code` / `o_message`…) has headings that match the row.
+  - Shape B (record sets: profile, addresses, orders, reservation, car types…) usually has headings that **don't match** the row. Map those by position, using the code's column list in §10.
+  - `o_code` / `o_message` mean different things per code: login's `o_message` is the VIP number, and `GOOGLE_ZONE_NUM` answers `"1"` + a zone. Never assume "0 = success" without checking §10.
+  - Some bodies are invalid JSON. `parseBody` repairs stray backslashes.
+- **Working on an action code:**
+  - Always inspect and analyse its actual response before writing code for it: `npm run gateway:probe -- <CODE> '<JData JSON>'`.
+  - Understand the structure before implementing UI rendering: the shape, whether the headings match, the column list and row count, and what each `o_code` means. Record it in guide §10 and the tracker first.
+  - Render UI components dynamically from that code's actual response data: what it returns, in the order it returns it, with its own states (loading / error / empty / data).
+  - Never use hardcoded or dummy data where the gateway's actual response should be used.
+  - Probe only read codes. A write code (`.I.` / `.U.` / `.D.`) needs an agreed test record and `--write`. Never commit credentials, passwords, card numbers or other sensitive response values to code or docs; test logins live in `e2e/e2e.local.env` (git-ignored).
+- **No property resolvers on gateway responses** (the `strict-property-access` skill, enabled in `.claude/settings.json`, has the full procedure):
+  - Read every value from a gateway row by **one verified column name**: the one the code's real response uses, recorded in guide §10. Never try several names for the same value: no `pick(row, ['oCountry', 'country', 'country_name'])`, no `row.a ?? row.b`, no `row.x || row.X`.
+  - Don't normalise key case or rename keys speculatively to avoid learning the real name.
+  - No silent defaults (`?? ''`, `|| 0`) that hide a missing required column. A default is allowed only where §10 shows the column is genuinely optional.
+  - Never use `any` / `as` casts to get around a column-name error.
+  - If the name can't be verified yet: probe the code (`npm run gateway:probe`), or ask. If code must be written first, use ONE direct access with `// TODO(schema-unverified): assumed column is <name>; confirm against guide §10` directly above it.
+  - When you touch existing code that tries several names, collapse it to the verified name; if it can't be verified, add the `TODO(schema-unverified)` and report it.
 - **Environment config:** gateway settings come from env vars, never hardcoded. Keep `.env.example` in sync.
 
 ### Layout
@@ -50,6 +69,8 @@ npm run android  # expo start --android
 npm run web      # expo start --web
 npm run recaptcha:dev  # the reCAPTCHA verify server on its own (localhost:3009)
 npm run lint     # expo lint
+npm run gateway:probe -- <CODE> '<JData JSON>'  # print an action code's real response + shape (scripts/probe-action-code.mjs)
+npx playwright test e2e/login.spec.ts  # login against the real gateway (e2e/e2e.local.env)
 npm run build:android:dev           # debug APK (JS from Metro) → ~/xyz-builds/
 npm run build:android:prod -- --clean  # release APK from .env.production (docs/android-build-guide.md)
 ```

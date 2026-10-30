@@ -7,7 +7,7 @@ import { type AccountOnFile, accountVipJData, toAccountOnFile } from '@/services
 import { type GatewayResponse, mapRows } from '@/services/gateway';
 import { pick } from '@/services/gatewayRows';
 import type { AddressSuggestion } from '@/services/places';
-import { toSavedSuggestions, userAddressesJData } from '@/services/savedPlaces';
+import { toAddressRecords, toSavedSuggestions, userAddressesJData } from '@/services/savedPlaces';
 import { toVehicleTypes, type VehicleType } from '@/services/vehicleTypes';
 
 /**
@@ -50,8 +50,9 @@ export function useVehicleTypes(): Lookup<VehicleType> {
   return useLookup(ACTION_CODES.VEHICLE_TYPE, {}, toVehicleTypes);
 }
 
-const toProfilePlaces = (response: GatewayResponse) => toSavedSuggestions(mapRows(response), 'profile');
-const toCompanyPlaces = (response: GatewayResponse) => toSavedSuggestions(mapRows(response), 'company');
+// Both send the verified 17-column address record (guide §10).
+const toProfilePlaces = (response: GatewayResponse) => toSavedSuggestions(toAddressRecords(response), 'profile');
+const toCompanyPlaces = (response: GatewayResponse) => toSavedSuggestions(toAddressRecords(response), 'company');
 
 /** `PROF.S.USER_PROFILE_ADDRESSES` — the profile's home / office address. */
 export function useProfilePlaces(loginId: string): Lookup<AddressSuggestion> {

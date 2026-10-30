@@ -1,5 +1,14 @@
 {
+  "extraKnownMarketplaces": {
+    "strict-property-access": {
+      "source": {
+        "source": "github",
+        "repo": "xs2tariqrasheed/strict-property-access"
+      }
+    }
+  },
   "enabledPlugins": {
-    "expo@claude-plugins-official": true
+    "expo@claude-plugins-official": true,
+    "strict-property-access@strict-property-access": true
   }
 }

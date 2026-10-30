@@ -106,6 +106,31 @@ export function mapRows(response: GatewayResponse): Record<string, string>[] {
     );
 }
 
+/**
+ * Pairs each `JData` row with `columns` by position, ignoring
+ * `JMetaData.Headings`. For record sets whose headings do not match their rows
+ * (docs/XYZ_INTEGRATION_GUIDE.md §4, §10 has each code's column list).
+ * A position the row does not reach becomes ''; callers that rely on a fixed
+ * layout check the row length first.
+ */
+export function mapRowsByPosition<Column extends string>(
+  response: GatewayResponse,
+  columns: readonly Column[],
+): Record<Column, string>[] {
+  const rows = response.JData;
+  if (!Array.isArray(rows)) return [];
+
+  return rows
+    .filter((row): row is unknown[] => Array.isArray(row))
+    .map(
+      (row) =>
+        // Every column is set from its position, so the record is complete.
+        Object.fromEntries(
+          columns.map((key, index) => [key, row[index] == null ? '' : String(row[index])]),
+        ) as Record<Column, string>,
+    );
+}
+
 /** Ready-made copy for showing a failed gateway call (docs/XYZ_INTEGRATION_GUIDE.md §6). */
 export type ErrorDisplay = {
   title: string;
@@ -192,13 +217,25 @@ async function send(body: string, signal?: AbortSignal): Promise<GatewayResponse
   return parsed;
 }
 
-/** The body may be a JSON object, or that object encoded once more as a string. */
+/**
+ * The body may be a JSON object, or that object encoded once more as a string
+ * (the real gateway always does the latter). It is not always valid JSON
+ * (docs/XYZ_INTEGRATION_GUIDE.md §4): row values carry unescaped backslashes
+ * (`\\host\Receipt_Images\…`), which {@link parseLenient} repairs, and error
+ * messages carry unescaped quotes, which cannot be — such a body still yields
+ * an `api` error when its non-zero ActionCode can be read.
+ */
 function parseBody(text: string): GatewayResponse {
   let data: unknown;
   try {
-    data = JSON.parse(text);
-    if (typeof data === 'string') data = JSON.parse(data);
+    data = parseLenient(text);
+    if (typeof data === 'string') data = parseLenient(data);
   } catch {
+    const code = /"ActionCode"\s*:\s*"?(\d+)"?/.exec(text)?.[1];
+    if (code !== undefined && Number(code) !== GATEWAY_SUCCESS_CODE) {
+      // The gateway's own message is unreadable here, and it is raw DB text anyway.
+      throw new GatewayError('api', COMMON_MESSAGES.REQUEST_NOT_ACCEPTED);
+    }
     throw new GatewayError('parsing', 'The gateway response is not valid JSON.');
   }
 
@@ -245,6 +282,19 @@ function buildEnvelope(
     },
     Notes: GATEWAY_NOTES,
   };
+}
+
+/** `JSON.parse`, retried once with every backslash that starts no valid escape doubled. */
+function parseLenient(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const repaired = text.replace(/\\(["\\/bfnrtu])|\\/g, (match, escape?: string) =>
+      escape ? match : '\\\\',
+    );
+    if (repaired === text) throw error;
+    return JSON.parse(repaired);
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
