@@ -86,7 +86,9 @@ Probed on 2026-10-30 with a test login unless stated.
 | `PROF.U.PROFILE_COLUMN_VALUE` | W | — | — | — | Not probed: writes data | |
 | `PROF.D.PROFILE_COLUMN_VALUE` | W | — | — | — | Not probed: writes data | |
 | `PROF.U.BLOCK_DRIVER`, `PROF.U.UNBLOCK_DRIVER` | W | — | — | — | Not wired | |
-| `PROF.U.GRANT_ACCESS_RIGHTS`, `PROF.U.REVOKE_ACCESS_RIGHTS`, `PROF.S.LOAD_MATCHING_PROFILE_LIST`, `PROF.S.GRANT_ACCESS_RIGHTS_TO_ALL`, `PROF.U.GRANT_ACCESS_RIGHTS_TO_ALL`, `PROF.U.REVOKE_ACCESS_RIGHTS_TO_ALL`, `PROF.S.LOAD_ACCESS_RIGHTS_GRANTED_PROFILE` | R/W | — | — | — | Not wired | |
+| `PROF.S.MATCHING_PROFILE_LIST` | R | 2026-10-30 | B | Yes (`oLoginID … oVIPNum`) | Not wired | Was listed as `LOAD_MATCHING_PROFILE_LIST`. Returns other customers' profiles (15 rows for the test login); no preference columns. |
+| `PROF.S.ACCESS_RIGHTS_GRANTED_PROFILE` | R | 2026-10-30 | B | Yes (same 7) | Not wired | Was listed as `LOAD_ACCESS_RIGHTS_GRANTED_PROFILE`. Needs `P_LOGIN_ID_FROM`; 0 rows for the test login. |
+| `PROF.I.ACCESS_RIGHTS`, `PROF.D.ACCESS_RIGHTS`, `PROF.S.GRANT_ACCESS_RIGHTS_TO_ALL`, `PROF.U.GRANT_ACCESS_RIGHTS_TO_ALL`, `PROF.U.REVOKE_ACCESS_RIGHTS_TO_ALL` | R/W | — | — | — | Not wired | Names as the backend test client lists them. |
 | `PROF.S.DB_LOG_ERROR` | W | — | — | — | Not wired | Writes a log entry |
 
 ## Migration order
@@ -122,7 +124,7 @@ Every code moves to **heading-only reads** (guide §4): pair each heading with i
 - **`PROF.U.PROFILE` value codes** with no sample: office `P_ADDRESS_TYPE`, phone `P_CONFIRMATION_METHOD` (the update sample sends `''`), non-US `P_COUNTRY`.
 - **Apt # / Mail stop:** the test client fills `P_CROSS_STREET1` / `P_CROSS_STREET2` with two cross streets. Which parameter takes the apartment / mail stop?
 - **Mailing address:** which code returns the profile's mailing address, and under which headings?
-- **Preferences:** which `LOAD_PROFILE` headings will carry the confirmation method and the special-offer flag? What are the `P_CONFIRMATION_METHOD` codes for phone and for "None" (guide 09 §5)? Does `''` in the `PROF.U.PROFILE` sample mean None, or "leave unchanged"? Is `Y` the `P_SPECIAL_OFFER` opt-in?
+- **Preferences:** no action code in either test client returns them (guide §10, "Searching for a preferences source"). Which `LOAD_PROFILE` headings will carry the confirmation method and the special-offer flag? What are the `P_CONFIRMATION_METHOD` codes for phone and for "None" (guide 09 §5)? Does `''` in the `PROF.U.PROFILE` sample mean None, or "leave unchanged"? Is `Y` the `P_SPECIAL_OFFER` opt-in?
 - **`last_login`:** when is it filled, and in which format?
 - **`RES.S.GOOGLE_ZONE_NUM`:** what marks "outside the service area"? `0, 0` answered `"1"` / `90000999`.
 - **`RES.S.ZONE_THE_LOCATION`:** which input zones a street, and what does a match answer?

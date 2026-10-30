@@ -449,7 +449,19 @@ The app first sent `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS`, `PROF.S.LOAD_PROFIL
 | `PROF.S.PROFILE_COLUMN_VALUES` — ✅ migrated | `oColumnId, oColumnValue` | `toContacts`, `src/services/contacts.ts` |
 | `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` — ✅ migrated | `oColumnId, oColumnValue` | `toContactValues`, `useReservationLookups.ts` |
 
-The test login has no rows in any of the three yet.
+The test login has no rows in any of the three yet. Re-probed 2026-10-30 while looking for a preferences source: `PROFILE_COLUMN_VALUES` still answers 0 rows, while `PROFILE_COLUMN_VALUES_BY_TYPE` answers one row `["2", "0"]` for `P_COLUMN_ID` 2 and 0 rows for ids 1 and 3–12. What column 2 holds isn't documented, so nothing reads it.
+
+### Searching for a preferences source (2026-10-30)
+
+No action code in either backend test client (Profile and Reservation modules) is named for preferences, confirmation method or special offers. The read codes that could hold them under another name were probed:
+
+| Code | `JData` | Answer |
+|---|---|---|
+| `PROF.S.PROFILE_COLUMN_VALUES` / `_BY_TYPE` | `P_LOGIN_ID` (+ `P_COLUMN_ID` 1–12) | See above: no preference rows. |
+| `PROF.S.MATCHING_PROFILE_LIST` (not wired) | `P_LOGIN_ID` | Headings `oLoginID, oFirstName, oLastName, oPhoneNumberUS, oPhoneExtUS, oAccountNum, oVIPNum` (7 = 7); 15 rows of **other customers' profiles**, no preference columns. |
+| `PROF.S.ACCESS_RIGHTS_GRANTED_PROFILE` (not wired) | `P_LOGIN_ID_FROM` (`P_LOGIN_ID` alone → `"1"` / `ORA-20001: Mandatory data key "p_LOGIN_ID_FROM" is missing`, invalid JSON) | Same 7 headings, 0 rows. |
+
+So `PROF.S.LOAD_PROFILE` remains the only candidate, and its preference values have no heading (§10 above). The test client pages answered HTTP 500 (`Cannot find module './682.js'`) on 2026-10-30 afternoon; the code lists used are the ones read from them earlier that day.
 
 ### PROF.I.PROFILE — create
 
