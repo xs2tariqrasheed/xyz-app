@@ -1,15 +1,15 @@
 import { expect, type Page, test } from '@playwright/test';
 
 import { ACTION_CODES } from '../src/constants/actionCodes';
-import { MAILING_ADDRESS_MESSAGES, PROFILE_MESSAGES } from '../src/constants/messages';
+import { MAILING_ADDRESS_MESSAGES, PREFERENCES_MESSAGES, PROFILE_MESSAGES } from '../src/constants/messages';
 import { sandboxClientIpLookup } from './support/clientIp';
 import { gatewayRows, waitForGatewayAction } from './support/gateway';
 import { sandboxGoogleMaps } from './support/googleMaps';
 import { fillLoginForm } from './support/login';
 
 /**
- * Personal Info and Update Mailing Address against the real gateway
- * (reverse-engineer-implemented/guide/07, 08; docs/XYZ_INTEGRATION_GUIDE.md §10).
+ * Personal Info, Update Mailing Address and Preferences against the real
+ * gateway (reverse-engineer-implemented/guide/07, 08, 09; docs/XYZ_INTEGRATION_GUIDE.md §10).
  *
  * `PROF.S.LOAD_PROFILE` is read for real. `PROF.U.PROFILE` must never leave
  * the app while that response has values past its last heading: any that
@@ -64,6 +64,16 @@ test('Update Mailing Address shows "not available" without address headings', as
 
   await page.goto('/mailing-address');
   await expect(page.getByText(MAILING_ADDRESS_MESSAGES.UNAVAILABLE)).toBeVisible();
+  expect(updates).toHaveLength(0);
+});
+
+test('Preferences shows "not available" without preference headings', async ({ page }) => {
+  const updates = await interceptProfileUpdates(page);
+  await logIn(page);
+
+  await page.goto('/preferences');
+  await expect(page.getByText(PREFERENCES_MESSAGES.UNAVAILABLE)).toBeVisible();
+  await expect(page.getByRole('button', { name: PREFERENCES_MESSAGES.UPDATE, exact: true })).toHaveCount(0);
   expect(updates).toHaveLength(0);
 });
 

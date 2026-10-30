@@ -11,7 +11,7 @@ Which action codes are moved from the stub's dummy data to the gateway's **real*
 6. Once every code a module uses is ✅ (or recorded as Blocked / Needs data / Not probed with its reason), give the module guide in `reverse-engineer-implemented/guide/` a **Gateway (real data)** section, and add this line under its `✅ Implemented` banner:
    `> ✅ **Migrated to real gateway data** (<date>): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §N Gateway (real data).`
 
-**Module guides migrated:** 03 Forgot password, 04 Registration, 06 Member home & Express ride, 07 Personal info, 08 Mailing address.
+**Module guides migrated:** 03 Forgot password, 04 Registration, 06 Member home & Express ride, 07 Personal info, 08 Mailing address, 09 Preferences.
 
 Never probe a write code without an agreed test record.
 
@@ -122,6 +122,7 @@ Every code moves to **heading-only reads** (guide §4): pair each heading with i
 - **`PROF.U.PROFILE` value codes** with no sample: office `P_ADDRESS_TYPE`, phone `P_CONFIRMATION_METHOD` (the update sample sends `''`), non-US `P_COUNTRY`.
 - **Apt # / Mail stop:** the test client fills `P_CROSS_STREET1` / `P_CROSS_STREET2` with two cross streets. Which parameter takes the apartment / mail stop?
 - **Mailing address:** which code returns the profile's mailing address, and under which headings?
+- **Preferences:** which `LOAD_PROFILE` headings will carry the confirmation method and the special-offer flag? What are the `P_CONFIRMATION_METHOD` codes for phone and for "None" (guide 09 §5)? Does `''` in the `PROF.U.PROFILE` sample mean None, or "leave unchanged"? Is `Y` the `P_SPECIAL_OFFER` opt-in?
 - **`last_login`:** when is it filled, and in which format?
 - **`RES.S.GOOGLE_ZONE_NUM`:** what marks "outside the service area"? `0, 0` answered `"1"` / `90000999`.
 - **`RES.S.ZONE_THE_LOCATION`:** which input zones a street, and what does a match answer?

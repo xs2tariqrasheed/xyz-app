@@ -151,6 +151,8 @@ export const PREFERENCES_MESSAGES = {
   UPDATE_FAILED_TITLE: 'Preferences not updated',
   /** Server refused the update without saying why. */
   UPDATE_REJECTED: "We couldn't update your preferences.",
+  /** The loaded profile can't be sent back safely, so updates are off. */
+  UPDATE_UNAVAILABLE: "Your preferences can't be updated right now.",
   LOAD_FAILED_TITLE: 'Your preferences could not be loaded',
   /** The profile came back without any preferences. */
   UNAVAILABLE: 'Your preferences are not available right now.',
@@ -229,6 +231,8 @@ export const MAILING_ADDRESS_MESSAGES = {
   UPDATE_FAILED_TITLE: 'Mailing address not updated',
   /** Server refused the update without saying why. */
   UPDATE_REJECTED: "We couldn't update your mailing address.",
+  /** The loaded profile can't be sent back safely, so updates are off. */
+  UPDATE_UNAVAILABLE: "Your mailing address can't be updated right now.",
   LOAD_FAILED_TITLE: 'Your mailing address could not be loaded',
   RETRY: 'Try again',
   BACK_TO_PROFILE: 'Back to profile',

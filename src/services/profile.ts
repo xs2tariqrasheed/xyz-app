@@ -31,7 +31,9 @@ export type CustomerProfile = {
   accountNumber: string;
   /**
    * What the Preferences screen edits. `null`: `LOAD_PROFILE` sends no
-   * preference headings, so the app has no preferences to show.
+   * preference headings — the values arrive only past its last heading, which
+   * the app never reads (docs/XYZ_INTEGRATION_GUIDE.md §10) — so the app has no
+   * preferences to show, and a new booking starts from the form's own default.
    */
   preferences: PreferencesValue | null;
   /**
@@ -43,7 +45,10 @@ export type CustomerProfile = {
 
 /**
  * `P_CONFIRMATION_METHOD`. "ML" (e-mail) is the backend test client's value
- * for `PROF.I.PROFILE` and `RES.I.RESERVATION` (docs/XYZ_INTEGRATION_GUIDE.md §10).
+ * for `PROF.I.PROFILE`, `RES.I.RESERVATION` and `RES.U.RESERVATION`
+ * (docs/XYZ_INTEGRATION_GUIDE.md §10). Its `PROF.U.PROFILE` sample sends ''.
+ * Guide 09 calls an unticked "Phone" confirmation by "None"; no code for None
+ * is known, so unticked sends e-mail.
  */
 export const CONFIRMATION_CODES = {
   email: 'ML',
@@ -52,8 +57,13 @@ export const CONFIRMATION_CODES = {
   phone: 'PHONE',
 } as const;
 
-/** `P_SPECIAL_OFFER`: "N" is the sample; "Y" opts in. */
-export const SPECIAL_OFFER_CODES = { yes: 'Y', no: 'N' } as const;
+/** `P_SPECIAL_OFFER`: "N" is the backend test client's value. */
+export const SPECIAL_OFFER_CODES = {
+  // TODO(schema-unverified): "Y" is not in any backend sample; confirm the
+  // opt-in code with the backend and remove this comment.
+  yes: 'Y',
+  no: 'N',
+} as const;
 
 /** `P_ADDRESS_TYPE`. "HOME" is the backend test client's value (`PROF.I.PROFILE`, `PROF.U.PROFILE`). */
 export const ADDRESS_TYPE_CODES: Record<AddressType, string> = {

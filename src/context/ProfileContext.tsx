@@ -95,12 +95,18 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
   const row = read.row;
   const profile = useMemo(() => toCustomerProfile(row ? [row] : undefined), [row]);
 
-  /** Sends the whole profile built from the loaded row, then reloads it. */
-  const saveProfile = async (build: (loaded: ProfileRow) => GatewayJData, rejected?: string) => {
+  /**
+   * Sends the whole profile built from the loaded row, then reloads it. `copy`
+   * is the saving screen's own refusal text.
+   */
+  const saveProfile = async (
+    build: (loaded: ProfileRow) => GatewayJData,
+    copy: { rejected: string; unavailable: string },
+  ) => {
     if (!row || !data) throw new Error('The profile has not loaded yet.');
     // The update sends the loaded values back; with values past the last
     // heading, that pairing can't be trusted, so nothing is written.
-    if (hasUnheadedValues(data)) throw new ProfileError(PROFILE_MESSAGES.UPDATE_UNAVAILABLE);
+    if (hasUnheadedValues(data)) throw new ProfileError(copy.unavailable);
     const response = await sendUpdate(
       ACTION_CODES.UPDATE_PROFILE,
       GATEWAY_VIEW_NAME,
@@ -108,24 +114,27 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
       // A write: a lost response must not send the update twice.
       { retry: false },
     );
-    assertProfileUpdated(response, rejected);
+    assertProfileUpdated(response, copy.rejected);
     refetch();
   };
 
   const updatePersonalInfo = (personal: PersonalInfoValue) =>
-    saveProfile((loaded) => updateProfileJData(loginId, loaded, personal));
+    saveProfile((loaded) => updateProfileJData(loginId, loaded, personal), {
+      rejected: PROFILE_MESSAGES.UPDATE_REJECTED,
+      unavailable: PROFILE_MESSAGES.UPDATE_UNAVAILABLE,
+    });
 
   const updatePreferences = (preferences: PreferencesValue) =>
-    saveProfile(
-      (loaded) => updatePreferencesJData(loginId, loaded, preferences),
-      PREFERENCES_MESSAGES.UPDATE_REJECTED,
-    );
+    saveProfile((loaded) => updatePreferencesJData(loginId, loaded, preferences), {
+      rejected: PREFERENCES_MESSAGES.UPDATE_REJECTED,
+      unavailable: PREFERENCES_MESSAGES.UPDATE_UNAVAILABLE,
+    });
 
   const updateMailingAddress = (address: MailingAddress) =>
-    saveProfile(
-      (loaded) => updateMailingAddressJData(loginId, loaded, address),
-      MAILING_ADDRESS_MESSAGES.UPDATE_REJECTED,
-    );
+    saveProfile((loaded) => updateMailingAddressJData(loginId, loaded, address), {
+      rejected: MAILING_ADDRESS_MESSAGES.UPDATE_REJECTED,
+      unavailable: MAILING_ADDRESS_MESSAGES.UPDATE_UNAVAILABLE,
+    });
 
   const value: ProfileContextValue = {
     profile,
