@@ -181,9 +181,11 @@ so it runs on its own — no Metro, no dev menu.
 **Checklist — every production build**
 
 1. `.env.production` has the production values — [§4.1](#41-production-values-envproduction)
-2. Version raised in `app.json` — [§4.2](#42-raise-the-version)
-3. `npm run build:android:prod -- --clean` — [§4.3](#43-build)
-4. Share `~/xyz-builds/xyz-v<version>-<versionCode>-release-<time>.apk` — [§4.4](#44-install-and-share)
+2. `api/verify-recaptcha` is deployed on Vercel with `RECAPTCHA_SECRET_KEY` set, and `EXPO_PUBLIC_RECAPTCHA_VERIFY_URL` points at it — [§4.1](#41-production-values-envproduction)
+3. Google Maps key restricted by API only — [§4.6](#46-google-maps-key)
+4. Version raised in `app.json` — [§4.2](#42-raise-the-version)
+5. `npm run build:android:prod -- --clean` — [§4.3](#43-build)
+6. Test on a phone, then share `~/xyz-builds/xyz-v<version>-<versionCode>-release-<time>.apk` — [§4.4](#44-install-and-share)
 
 ### 4.1 Production values (`.env.production`)
 
@@ -204,8 +206,9 @@ must change from development:
 | `EXPO_PUBLIC_RECAPTCHA_VERIFY_URL` | The deployed verify endpoint, `https://<vercel-domain>/api/verify-recaptcha` — **not** `localhost:3009`, which only exists on your machine |
 | `EXPO_PUBLIC_DBAPI_URL` | The production gateway (`https://…`) |
 | `EXPO_PUBLIC_DBAPI_LOGIN` / `EXPO_PUBLIC_DBAPI_PASSWORD` | Production gateway credentials |
-| `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` | A key with *Maps SDK for Android* enabled and restricted to package `com.xyzcar.app` + the signing SHA-1 ([§4.5](#45-signing)) |
+| `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` | A key with *Maps SDK for Android*, *Places API*, *Directions API* and *Geocoding API* enabled, restricted **by API only** — see [§4.6](#46-google-maps-key) |
 | `EXPO_PUBLIC_RECAPTCHA_SITE_KEY` | The production site key; its allowed domains must include the verify URL's host |
+| `EXPO_PUBLIC_DBAPI_CLIENT_VERSION` | **Empty**, so the gateway's `ClientVersion` follows `version` in `app.json` (§4.2). A value here is sent as-is on every release |
 
 `RECAPTCHA_SECRET_KEY` and `RECAPTCHA_ALLOWED_HOSTNAMES` are server-only and
 are never bundled — they belong in the Vercel project, not in the APK.
@@ -240,7 +243,9 @@ Nothing increments automatically. Before each release, raise both in
   release. Android refuses to install a lower `versionCode` over a higher one
   (`INSTALL_FAILED_VERSION_DOWNGRADE`).
 
-Both appear in the output file name.
+Both appear in the output file name. `version` is also the `ClientVersion` sent
+to the gateway, as long as `EXPO_PUBLIC_DBAPI_CLIENT_VERSION` is empty in
+`.env.production` (and `.env`).
 
 ### 4.3 Build
 
@@ -298,7 +303,18 @@ next `--clean`.
   XYZ_ABIS=arm64-v8a,armeabi-v7a,x86_64 npm run build:android:prod
   ```
 
-Open the app and sign in; it should reach the gateway without Metro running.
+Before sharing, check on a real phone — with Metro **not** running — the parts
+Expo Go never exercises:
+
+- [ ] Sign in, including the reCAPTCHA checkbox (deployed verify URL)
+- [ ] Location permission prompt appears and is honoured
+- [ ] Address search returns suggestions; picking one fills the address
+- [ ] The map shows tiles (not grey) and the route between pickup and destination
+- [ ] Future and live reservation: preview, submit, update, cancel
+- [ ] Reservation history and live tracking (car address on *Track your route*)
+- [ ] Profile, addresses and contacts load and save
+- [ ] Password reset
+- [ ] Website / *Rate a ride* links open
 
 ### 4.5 Signing
 
@@ -310,12 +326,36 @@ public debug key. For a store release use EAS ([§5](#5-optional-eas-builds)),
 which signs with a project keystore held in EAS credentials.
 
 `--clean` regenerates `android/app/debug.keystore`, but it is the same
-well-known key every time, so its SHA-1 stays the same. If the Google Maps key
-is restricted by package + SHA-1, register it:
+well-known key every time, so its SHA-1 stays the same. Should you ever need it
+(e.g. a separate, Android-restricted map key — §4.6):
 
 ```bash
 keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android | grep SHA1
 ```
+
+### 4.6 Google Maps key
+
+Expo Go uses its own Maps key, so the key in `.env.production` is first really
+tested by the APK. The app uses it two ways:
+
+- the native map (`react-native-maps`) — *Maps SDK for Android*;
+- plain `fetch` calls to the Places, Directions and Geocoding web services
+  (`src/services/googlePlaces.ts`, `googleDirections.ts`, `geocoding.ts`).
+
+Google rejects those web-service calls with `REQUEST_DENIED` when the key has an
+**Android apps** application restriction (package + SHA-1) — the app does not
+send the `X-Android-Package` / `X-Android-Cert` headers. With such a key the map
+draws, but address search, the route and the car's street address fail.
+
+So, in Google Cloud console → *Credentials* → the key:
+
+- *Application restrictions:* **None**
+- *API restrictions:* *Restrict key* to Maps SDK for Android, Places API,
+  Directions API, Geocoding API (plus Maps SDK for iOS / Maps JavaScript API if
+  the same key serves those builds)
+
+The web build's HTTP-referrer restriction can't share this key either: give the
+web build its own key if you want referrer locking.
 
 ---
 
@@ -385,7 +425,8 @@ npx expo doctor
 | Dev app: red screen *Unable to load script* | Metro is not reachable. Run `npm start`, then `adb reverse tcp:8081 tcp:8081` — [§3.1](#31-use-it). |
 | Dev app: *Could not reach verification* | Restart Metro (`npm start` — it serves the verify endpoint on 3009; check its log for `[reCAPTCHA] verify server`). Over USB also `adb reverse tcp:3009 tcp:3009`; over Wi-Fi keep the phone on the same network. |
 | Prod app: reCAPTCHA fails | `EXPO_PUBLIC_RECAPTCHA_VERIFY_URL` is not the deployed endpoint, or its host isn't on the site key's domain list. Fix `.env.production` and rebuild. |
-| Map is blank / grey | The Maps key lacks *Maps SDK for Android*, or its Android restriction doesn't list `com.xyzcar.app` with the signing SHA-1 ([§4.5](#45-signing)). The key is baked in at prebuild — rebuild with `-- --clean` after changing it. |
+| Map is blank / grey | The Maps key lacks *Maps SDK for Android* ([§4.6](#46-google-maps-key)). The key is baked in at prebuild — rebuild with `-- --clean` after changing it. |
+| Map shows, but address search / route / car address fail | The key has an Android-apps restriction or lacks Places / Directions / Geocoding API. Set it as in [§4.6](#46-google-maps-key) — a console change, no rebuild needed. |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | An APK signed with a different key (e.g. an EAS build) is installed. `adb uninstall com.xyzcar.app` (deletes the app's data), then install. |
 | `INSTALL_FAILED_VERSION_DOWNGRADE` | The device has a higher `versionCode`. Raise it in `app.json` ([§4.2](#42-raise-the-version)), or uninstall first. |
 | `INSTALL_FAILED_NO_MATCHING_ABIS` | The APK has no code for this device's CPU (e.g. prod APK on an Intel emulator). Rebuild with `XYZ_ABIS=…` — [§4.4](#44-install-and-share). |
