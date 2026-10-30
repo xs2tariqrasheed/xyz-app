@@ -80,8 +80,14 @@ test('signs in, greets the customer from the profile and logs out', async ({ pag
     header.DeviceID,
   );
   const [profile] = await gatewayRows(profileCall);
-  expect(profile?.first_name).toBeTruthy();
-  await expect(page.getByText(`Welcome back, ${profile.first_name}`)).toBeVisible();
+  expect(Boolean(profile?.first_name), 'LOAD_PROFILE has a first_name value').toBe(true);
+  // `first_name` pairs with the password today (guide §10), so the greeting is
+  // compared without printing it.
+  const greeting = page.getByText(/^Welcome back, /);
+  await expect(greeting).toBeVisible();
+  expect((await greeting.textContent()) === `Welcome back, ${profile.first_name.trim()}`, 'greeting = first_name').toBe(
+    true,
+  );
 
   // ── Log out ─────────────────────────────────────────────────────────────
   await logOut(page);

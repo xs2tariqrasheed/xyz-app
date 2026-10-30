@@ -203,11 +203,13 @@
 
 ### **Action Code: RES.S.ALL\_ORDERS** — ✅ Implemented
 
+Dates as `MM-DD-YYYY`, as the backend test client sends them (`MM/DD/YYYY` returned the same rows). The test client sends no `P_TOTAL_RECORDS`, and the gateway ignores it.
+
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
-| P\_DATE\_FROM | ‘09/01/2026’ |
-| P\_DATE\_TO | ‘09/30/2026’ |
+| P\_DATE\_FROM | ‘09-01-2026’ |
+| P\_DATE\_TO | ‘09-30-2026’ |
 | P\_TOTAL\_RECORDS | 50 |
 
 ### **Action Code: RES.I.CREDIT\_CARD\_APPROVAL** — ✅ Implemented
@@ -475,6 +477,8 @@
 
 ### **Action Code: PROF.U.PROFILE** — ✅ Implemented
 
+Sample values follow the backend test client (XYZCar Profile Module, 2026-10-30): `P_COUNTRY` `01` (US), `P_ADDRESS_TYPE` `HOME`, `P_PAYMENT_TYPE` `1`. Its `P_CROSS_STREET1` / `P_CROSS_STREET2` are two cross streets. Not yet sent to the real gateway (guide §10).
+
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
@@ -486,21 +490,21 @@
 | P\_PHONE\_NUMBER\_US | ‘2125551234’ |
 | P\_PHONE\_EXT\_US | ‘101’ |
 | P\_FAX | ‘2125559999’ |
-| P\_COUNTRY | ‘US’ |
+| P\_COUNTRY | ‘01’ |
 | P\_STATE | ‘NY’ |
 | P\_CITY | ‘New York’ |
 | P\_ZIP | ‘10001’ |
 | P\_BUILDING\_NUM | ‘350’ |
-| P\_STREET\_NAME | ‘5th Ave’ |
-| P\_CROSS\_STREET1 | ‘34th St’ |
-| P\_CROSS\_STREET2 | ‘35th St’ |
+| P\_STREET\_NAME | ‘W 52ND ST’ |
+| P\_CROSS\_STREET1 | ‘BROADWAY’ |
+| P\_CROSS\_STREET2 | ‘8TH AVE’ |
 | P\_ADDRESS\_PHONE | ‘2125551234’ |
 | P\_ADDRESS\_PHONE\_US | ‘2125551234’ |
-| P\_ADDRESS\_TYPE | ‘H’ |
-| P\_PAYMENT\_TYPE | ‘CC’ |
-| P\_CC\_TYPE | ‘VISA’ |
+| P\_ADDRESS\_TYPE | ‘HOME’ |
+| P\_PAYMENT\_TYPE | ‘1’ |
+| P\_CC\_TYPE | ‘’ |
 | P\_CARD\_HOLDER\_NAME | ‘John Doe’ |
-| P\_CARD\_NUMBER | ‘4111111111111111’ |
+| P\_CARD\_NUMBER | ‘’ |
 | P\_VERIFY\_CODE | ‘123’ |
 | P\_CC\_MONTH | ‘12’ |
 | P\_CC\_YEAR | ‘2027’ |
@@ -508,10 +512,10 @@
 | P\_ACCOUNT\_REQ2 | ‘REQ001’ |
 | P\_ACCOUNT\_REQ3 | ‘REQ001’ |
 | P\_ACCOUNT\_REQ4 | ‘REQ001’ |
-| P\_CONFIRMATION\_METHOD | ‘EMAIL’ |
+| P\_CONFIRMATION\_METHOD | ‘’ |
 | P\_PREFERRED\_FLEET | ‘ABC Fleet’ |
-| P\_CAR\_YEAR | ‘2023’ |
-| P\_CAR\_PHONE | ‘2125551234’ |
+| P\_CAR\_YEAR | ‘90’ |
+| P\_CAR\_PHONE | ‘N’ |
 | P\_SPECIAL\_OFFER | ‘N’ |
 | P\_SMOKING\_CAR | ‘N’ |
 | P\_IVR\_PIN | ‘4521’ |

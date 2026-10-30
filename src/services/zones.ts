@@ -1,7 +1,5 @@
 import { ACTION_CODES, DB_SUCCESS_CODE } from '@/constants/actionCodes';
-import type { GatewayJData, GatewayResponse } from '@/services/gateway';
-import { hasColumn, pick } from '@/services/gatewayRows';
-import { mapRows } from '@/services/gateway';
+import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 import type { StructuredPlace } from '@/services/places';
 
 /**
@@ -29,8 +27,8 @@ export const IDLE_ZONE: ZoneState = { status: 'idle', zoneNum: '' };
 /** `P_PU_DO_TYPE`: "P" is the documented sample, "D" mirrors it for drop-off. */
 const PU_DO_TYPE: Record<Leg, string> = { pickup: 'P', destination: 'D' };
 
-/** Columns the zone may come back under (undocumented; stub returns none). */
-const ZONE_COLUMNS = ['o_zone_num', 'zone_num', 'o_zone', 'zone', 'zone_number', 'o_zonenum'];
+/** Both zone codes answer under these headings (docs/XYZ_INTEGRATION_GUIDE.md §10). */
+const ZONE_HEADINGS = ['o_code', 'o_message'] as const;
 
 export type ZoneRequest = {
   actionCode: typeof ACTION_CODES.GOOGLE_ZONE_NUM | typeof ACTION_CODES.ZONE_THE_LOCATION;
@@ -65,14 +63,20 @@ export function zoneRequest(place: StructuredPlace, leg: Leg, searched: boolean)
 }
 
 /**
- * `o_code` "0" is a match (with the zone number when the row carries one);
- * any other code, or none, is "unmatched" — it fails closed into the
- * acknowledgement rather than silently booking an unknown address.
+ * `o_code` "0" is a match, with the zone number in `o_message`; any other
+ * code, an empty one, or no row is "unmatched" — it fails closed into the
+ * acknowledgement rather than silently booking an unknown address. A missing
+ * heading throws `GatewayError('parsing')`, which the caller also treats as
+ * no match.
+ *
+ * Today neither code answers "0": `ZONE_THE_LOCATION` answers `["", ""]` for
+ * every street tried, and `GOOGLE_ZONE_NUM` answers "1" with a zone number
+ * even at 0,0, so "1" does not prove a match (guide §10).
  */
 export function toZoneState(response: GatewayResponse): ZoneState {
-  const row = mapRows(response)[0];
-  const matched = hasColumn(row, ['o_code'])
-    ? pick(row, ['o_code']) === DB_SUCCESS_CODE
-    : pick(row, ZONE_COLUMNS) !== '';
-  return { status: matched ? 'matched' : 'unmatched', zoneNum: matched ? pick(row, ZONE_COLUMNS) : '' };
+  const row = mapRowsByHeadings(response, ZONE_HEADINGS)[0];
+  // TODO(schema-unverified): no "0" answer has been seen from either code;
+  // "0" + zone number in o_message is assumed. Confirm against guide §10.
+  if (!row || row.o_code.trim() !== DB_SUCCESS_CODE) return { status: 'unmatched', zoneNum: '' };
+  return { status: 'matched', zoneNum: row.o_message.trim() };
 }

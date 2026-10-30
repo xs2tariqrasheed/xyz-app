@@ -8,12 +8,20 @@ import { MAILING_ADDRESS_MESSAGES, PREFERENCES_MESSAGES, PROFILE_MESSAGES } from
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { usePostData } from '@/hooks/usePostData';
-import { type ErrorDisplay, type GatewayJData, hasUnheadedValues, mapRows } from '@/services/gateway';
+import {
+  type ErrorDisplay,
+  type GatewayJData,
+  type GatewayResponse,
+  getErrorDisplay,
+  hasUnheadedValues,
+} from '@/services/gateway';
 import {
   assertProfileUpdated,
   type CustomerProfile,
   ProfileError,
+  type ProfileRow,
   toCustomerProfile,
+  toProfileRow,
   updateMailingAddressJData,
   updatePreferencesJData,
   updateProfileJData,
@@ -82,11 +90,13 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
   const { mutateAsync: sendUpdate } = usePostData();
 
   // Keyed on the response, so the profile keeps its identity until a load lands.
-  const row = useMemo(() => (data ? mapRows(data)[0] : undefined), [data]);
+  // Read by heading (guide §10); a missing heading shows as the load error.
+  const read = useMemo(() => readRow(data), [data]);
+  const row = read.row;
   const profile = useMemo(() => toCustomerProfile(row ? [row] : undefined), [row]);
 
   /** Sends the whole profile built from the loaded row, then reloads it. */
-  const saveProfile = async (build: (loaded: Record<string, string>) => GatewayJData, rejected?: string) => {
+  const saveProfile = async (build: (loaded: ProfileRow) => GatewayJData, rejected?: string) => {
     if (!row || !data) throw new Error('The profile has not loaded yet.');
     // The update sends the loaded values back; with values past the last
     // heading, that pairing can't be trusted, so nothing is written.
@@ -120,7 +130,7 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
   const value: ProfileContextValue = {
     profile,
     isLoading,
-    errorDisplay,
+    errorDisplay: errorDisplay ?? read.errorDisplay,
     refetch,
     updatePersonalInfo,
     updatePreferences,
@@ -128,6 +138,15 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
   };
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
+}
+
+function readRow(data: GatewayResponse | undefined): { row?: ProfileRow; errorDisplay?: ErrorDisplay } {
+  if (!data) return {};
+  try {
+    return { row: toProfileRow(data) };
+  } catch (error) {
+    return { errorDisplay: getErrorDisplay(error) };
+  }
 }
 
 /** The signed-in profile and its update. Must be used inside `ProfileProvider`. */

@@ -6,7 +6,7 @@ import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/se
  * fields and in the Express Checkout lists (reverse-engineer-implemented/guide/05, 06):
  *
  * - `PROF.S.USER_ADDRESSES` — saved ("favourite") addresses;
- * - `PROF.S.USER_PROFILE_ADDRESSES` — the profile's home / office address;
+ * - `PROF.S.USER_PROFILE_ADDRESSES` — the profile's frequent pickup places;
  * - `PROF.S.CORPORATE_ADDRESSES` — the company's own locations.
  *
  * All three map to {@link AddressSuggestion}s that already carry their booking

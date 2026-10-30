@@ -1,22 +1,14 @@
 import { hasRateRideUrl } from '@/config/rateRide';
-import { RIDES_MESSAGES } from '@/constants/messages';
-import type { GatewayJData, GatewayResponse } from '@/services/gateway';
-import { type GatewayRow, isYes, parseGatewayDate, pick, recordSet } from '@/services/gatewayRows';
+import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
+import { isYes, parseGatewayDate } from '@/services/gatewayRows';
 import { addDays, endOfDay, pad2, startOfDay } from '@/utils/datetime';
 
 /**
  * Rides on the account: history (`RES.S.ALL_ORDERS`, guide 18), open
  * reservations (`RES.S.UPDATABLE_ORDERS`, guide 19) and the home dashboard
- * built from them. Rows are mapped here so screens never read raw columns.
+ * built from them. Rows are mapped here, by each code's own headings, so
+ * screens never read raw columns (docs/XYZ_INTEGRATION_GUIDE.md §10).
  */
-
-/** Thrown when the server refuses a rides lookup, as opposed to failing. */
-export class RidesError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RidesError';
-  }
-}
 
 export type RideStatus = 'confirmed' | 'in-progress' | 'completed' | 'canceled';
 
@@ -162,9 +154,9 @@ export const HISTORY_DEFAULT_DAYS = 90;
 /** How far back and ahead a history search may reach (guide 18: three months each way). */
 export const HISTORY_REACH_DAYS = 92;
 
-/** `MM/DD/YYYY`, the gateway's date format. */
+/** `MM-DD-YYYY`, as the backend test client sends `P_DATE_FROM` / `P_DATE_TO`. */
 function gatewayDate(date: Date): string {
-  return `${pad2(date.getMonth() + 1)}/${pad2(date.getDate())}/${date.getFullYear()}`;
+  return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}-${date.getFullYear()}`;
 }
 
 /** `JData` for {@link ACTION_CODES.ALL_ORDERS}. `P_TOTAL_RECORDS` is a number in the contract. */
@@ -182,19 +174,26 @@ export function updatableOrdersJData(loginId: string): GatewayJData {
   return { P_LOGIN_ID: loginId };
 }
 
-/** Column candidates: today's gateway names first, then the old grid's (guide 18). */
-const COLUMNS = {
-  id: ['reservation_num', 'reservationid', 'ride_no', 'rideno'],
-  passenger: ['passenger_name', 'passengername'],
-  date: ['pickup_date', 'ride_date', 'reservation_date', 'ridedate'],
-  time: ['pickup_time', 'ride_time', 'reservation_time'],
-  pickup: ['pickup_location', 'pickupshortaddress', 'pickup_address'],
-  destination: ['destination', 'dropshortaddress', 'dropoff_location', 'drop_address'],
-  status: ['status', 'callstatus', 'call_status'],
-  payment: ['payment_method', 'cardno', 'payment_type'],
-  voucher: ['voucher_num', 'voucher_number', 'voucherno'],
-  feedback: ['feedback_left', 'feedback'],
-} as const;
+/** The headings both order codes send and the app reads (guide §10). */
+const RIDE_HEADINGS = [
+  'reservation_num',
+  'passenger_name',
+  'pickup_date',
+  'pickup_time',
+  'pickup_location',
+  'destination',
+  'status',
+  'payment_method',
+] as const;
+
+/** `RES.S.ALL_ORDERS` adds the voucher and feedback headings. */
+const ALL_ORDERS_HEADINGS = [...RIDE_HEADINGS, 'voucher_num', 'feedback_left'] as const;
+
+/** `RES.S.UPDATABLE_ORDERS` ends in `car_type, number_of_passengers` instead, which no screen shows. */
+const UPDATABLE_ORDERS_HEADINGS = RIDE_HEADINGS;
+
+type RideRow = Record<(typeof RIDE_HEADINGS)[number], string>;
+type OrderRow = Record<(typeof ALL_ORDERS_HEADINGS)[number], string>;
 
 /** Status words, as the server spells them, onto the four the app shows. */
 export function toRideStatus(value: string): RideStatus {
@@ -214,37 +213,58 @@ export function toPaymentMethod(value: string): PaymentMethod {
   return 'account';
 }
 
-function toRide(row: GatewayRow): Ride | null {
-  const id = pick(row, COLUMNS.id);
-  const pickupAt = parseGatewayDate(pick(row, COLUMNS.date), pick(row, COLUMNS.time));
+/**
+ * One row as a ride, or `null` when it cannot be listed. Each field is read
+ * from its own heading, as paired; today's rows are shifted (`pickup_date`
+ * holds a name), so none of them parses into a ride (guide §10).
+ */
+function toRide(row: RideRow, extra: { voucherNo: string | null; feedbackLeft: boolean }): Ride | null {
+  const id = row.reservation_num.trim();
+  const pickupAt = parseGatewayDate(row.pickup_date, row.pickup_time);
   // A row with no ride number or no date cannot be listed or opened.
   if (!id || !pickupAt) return null;
 
   return {
     id,
-    passengerName: pick(row, COLUMNS.passenger),
+    passengerName: row.passenger_name.trim(),
     pickupAt,
-    pickupLocation: pick(row, COLUMNS.pickup),
-    destination: pick(row, COLUMNS.destination),
-    status: toRideStatus(pick(row, COLUMNS.status)),
-    paymentMethod: toPaymentMethod(pick(row, COLUMNS.payment)),
-    voucherNo: pick(row, COLUMNS.voucher) || null,
-    feedbackLeft: isYes(pick(row, COLUMNS.feedback)),
+    pickupLocation: row.pickup_location.trim(),
+    destination: row.destination.trim(),
+    status: toRideStatus(row.status),
+    paymentMethod: toPaymentMethod(row.payment_method),
+    ...extra,
   };
 }
 
-/** Rows → rides, newest first, de-duplicated by ride number. */
-export function toRides(response: GatewayResponse): Ride[] {
-  const rows = recordSet(response, (message) => new RidesError(message), RIDES_MESSAGES.HISTORY_FAILED);
+/** Rides newest first, de-duplicated by ride number. */
+function listRides(rides: (Ride | null)[]): Ride[] {
   const seen = new Set<string>();
-  return rows
-    .map(toRide)
+  return rides
     .filter((ride): ride is Ride => {
       if (!ride || seen.has(ride.id)) return false;
       seen.add(ride.id);
       return true;
     })
     .sort(byPickupDesc);
+}
+
+/** `RES.S.ALL_ORDERS` rows → rides. Throws `GatewayError('parsing')` when a heading is missing. */
+export function toRides(response: GatewayResponse): Ride[] {
+  const rows: OrderRow[] = mapRowsByHeadings(response, ALL_ORDERS_HEADINGS);
+  return listRides(
+    rows.map((row) =>
+      toRide(row, { voucherNo: row.voucher_num.trim() || null, feedbackLeft: isYes(row.feedback_left) }),
+    ),
+  );
+}
+
+/**
+ * `RES.S.UPDATABLE_ORDERS` rows → rides. It has no voucher or feedback
+ * heading, so those stay empty. Throws like {@link toRides}.
+ */
+export function toUpdatableRides(response: GatewayResponse): Ride[] {
+  const rows: RideRow[] = mapRowsByHeadings(response, UPDATABLE_ORDERS_HEADINGS);
+  return listRides(rows.map((row) => toRide(row, { voucherNo: null, feedbackLeft: false })));
 }
 
 /** The list narrowed to the form's dates and payment filter — the contract has no payment parameter. */

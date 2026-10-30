@@ -4,16 +4,18 @@ import type { PersonalInfoValue } from '@/components/profile/PersonalInfoSection
 import type { PhoneValue } from '@/components/ui/PhoneField';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { PROFILE_MESSAGES } from '@/constants/messages';
-import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
+import { GatewayError, type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 import { digitsOnly } from '@/utils/contact';
 import { COUNTRIES, findCountryByDial, toIntlDigits } from '@/utils/phone';
 
 /**
  * The signed-in customer's profile, mapped from a `PROF.S.LOAD_PROFILE` row.
  * Only the columns its `JMetaData.Headings` name are read, each value paired
- * with the heading at the same position (`mapRows`); values past the last
- * heading are ignored (docs/XYZ_INTEGRATION_GUIDE.md §10). Field names are
- * renamed here so screens never read raw gateway columns.
+ * with the heading at the same position (`mapRowsByHeadings`); values past the
+ * last heading are ignored, and a heading that stops coming fails the load
+ * (docs/XYZ_INTEGRATION_GUIDE.md §10). Today's pairing is shifted (`first_name`
+ * carries the password); it is shown as paired until the gateway is fixed.
+ * Field names are renamed here so screens never read raw gateway columns.
  */
 
 export type CustomerProfile = {
@@ -53,7 +55,7 @@ export const CONFIRMATION_CODES = {
 /** `P_SPECIAL_OFFER`: "N" is the sample; "Y" opts in. */
 export const SPECIAL_OFFER_CODES = { yes: 'Y', no: 'N' } as const;
 
-/** `P_ADDRESS_TYPE`. "HOME" is the backend test client's value. */
+/** `P_ADDRESS_TYPE`. "HOME" is the backend test client's value (`PROF.I.PROFILE`, `PROF.U.PROFILE`). */
 export const ADDRESS_TYPE_CODES: Record<AddressType, string> = {
   home: 'HOME',
   // TODO(schema-unverified): the office code is not in any backend sample;
@@ -89,7 +91,15 @@ const COLUMNS = {
   accountNumber: 'account_number',
 } as const;
 
-type ProfileRow = Record<string, string>;
+/** Every `LOAD_PROFILE` heading the app reads; the load fails closed without one. */
+const PROFILE_HEADINGS = Object.values(COLUMNS);
+
+export type ProfileRow = Record<(typeof COLUMNS)[keyof typeof COLUMNS], string>;
+
+/** The `PROF.S.LOAD_PROFILE` row, by heading. Throws `GatewayError('parsing')` when a heading is missing. */
+export function toProfileRow(response: GatewayResponse): ProfileRow | undefined {
+  return mapRowsByHeadings(response, PROFILE_HEADINGS)[0];
+}
 
 export function toCustomerProfile(rows: ProfileRow[] | undefined): CustomerProfile | null {
   const row = rows?.[0];
@@ -140,6 +150,8 @@ export function mailingAddressParams(address: MailingAddress): GatewayJData {
     P_CROSS_STREET1: address.crossStreet.trim(),
     // Apt # / Mail stop has no parameter of its own, so it uses the second
     // cross-street slot, which the form does not otherwise fill.
+    // TODO(schema-unverified): the backend test client sends a second cross
+    // street here (`8TH AVE`); confirm which parameter takes the apartment.
     P_CROSS_STREET2: address.unit.trim(),
     P_ADDRESS_PHONE: digitsOnly(`${address.intlDialCode}${address.intlPhone}`),
     P_ADDRESS_PHONE_US: digitsOnly(address.phone),
@@ -155,26 +167,20 @@ export function mailingAddressParams(address: MailingAddress): GatewayJData {
  * than sent blank — the update never clears data the app was never shown.
  */
 function loadedProfileParams(row: ProfileRow): GatewayJData {
-  const has = (column: string) => column in row;
-  const params: GatewayJData = {};
-
-  if (has(COLUMNS.firstName)) params.P_FIRST_NAME = text(row, COLUMNS.firstName);
-  if (has(COLUMNS.lastName)) params.P_LAST_NAME = text(row, COLUMNS.lastName);
-  if (has(COLUMNS.intlDial) || has(COLUMNS.intlNumber)) {
-    params.P_PHONE_NUMBER = joinedDigits(row, COLUMNS.intlDial, COLUMNS.intlNumber);
-  }
-  if (has(COLUMNS.intlExt)) params.P_PHONE_EXT = digits(row, COLUMNS.intlExt);
-  if (has(COLUMNS.usNumber)) params.P_PHONE_NUMBER_US = digits(row, COLUMNS.usNumber);
-  if (has(COLUMNS.usExt)) params.P_PHONE_EXT_US = digits(row, COLUMNS.usExt);
-  // The contract has no fax extension parameter.
-  if (has(COLUMNS.faxDial) || has(COLUMNS.faxNumber)) {
-    params.P_FAX = joinedDigits(row, COLUMNS.faxDial, COLUMNS.faxNumber);
-  }
-  return params;
+  return {
+    P_FIRST_NAME: text(row, COLUMNS.firstName),
+    P_LAST_NAME: text(row, COLUMNS.lastName),
+    P_PHONE_NUMBER: joinedDigits(row, COLUMNS.intlDial, COLUMNS.intlNumber),
+    P_PHONE_EXT: digits(row, COLUMNS.intlExt),
+    P_PHONE_NUMBER_US: digits(row, COLUMNS.usNumber),
+    P_PHONE_EXT_US: digits(row, COLUMNS.usExt),
+    // The contract has no fax extension parameter.
+    P_FAX: joinedDigits(row, COLUMNS.faxDial, COLUMNS.faxNumber),
+  };
 }
 
 /** Calling code + number as one run of digits, or '' when there is no number. */
-function joinedDigits(row: ProfileRow, dialColumn: string, numberColumn: string): string {
+function joinedDigits(row: ProfileRow, dialColumn: ProfileColumn, numberColumn: ProfileColumn): string {
   const number = digits(row, numberColumn);
   return number ? `${digits(row, dialColumn)}${number}` : '';
 }
@@ -272,32 +278,40 @@ export function updateMailingAddressJData(
 }
 
 /**
- * Throws unless the update's first row carries `o_code` "0". A missing code
- * fails closed; `rejected` is shown when the server refuses without a message.
+ * Throws unless the update's first row carries `o_code` "0". A missing
+ * `o_code` heading or row fails closed; `rejected` is shown when the server
+ * refuses without a message.
  */
 export function assertProfileUpdated(
   response: GatewayResponse,
   rejected: string = PROFILE_MESSAGES.UPDATE_REJECTED,
 ): void {
-  const result = mapRows(response)[0];
-  if (!result || !('o_code' in result)) {
-    throw new GatewayError('parsing', 'The profile update response has no result code.');
-  }
+  const result = mapRowsByHeadings(response, ['o_code', 'o_message'])[0];
+  if (!result) throw new GatewayError('parsing', 'The profile update response has no result row.');
+  // TODO(schema-unverified): `PROF.U.PROFILE` has never been sent (guide §10),
+  // so "0" = saved is assumed; confirm its answers against guide §10.
   if (result.o_code !== DB_SUCCESS_CODE) {
-    throw new ProfileError(result.o_message || rejected);
+    throw new ProfileError(result.o_message.trim() || rejected);
   }
 }
 
-function text(row: ProfileRow, column: string): string {
-  return row[column]?.trim() ?? '';
+type ProfileColumn = keyof ProfileRow;
+
+function text(row: ProfileRow, column: ProfileColumn): string {
+  return row[column].trim();
 }
 
-function digits(row: ProfileRow, column: string): string {
+function digits(row: ProfileRow, column: ProfileColumn): string {
   return text(row, column).replace(/\D/g, '');
 }
 
 /** A calling code with no number is noise, so the country is kept only alongside one. */
-function intlPhone(row: ProfileRow, dialColumn: string, numberColumn: string, extColumn: string): PhoneValue {
+function intlPhone(
+  row: ProfileRow,
+  dialColumn: ProfileColumn,
+  numberColumn: ProfileColumn,
+  extColumn: ProfileColumn,
+): PhoneValue {
   const number = digits(row, numberColumn);
   if (!number) return { country: null, number: '', ext: '' };
   return {
@@ -307,15 +321,19 @@ function intlPhone(row: ProfileRow, dialColumn: string, numberColumn: string, ex
   };
 }
 
-/** "10/11/2026 09:20 AM" (MM/DD/YYYY hh:mm AM|PM, local time) → Date. */
-const DATE_TIME = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
+/**
+ * "10/15/2026 6:45:35 AM" or "10/11/2026 09:20 AM" (MM/DD/YYYY hh:mm[:ss]
+ * AM|PM, local time; guide 06) → Date. `last_login` has never carried a value
+ * yet (guide §10), so the format is the old site's.
+ */
+const DATE_TIME = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i;
 
-function parseGatewayDateTime(value: string | undefined): Date | null {
-  const match = value?.trim().match(DATE_TIME);
+function parseGatewayDateTime(value: string): Date | null {
+  const match = value.trim().match(DATE_TIME);
   if (!match) return null;
 
-  const [, month, day, year, hour, minute, meridiem] = match;
+  const [, month, day, year, hour, minute, second, meridiem] = match;
   const hours = (Number(hour) % 12) + (meridiem.toUpperCase() === 'PM' ? 12 : 0);
-  const date = new Date(Number(year), Number(month) - 1, Number(day), hours, Number(minute));
+  const date = new Date(Number(year), Number(month) - 1, Number(day), hours, Number(minute), Number(second ?? 0));
   return Number.isNaN(date.getTime()) ? null : date;
 }

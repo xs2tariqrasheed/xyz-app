@@ -188,13 +188,17 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
 
 test('express checkout opens a zoned ready-now ride on the preview and books nothing', async ({ page }) => {
   const { saved } = await logIn(page);
-  expect(saved.length).toBeGreaterThan(1);
+  // The live list repeats some addresses, so the drop-off is the first one
+  // that reads differently from the pickup, and each label's first radio is used.
+  const pickup = savedLabel(saved[0]);
+  const dropoff = saved.map(savedLabel).find((label) => label !== pickup);
+  expect(dropoff, 'two different saved addresses').toBeDefined();
   const calls = recordGatewayCalls(page);
 
   await page.getByRole('radiogroup', { name: 'Select your pickup location' })
-    .getByRole('radio', { name: savedLabel(saved[0]) }).click();
+    .getByRole('radio', { name: pickup, exact: true }).first().click();
   await page.getByRole('radiogroup', { name: 'Select your dropoff location' })
-    .getByRole('radio', { name: savedLabel(saved[1]) }).click();
+    .getByRole('radio', { name: dropoff, exact: true }).first().click();
 
   await page.getByRole('button', { name: 'Express Checkout' }).click();
   await expect(page).toHaveURL(/\/reserver-2$/);

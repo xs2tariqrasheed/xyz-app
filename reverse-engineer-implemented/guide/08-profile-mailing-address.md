@@ -1,4 +1,6 @@
-> ✅ **Implemented** in the XYZ app (2026-10-16). `/mailing-address` loads the address columns from `PROF.S.LOAD_PROFILE` and saves the 11 address parameters with `PROF.U.PROFILE` through `ProfileContext.updateMailingAddress`; registration's address step uses the same validator.
+> ✅ **Implemented** in the XYZ app (`/mailing-address`). Today it shows "not available", because `PROF.S.LOAD_PROFILE` sends no mailing-address headings (§7). Saving goes through `PROF.U.PROFILE` via `ProfileContext.updateMailingAddress`, and registration's address step uses the same validator.
+>
+> ✅ **Migrated to real gateway data** (2026-10-30): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §7 Gateway (real data).
 
 # Module 08 — Profile: Update Billing / Mailing Address
 
@@ -39,3 +41,20 @@ Response: JSON with non-empty `message` → show; otherwise HTML page (success).
 
 ## 6. Revamp notes
 `GET/PUT /me/profile/mailing-address`. Note field length differences vs registration (StreetName2/Apt 20 at registration, 30 here) — standardise.
+
+## 7. Gateway (real data)
+
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10).
+
+| Action code | Real answers |
+|---|---|
+| `PROF.S.LOAD_PROFILE` | No mailing-address headings. The address's country code (`01`), state and city arrive only past the last heading, so they're ignored and the screen shows "not available". |
+| `PROF.S.USER_PROFILE_ADDRESSES` | Headings match, but it is the profile's frequent-pickup list (17 rows for the test login), not one mailing address, so it isn't used here. Unknown login → `"1"` / `ORA-01001`. |
+| `PROF.U.PROFILE` | Not sent: refused while `LOAD_PROFILE` has values past its last heading. |
+
+Value codes follow the backend test client (`P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`). Client rules: ZIP 5 digits, building # ≤ 6 digits, street 4–30 street characters, Apt # with no `"`, and at least one address phone.
+
+**Still unverified:**
+- Which code and headings return the mailing address.
+- The office `P_ADDRESS_TYPE` code (the app sends `O`) and non-US `P_COUNTRY` codes.
+- Where Apt # / Mail stop goes: the app uses `P_CROSS_STREET2`, which the test client fills with a second cross street.

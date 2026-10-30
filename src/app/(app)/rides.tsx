@@ -14,6 +14,7 @@ import { RIDES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { useOpenReservation } from '@/hooks/useReservationActions';
+import type { GatewayResponse } from '@/services/gateway';
 import { openRateRide } from '@/services/rateRide';
 import {
   allOrdersJData,
@@ -22,6 +23,7 @@ import {
   HISTORY_REACH_DAYS,
   type Ride,
   toRides,
+  toUpdatableRides,
   updatableOrdersJData,
 } from '@/services/rides';
 import { colors, radii, space } from '@/theme';
@@ -101,16 +103,16 @@ export default function RideSearchScreen() {
   );
 }
 
-/** Maps a list response, treating a refusal like a failed load. */
-function useRides(data: Parameters<typeof toRides>[0] | undefined) {
+/** Maps a list response with its code's mapper, treating a mapping failure like a failed load. */
+function useRides(data: GatewayResponse | undefined, toList: (response: GatewayResponse) => Ride[]) {
   return useMemo((): { rides: Ride[]; refused: boolean } => {
     if (!data) return { rides: [], refused: false };
     try {
-      return { rides: toRides(data), refused: false };
+      return { rides: toList(data), refused: false };
     } catch {
       return { rides: [], refused: true };
     }
-  }, [data]);
+  }, [data, toList]);
 }
 
 function UpcomingRides({
@@ -127,7 +129,7 @@ function UpcomingRides({
     GATEWAY_VIEW_NAME,
     updatableOrdersJData(loginId),
   );
-  const { rides, refused } = useRides(data);
+  const { rides, refused } = useRides(data, toUpdatableRides);
   // Soonest first: what is coming next leads.
   const sorted = useMemo(() => [...rides].reverse(), [rides]);
 
@@ -171,7 +173,7 @@ function RideHistory({
     GATEWAY_VIEW_NAME,
     allOrdersJData(loginId, searched.from, searched.to),
   );
-  const { rides, refused } = useRides(data);
+  const { rides, refused } = useRides(data, toRides);
   // The contract has no payment parameter, so the filter runs here.
   const shown = useMemo(() => filterRides(rides, searched), [rides, searched]);
 

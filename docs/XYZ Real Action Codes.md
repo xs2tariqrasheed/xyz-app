@@ -8,6 +8,10 @@ Which action codes are moved from the stub's dummy data to the gateway's **real*
 3. Map it in its service, by heading or by position as §10 says.
 4. Verify it in the app.
 5. Set its status here to ✅.
+6. Once every code a module uses is ✅ (or recorded as Blocked / Needs data / Not probed with its reason), give the module guide in `reverse-engineer-implemented/guide/` a **Gateway (real data)** section, and add this line under its `✅ Implemented` banner:
+   `> ✅ **Migrated to real gateway data** (<date>): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §N Gateway (real data).`
+
+**Module guides migrated:** 03 Forgot password, 04 Registration, 06 Member home & Express ride, 07 Personal info, 08 Mailing address.
 
 Never probe a write code without an agreed test record.
 
@@ -31,13 +35,13 @@ Probed on 2026-10-30 with a test login unless stated.
 | Action code | R/W | Probed | Shape | Headings OK? | Status | Notes |
 |---|---|---|---|---|---|---|
 | `PROF.S.CHECK_LOGIN_CREDENTIALS` | R | 2026-10-30 | A | Yes | ✅ Migrated | `o_message` = VIP number on success, stored in the session |
-| `PROF.S.LOAD_PROFILE` | R | 2026-10-30 | B | No (15 vs 44) | ✅ Migrated | Mapped by its 15 headings; the extra values are ignored. `first_name` pairs with the password (backend issue). Preferences and mailing address are not available, and profile updates are refused. |
-| `PROF.S.USER_ADDRESSES` | R | 2026-10-30 | B | No (16 vs 17) | ✅ Migrated | Mapped by its 16 headings. `address_id` is `"01"` on every row, so update and delete are refused; list keys use the row position. |
-| `PROF.S.USER_PROFILE_ADDRESSES` | R | 2026-10-30 | B | Yes (`oCountry…`) | ✅ Migrated | Read by its own `o…` headings; shown in the booking form's address fields. |
-| `PROF.S.CORPORATE_ADDRESSES` | R | 2026-10-30 | B | Yes (`oCountry…`) | ✅ Migrated | As above (loaded only with an account number) |
+| `PROF.S.LOAD_PROFILE` | R | 2026-10-30 | B | No (15 vs 44) | ✅ Migrated | Read with `mapRowsByHeadings` (fails closed when a heading stops coming); the extra values are ignored. `first_name` pairs with the password and Home's welcome line and Personal Info show it (critical backend issue). `last_login` always empty. Unknown login → `["X"]`. Preferences and mailing address are not available, and profile updates are refused. Re-probed 2026-10-30. |
+| `PROF.S.USER_ADDRESSES` | R | 2026-10-30 | B | No (16 vs 17) | ✅ Migrated | Mapped by its 16 headings. `address_id` is `"01"` on every row, so update and delete are refused; list keys use the row position. Feeds the Express lists, shifted (`country` = state…). Unknown login → `["X"]` → empty list. Re-probed 2026-10-30. |
+| `PROF.S.USER_PROFILE_ADDRESSES` | R | 2026-10-30 | B | Yes (`oCountry…`) | ✅ Migrated | Read by its own `o…` headings; shown in the booking form's address fields. 17 rows for the test login: the frequent-pickup list, not the mailing address (so Update Mailing Address doesn't use it). Unknown login → `"1"` / `ORA-01001`. |
+| `PROF.S.CORPORATE_ADDRESSES` | R | 2026-10-30 | B | Yes (`oCountry…`) | ✅ Migrated | As above (loaded only with an account number). 2 rows for the test account; unknown account → 0 rows. |
 | `RES.S.VEHICLE_TYPE` | R | 2026-10-30 | B | Partly (2 of 5) | Move to heading-only reads | `[car_type, car_type_name]` only |
-| `RES.S.ALL_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | Move to heading-only reads | Invalid JSON, now repaired by `parseBody`. `P_TOTAL_RECORDS` not honoured. |
-| `RES.S.UPDATABLE_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | Move to heading-only reads | Same row as `ALL_ORDERS` |
+| `RES.S.ALL_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | ✅ Migrated | Read with `mapRowsByHeadings`, one heading per field. `pickup_date` pairs with a first name, so no row can be listed: Home, History and Receipts show their empty states. Dates sent as `MM-DD-YYYY` (test client). Invalid JSON, repaired by `parseBody`. `P_TOTAL_RECORDS` not honoured. |
+| `RES.S.UPDATABLE_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | ✅ Migrated | Same row as `ALL_ORDERS`, but its last two headings are `car_type, number_of_passengers`. Read by its own headings; no row can be listed (same shift), so Upcoming is empty. |
 | `RES.S.LOAD_RESERVATION` | R | 2026-10-30 | B | No (39 vs 160) | Move to heading-only reads | Invalid JSON, now repaired |
 | `RES.S.ALL_PREDEFINED_QUESTIONS` | R | 2026-10-30 | B | No | Move to heading-only reads | `[question_id, text]` under `o_code/o_message` headings |
 | `PROF.S.ACCOUNT_REQUIREMENTS_RS` | R | 2026-10-30 | B | No (4 vs 1) | Needs data | `[["X"]]` for every account tried. The label is read from `o_message` alone (`TODO(schema-unverified)`). Needs an account with requirements. |
@@ -49,8 +53,8 @@ Probed on 2026-10-30 with a test login unless stated.
 | `PROF.S.ACCOUNT_VIP_NUM` | R | 2026-10-30 | A | Yes (`pAccountNum, pVIPNum`) | Ready | No `o_code` |
 | `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` | R | 2026-10-30 | A | Yes | Ready | `"0"` / `Corporate Account` |
 | `RES.S.BILLING_METHOD` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | `"1"` = Corporate Account (a method, not an error) |
-| `RES.S.GOOGLE_ZONE_NUM` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | `"1"` + zone number in `o_message` |
-| `RES.S.ZONE_THE_LOCATION` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | Empty `o_code` for an address that did not zone |
+| `RES.S.GOOGLE_ZONE_NUM` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | `"1"` + zone number in `o_message`, also at 0,0 (`90000999`), so `"1"` doesn't prove a match. Read by heading; the app still matches only on `"0"` (fails closed into the acknowledgement) until the backend documents it. |
+| `RES.S.ZONE_THE_LOCATION` | R | 2026-10-30 | A | Yes | Needs data | `[["", ""]]` for every input tried: saved addresses, the test client's sample, an airport, a made-up street. Read by heading (`o_code`, `o_message`); a match is `"0"` with the zone in `o_message` (`TODO(schema-unverified)`). Every Express stop goes to the acknowledgement today. |
 | `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | `"5"` / `No Data Found` |
 | `RES.S.COMMUNICATION_LOG` | R | 2026-10-30 | ? | — | Needs data | No rows for the reservation tried |
 | `RES.S.VEHICLE_LOG` | R | 2026-10-30 | ? | — | Needs data | No rows for the reservation tried |
@@ -74,7 +78,7 @@ Probed on 2026-10-30 with a test login unless stated.
 | `RES.I.ASKED_QUESTIONS` | W | — | — | — | Not probed: writes data | |
 | `PROF.U.PASSWORD` | W | — | — | — | Not probed: writes data | Changes the test login's password |
 | `PROF.I.PROFILE` | W | 2026-10-30 | A | Yes | Blocked | One real corporate create: `"9"` / `ORA-12899 … PREFERRED_KNOCKOFF_CODE (actual: 2, maximum: 1)`. No profile created. The backend must say which parameter fills that column and its codes (likely `P_CONFIRMATION_METHOD`). |
-| `PROF.U.PROFILE` | W | — | — | — | Not probed: writes data | Replaces the whole profile. Map `LOAD_PROFILE` first. |
+| `PROF.U.PROFILE` | W | — | — | — | Not probed: writes data | Replaces the whole profile. Refused in the app while `LOAD_PROFILE` has values past its last heading, so it can't be sent until the backend fixes that. Value codes follow the test client (`P_COUNTRY 01`, `P_ADDRESS_TYPE HOME`). The answer read is `o_code` / `o_message` by heading; `"0"` = saved is unverified. |
 | `PROF.I.USER_ADDRESS` | W | — | — | — | Not probed: writes data | |
 | `PROF.U.USER_ADDRESS` | W | — | — | — | Not probed: writes data | |
 | `PROF.D.USER_ADDRESS` | W | — | — | — | Not probed: writes data | |
@@ -91,7 +95,7 @@ Every code moves to **heading-only reads** (guide §4): pair each heading with i
 
 1. ✅ `PROF.S.CHECK_LOGIN_CREDENTIALS`, `PROF.S.LOAD_PROFILE`, `PROF.S.USER_ADDRESSES`, `PROF.S.USER_PROFILE_ADDRESSES`, `PROF.S.CORPORATE_ADDRESSES`: migrated.
 2. `RES.S.VEHICLE_TYPE`, `RES.S.ALL_PREDEFINED_QUESTIONS`.
-3. `RES.S.ALL_ORDERS` / `UPDATABLE_ORDERS` (Home, History, Upcoming), then `RES.S.LOAD_RESERVATION`.
+3. ✅ `RES.S.ALL_ORDERS` / `UPDATABLE_ORDERS` (Home, History, Upcoming); next `RES.S.LOAD_RESERVATION`.
 4. The booking-wizard lookups (shape A, `o_code` meanings per guide §10).
 5. Write codes, once the backend agrees a test record and account to use.
 
@@ -106,3 +110,20 @@ Every code moves to **heading-only reads** (guide §4): pair each heading with i
 - **Broken:** `PROF.S.CAR_INFO` (ORA-01001).
 - **`P_TOTAL_RECORDS` is ignored** by `RES.S.ALL_ORDERS`.
 - **`o_code` conventions differ per code** (`BILLING_METHOD`, `GOOGLE_ZONE_NUM`, `LATITUDE_LONGITUDE_FOR_CAR`). Ask for the documented outputs of each procedure.
+- **`PROF.S.LOAD_PROFILE` shows the password (critical).** Its `first_name` heading pairs with the plaintext password, so the app's welcome line ("Welcome back, …") and the Personal Info first-name field display it. Every other heading is shifted too (`last_name` = first name, `email` = last name).
+- **`PROF.S.LOAD_PROFILE` has no mailing-address or preference headings.** The mailing address's country code, state and city sit past the last heading, so Update Mailing Address and Preferences can't show anything, and `PROF.U.PROFILE` can't be sent.
+- **`PROF.S.USER_ADDRESSES` is shifted by one** (`country` = the state, `city` = the ZIP…) and `address_id` is `"01"` on every row. The Express lists on Home show the shifted values.
+- **`RES.S.ALL_ORDERS` / `UPDATABLE_ORDERS` are shifted:** `reservation_num` = the login id and `pickup_date` = a first name, so no ride can be listed on Home, History, Upcoming or Receipts.
+- **`RES.S.ZONE_THE_LOCATION` never zones:** `[["", ""]]` for every input tried, including the test client's own sample.
+
+## Questions for the backend
+
+- **`PROF.U.PROFILE`:** does it keep omitted parameters unchanged, or must every parameter be sent? What does it answer (`o_code` / `o_message`) on success and on refusal?
+- **`PROF.U.PROFILE` value codes** with no sample: office `P_ADDRESS_TYPE`, phone `P_CONFIRMATION_METHOD` (the update sample sends `''`), non-US `P_COUNTRY`.
+- **Apt # / Mail stop:** the test client fills `P_CROSS_STREET1` / `P_CROSS_STREET2` with two cross streets. Which parameter takes the apartment / mail stop?
+- **Mailing address:** which code returns the profile's mailing address, and under which headings?
+- **`last_login`:** when is it filled, and in which format?
+- **`RES.S.GOOGLE_ZONE_NUM`:** what marks "outside the service area"? `0, 0` answered `"1"` / `90000999`.
+- **`RES.S.ZONE_THE_LOCATION`:** which input zones a street, and what does a match answer?
+- **`RES.S.ALL_ORDERS` dates:** the test client sends `MM-DD-YYYY` and no `P_TOTAL_RECORDS`; the contract has `MM/DD/YYYY` and `P_TOTAL_RECORDS`. Which is right? Both returned the same rows.
+- **Announcements ("What's New") on Home:** is there an action code for them?

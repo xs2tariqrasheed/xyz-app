@@ -30,9 +30,9 @@ export const ACTION_CODES = {
   CREATE_PROFILE: 'PROF.I.PROFILE',
 
   // ── Reservation flow: lookups (reverse-engineer-implemented/guide/05) ──────────────────
-  /** P_LOGIN_ID → saved addresses: the 17-column address record (oCountry … oePickupCount …), headings do not match — read by position. */
+  /** P_LOGIN_ID → saved addresses: 16 headings (address_id … driver_notes) over 17 values, read by heading (guide §10). */
   USER_ADDRESSES: 'PROF.S.USER_ADDRESSES',
-  /** P_LOGIN_ID → the profile's home / office addresses: the 17-column address record. */
+  /** P_LOGIN_ID → the profile's frequent pickup places (oCountry … oeLastServiceDate, headings match; guide §10). */
   USER_PROFILE_ADDRESSES: 'PROF.S.USER_PROFILE_ADDRESSES',
   /** P_ACCOUNT_NUM → the company's own locations: the 17-column address record. */
   CORPORATE_ADDRESSES: 'PROF.S.CORPORATE_ADDRESSES',
@@ -86,7 +86,7 @@ export const ACTION_CODES = {
   FORMAT_EMAIL_MESSAGE: 'RES.U.FORMAT_EMAIL_MESSAGE',
 
   // ── Reservation records (guides 18–24) ─────────────────────────────────────
-  /** P_LOGIN_ID, P_DATE_FROM, P_DATE_TO, P_TOTAL_RECORDS → ride history rows. */
+  /** P_LOGIN_ID, P_DATE_FROM, P_DATE_TO (MM-DD-YYYY), P_TOTAL_RECORDS → ride history rows (10 headings; guide §10). */
   ALL_ORDERS: 'RES.S.ALL_ORDERS',
   /** P_LOGIN_ID → open reservations that can still be changed or cancelled. */
   UPDATABLE_ORDERS: 'RES.S.UPDATABLE_ORDERS',

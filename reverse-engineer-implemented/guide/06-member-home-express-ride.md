@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-10-30): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §8 Gateway (real data).
 
 # Module 06 — Member Home & Express Ride ("I am ready for pickup")
 
@@ -43,3 +45,24 @@ Response: page/redirect **[U]**. Client code in the booking module supports an e
 - `GET /me/home` → `{ lastLoginAt, announcements[], frequentAddresses[], savedAddresses[] }`.
 - `POST /reservations/express { pickupAddressId, dropoffAddressId }` → create draft with defaults → return draft for one-click confirm (or confirm immediately if product wants true one-click).
 - **Unknown**: whether the express POST books immediately or returns to the wizard; not executed (would dispatch a car).
+
+## 8. Gateway (real data)
+
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §7a, §10). Every code below is read by its own headings; values past the last heading are ignored.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `PROF.S.LOAD_PROFILE` | Home opens (shared with Profile) | 15 headings, 44 values, shifted: `first_name` holds the **password**, which the welcome line shows as paired (backend issue). `last_login` is always empty, so no last-login line shows. |
+| `RES.S.ALL_ORDERS` | Home opens (±92 days) | 10 headings, 112 values, shifted: `reservation_num` = login id, `pickup_date` = a first name. No row has a date, so the tiles count 0 and the lists show their empty states. |
+| `PROF.S.USER_ADDRESSES` | Express pickup / drop-off lists | 16 headings, 17 values, shifted by one (`country` = state, `city` = ZIP…), shown as paired. 20 rows for the test login. |
+| `PROF.S.USER_PROFILE_ADDRESSES`, `PROF.S.CORPORATE_ADDRESSES` | Booking form's "Your places" | Headings match (17). The first is the frequent-pickup list (17 rows). |
+| `RES.S.ZONE_THE_LOCATION` | Express → both stops zoned by street | `["", ""]` for every input tried, so both stops go to the "confirm this address" step. |
+
+- **Express writes nothing.** It opens the booking form's Preview with a live ("ready now") draft. Only "Book reservation" there sends `RES.I.RESERVATION`, and that is not tested here because it creates a real ride.
+- **"What's New":** no action code exists, so Home shows no announcements.
+- **The 15-minute dispatch note** is copy from the old site (§3), not a gateway value.
+
+**Still unverified:**
+- The `last_login` format (the app reads `MM/DD/YYYY h:mm[:ss] AM|PM`).
+- A zoned street's answer from `ZONE_THE_LOCATION` (assumed `"0"` plus the zone in `o_message`, `TODO(schema-unverified)`).
+- Ride status and payment words, because no `status` / `payment_method` heading has carried a real value yet.

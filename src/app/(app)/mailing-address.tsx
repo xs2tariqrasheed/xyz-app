@@ -121,11 +121,12 @@ function MailingAddressPanel({ initial, onSave, onScrollTop }: MailingAddressPan
     // fixed without new ones appearing mid-typing.
     if (errorCount > 0) {
       const fresh = validateMailingAddress(next);
-      setErrors(
-        Object.fromEntries(
-          Object.entries(fresh).filter(([field]) => field in errors),
-        ) as MailingAddressErrors,
-      );
+      const kept: MailingAddressErrors = {};
+      let field: keyof MailingAddress;
+      for (field in errors) {
+        if (fresh[field]) kept[field] = fresh[field];
+      }
+      setErrors(kept);
     }
   };
 

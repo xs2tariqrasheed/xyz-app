@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app (`/profile` → Personal Info: `PROF.S.LOAD_PROFILE` + `PROF.U.PROFILE` via `ProfileContext`)
+>
+> ✅ **Migrated to real gateway data** (2026-10-30): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §8 Gateway (real data).
 
 # Module 07 — Profile: Update Personal Information
 
@@ -45,3 +47,18 @@ Pre-filled current values of all fields above.
 
 ## 7. Revamp notes
 `GET /me/profile` → `{firstName,lastName,email,phones:{us,usExt,intlCode,intl,intlExt},fax:{code,number}}`; `PUT /me/profile/personal`. Server success message text **[U]**.
+
+## 8. Gateway (real data)
+
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10).
+
+| Action code | When | Real answers |
+|---|---|---|
+| `PROF.S.LOAD_PROFILE` | Profile opens | 15 headings, 44 values per row. Read by heading with `mapRowsByHeadings`, so a missing heading shows the load error. The pairing is shifted: `first_name` = the **password**, `last_name` = the first name, `email` = the last name, and the phone and fax headings pair with phone fragments, a country code, a state and a city. The form shows those values as paired (backend issue). Unknown login → one row `["X"]`. |
+| `PROF.U.PROFILE` | Update | **Not sent.** It is refused while `LOAD_PROFILE` has values past its last heading (`UPDATE_UNAVAILABLE`, shown in the form). |
+
+Value codes follow the backend test client's update sample (`P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`, `P_PAYMENT_TYPE` `1`). Client rules are in §3: first name ≤ 15 with no digits or `"`; last name 2–20 with no digits or `"`; US phone 10 digits, not starting with 0 or 1; extensions ≤ 5 digits; international and fax numbers ≥ 7 digits with the calling code; at least one callback phone.
+
+**Still unverified:**
+- What `PROF.U.PROFILE` answers (`"0"` = saved is assumed, `TODO(schema-unverified)`), and whether it keeps the parameters the app leaves out (password, address, card, preferences) unchanged.
+- The server's success message text.

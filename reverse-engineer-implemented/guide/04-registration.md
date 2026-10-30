@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-10-30): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §8 Gateway (real data).
 
 # Module 04 — Registration (New Member Profile)
 
