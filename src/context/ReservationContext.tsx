@@ -182,8 +182,9 @@ function freshDraft(now: Date, profile: CustomerProfile | null): ReservationDraf
     preferences: profile
       ? {
           ...preferences,
-          // Module 09: the saved preference is the new booking's default.
-          confirmByPhone: profile.preferences.confirmByPhone,
+          // Module 09: the saved preference is the new booking's default;
+          // without one (LOAD_PROFILE sends none today) the form keeps its own.
+          confirmByPhone: profile.preferences ? profile.preferences.confirmByPhone : preferences.confirmByPhone,
           email: profile.email,
           callbackUs: profile.personalInfo.usPhone,
           callbackIntl: profile.personalInfo.intlPhone,
@@ -571,7 +572,7 @@ function SignedInReservationProvider({ loginId, children }: { loginId: string; c
       const booked: ReservationDraft = { ...current, billing: await verifyBilling(current.billing) };
       const { mode, editing } = stateRef.current;
       const now = new Date();
-      const context = { loginId, now, carPreferences: profileRef.current?.carPreferences };
+      const context = { loginId, now };
       const response =
         mode === 'edit' && editing
           ? await saveReservation.mutateAsync(

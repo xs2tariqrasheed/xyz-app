@@ -107,28 +107,38 @@ export function mapRows(response: GatewayResponse): Record<string, string>[] {
 }
 
 /**
- * Pairs each `JData` row with `columns` by position, ignoring
- * `JMetaData.Headings`. For record sets whose headings do not match their rows
- * (docs/XYZ_INTEGRATION_GUIDE.md §4, §10 has each code's column list).
- * A position the row does not reach becomes ''; callers that rely on a fixed
- * layout check the row length first.
+ * {@link mapRows}, for a caller that reads `headings`: every one of them must
+ * be among the response's own `JMetaData.Headings`, or the response fails
+ * closed. Values are still paired by heading position; values past the last
+ * heading are ignored (docs/XYZ_INTEGRATION_GUIDE.md §4).
  */
-export function mapRowsByPosition<Column extends string>(
+export function mapRowsByHeadings<Heading extends string>(
   response: GatewayResponse,
-  columns: readonly Column[],
-): Record<Column, string>[] {
-  const rows = response.JData;
-  if (!Array.isArray(rows)) return [];
+  headings: readonly Heading[],
+): Record<Heading, string>[] {
+  const rows = mapRows(response);
+  if (rows.length === 0) return [];
 
-  return rows
-    .filter((row): row is unknown[] => Array.isArray(row))
-    .map(
-      (row) =>
-        // Every column is set from its position, so the record is complete.
-        Object.fromEntries(
-          columns.map((key, index) => [key, row[index] == null ? '' : String(row[index])]),
-        ) as Record<Column, string>,
-    );
+  const sent = (response.JMetaData?.Headings ?? []).map((heading) =>
+    String(Array.isArray(heading) ? heading[0] : heading),
+  );
+  const missing = headings.filter((heading) => !sent.includes(heading));
+  if (missing.length > 0) {
+    throw new GatewayError('parsing', `The response has no ${missing.join(', ')} heading.`);
+  }
+  // Every heading read was checked above, so each row carries all of them.
+  return rows as Record<Heading, string>[];
+}
+
+/**
+ * True when any row carries more values than there are headings. The extra
+ * values are ignored when mapping (docs/XYZ_INTEGRATION_GUIDE.md §4), and the
+ * heading–value pairing of such a response is not trusted for a write that
+ * sends loaded values back.
+ */
+export function hasUnheadedValues(response: GatewayResponse): boolean {
+  const headings = response.JMetaData?.Headings ?? [];
+  return (response.JData ?? []).some((row) => Array.isArray(row) && row.length > headings.length);
 }
 
 /** Ready-made copy for showing a failed gateway call (docs/XYZ_INTEGRATION_GUIDE.md §6). */

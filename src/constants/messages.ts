@@ -127,6 +127,8 @@ export const PROFILE_MESSAGES = {
   UPDATE_FAILED_TITLE: 'Personal info not updated',
   /** Server refused the update without saying why. */
   UPDATE_REJECTED: "We couldn't update your personal information.",
+  /** The loaded profile can't be sent back safely, so updates are off. */
+  UPDATE_UNAVAILABLE: "Your profile can't be updated right now.",
   UPDATE_SUCCESS: 'Personal information updated.',
   LOAD_FAILED_TITLE: 'Your profile could not be loaded',
   RETRY: 'Try again',
@@ -150,6 +152,8 @@ export const PREFERENCES_MESSAGES = {
   /** Server refused the update without saying why. */
   UPDATE_REJECTED: "We couldn't update your preferences.",
   LOAD_FAILED_TITLE: 'Your preferences could not be loaded',
+  /** The profile came back without any preferences. */
+  UNAVAILABLE: 'Your preferences are not available right now.',
   RETRY: 'Try again',
 } as const;
 
@@ -160,6 +164,8 @@ export const PREFERENCES_MESSAGES = {
 export const MAILING_ADDRESS_MESSAGES = {
   SCREEN_TITLE: 'Update Mailing Address',
   PANEL_TITLE: 'Mailing Address',
+  /** The profile came back without a mailing address. */
+  UNAVAILABLE: 'Your mailing address is not available right now.',
 
   COUNTRY_LABEL: 'Country',
   COUNTRY_PLACEHOLDER: 'Select a country',
@@ -393,6 +399,8 @@ export const ADDRESS_BOOK_MESSAGES = {
   /** The gateway refused a write without saying why. */
   SAVE_REJECTED: "We couldn't save this location.",
   DELETE_REJECTED: "We couldn't delete this location.",
+  /** The loaded list can't name a location safely, so update and delete are off. */
+  CHANGE_UNAVAILABLE: "Saved locations can't be changed right now.",
   LOAD_REJECTED: "We couldn't load your saved locations.",
   RETRY: 'Try again',
   // Validation (reverse-engineer-implemented/guide/11 §3, 26).

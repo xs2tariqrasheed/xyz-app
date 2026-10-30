@@ -15,10 +15,10 @@ Never probe a write code without an agreed test record.
 
 | Status | Meaning |
 |---|---|
-| ✅ Migrated | Real response inspected, app maps and renders it, verified in the app |
+| ✅ Migrated | Real response inspected. The app maps it by its own headings only (heading *n* ↔ value *n*, one name per field, values past the last heading ignored) and shows exactly what each heading pairs with, even where the gateway's pairing is wrong |
 | Ready | Probed. Headings match the row (shape A), so `mapRows` works. Check the service against the `o_code` meanings in §10. |
 | Ready — review `o_code` | As Ready, but `o_code` doesn't mean "0 = success" for this code. The service's checks must change. |
-| Positional map needed | Probed. Headings don't match the row (shape B). Needs a column list in §10 and position-based mapping. |
+| Move to heading-only reads | Probed, but the app still reads it with fallback names. Move to one heading name per field. |
 | Needs data | Probed, but the record tried returned no rows. Shape still unknown. |
 | Blocked | The gateway fails on this code (see §10). Needs a backend fix. |
 | Not probed | Not sent yet. The reason is given. |
@@ -31,17 +31,17 @@ Probed on 2026-10-30 with a test login unless stated.
 | Action code | R/W | Probed | Shape | Headings OK? | Status | Notes |
 |---|---|---|---|---|---|---|
 | `PROF.S.CHECK_LOGIN_CREDENTIALS` | R | 2026-10-30 | A | Yes | ✅ Migrated | `o_message` = VIP number on success, stored in the session |
-| `PROF.S.LOAD_PROFILE` | R | 2026-10-30 | B | No (15 vs 44) | Positional map needed | **Next.** Home's greeting reads it straight after login. Returns password + card number (backend issue). |
-| `PROF.S.USER_ADDRESSES` | R | 2026-10-30 | B | No (16 vs 17) | ✅ Migrated | Read by position (`ADDRESS_RECORD_COLUMNS`). Home and My Addresses checked in the app. Fixed the duplicate `saved:01` keys. |
-| `PROF.S.USER_PROFILE_ADDRESSES` | R | 2026-10-30 | B | Yes (`oCountry…`) | Ready | The service now reads the real `o…` names. Check it in the booking form's address step, then mark ✅. |
-| `PROF.S.CORPORATE_ADDRESSES` | R | 2026-10-30 | B | Yes (`oCountry…`) | Ready | As above (needs an account number) |
-| `RES.S.VEHICLE_TYPE` | R | 2026-10-30 | B | Partly (2 of 5) | Positional map needed | `[car_type, car_type_name]` only |
-| `RES.S.ALL_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | Positional map needed | Invalid JSON, now repaired by `parseBody`. `P_TOTAL_RECORDS` not honoured. |
-| `RES.S.UPDATABLE_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | Positional map needed | Same row as `ALL_ORDERS` |
-| `RES.S.LOAD_RESERVATION` | R | 2026-10-30 | B | No (39 vs 160) | Positional map needed | Invalid JSON, now repaired |
-| `RES.S.ALL_PREDEFINED_QUESTIONS` | R | 2026-10-30 | B | No | Positional map needed | `[question_id, text]` under `o_code/o_message` headings |
-| `PROF.S.ACCOUNT_REQUIREMENTS_RS` | R | 2026-10-30 | B | No | Positional map needed | `[["X"]]` for an account without requirements. Needs an account with requirements. |
-| `RES.S.ACCOUNT_REQUIREMENTS_LIST` | R | 2026-10-30 | B | No | Positional map needed | As above |
+| `PROF.S.LOAD_PROFILE` | R | 2026-10-30 | B | No (15 vs 44) | ✅ Migrated | Mapped by its 15 headings; the extra values are ignored. `first_name` pairs with the password (backend issue). Preferences and mailing address are not available, and profile updates are refused. |
+| `PROF.S.USER_ADDRESSES` | R | 2026-10-30 | B | No (16 vs 17) | ✅ Migrated | Mapped by its 16 headings. `address_id` is `"01"` on every row, so update and delete are refused; list keys use the row position. |
+| `PROF.S.USER_PROFILE_ADDRESSES` | R | 2026-10-30 | B | Yes (`oCountry…`) | ✅ Migrated | Read by its own `o…` headings; shown in the booking form's address fields. |
+| `PROF.S.CORPORATE_ADDRESSES` | R | 2026-10-30 | B | Yes (`oCountry…`) | ✅ Migrated | As above (loaded only with an account number) |
+| `RES.S.VEHICLE_TYPE` | R | 2026-10-30 | B | Partly (2 of 5) | Move to heading-only reads | `[car_type, car_type_name]` only |
+| `RES.S.ALL_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | Move to heading-only reads | Invalid JSON, now repaired by `parseBody`. `P_TOTAL_RECORDS` not honoured. |
+| `RES.S.UPDATABLE_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | Move to heading-only reads | Same row as `ALL_ORDERS` |
+| `RES.S.LOAD_RESERVATION` | R | 2026-10-30 | B | No (39 vs 160) | Move to heading-only reads | Invalid JSON, now repaired |
+| `RES.S.ALL_PREDEFINED_QUESTIONS` | R | 2026-10-30 | B | No | Move to heading-only reads | `[question_id, text]` under `o_code/o_message` headings |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS` | R | 2026-10-30 | B | No | Move to heading-only reads | `[["X"]]` for an account without requirements. Needs an account with requirements. |
+| `RES.S.ACCOUNT_REQUIREMENTS_LIST` | R | 2026-10-30 | B | No | Move to heading-only reads | As above |
 | `PROF.S.IS_UNIQUE_EMAIL` | R | 2026-10-30 | A | Yes | Ready | `"1"` / `Duplicate` for a login in use |
 | `PROF.S.IS_VALID_COMPANY_NAME` | R | 2026-10-30 | A | Yes | Ready | `"0"` / `Success` |
 | `PROF.S.IS_VALID_VIP` | R | 2026-10-30 | A | Yes | Ready | `o_message` = customer name on success |
@@ -87,12 +87,13 @@ Probed on 2026-10-30 with a test login unless stated.
 
 ## Migration order
 
-1. **`PROF.S.LOAD_PROFILE`**: login lands on Home, whose greeting reads it. Mapped by name, the greeting shows the wrong column today. Confirm the 44 positions (guide §10) with the backend, then map it with `mapRowsByPosition` (`src/services/gateway.ts`) in `src/services/profile.ts`.
-2. ~~`PROF.S.USER_ADDRESSES`~~ ✅. Then check `USER_PROFILE_ADDRESSES` / `CORPORATE_ADDRESSES` in the booking form (same 17-column layout, already mapped).
-3. `RES.S.VEHICLE_TYPE`, `RES.S.ALL_PREDEFINED_QUESTIONS`.
-4. `RES.S.ALL_ORDERS` / `UPDATABLE_ORDERS` (Home, History, Upcoming), then `RES.S.LOAD_RESERVATION`.
-5. The "Ready — review `o_code`" codes in the booking wizard.
-6. Write codes, once the backend agrees a test record and account to use.
+Every code moves to **heading-only reads** (guide §4): pair each heading with its value, ignore values past the last heading, never name extra positions, and use one heading name per field.
+
+1. ✅ `PROF.S.CHECK_LOGIN_CREDENTIALS`, `PROF.S.LOAD_PROFILE`, `PROF.S.USER_ADDRESSES`, `PROF.S.USER_PROFILE_ADDRESSES`, `PROF.S.CORPORATE_ADDRESSES`: migrated.
+2. `RES.S.VEHICLE_TYPE`, `RES.S.ALL_PREDEFINED_QUESTIONS`.
+3. `RES.S.ALL_ORDERS` / `UPDATABLE_ORDERS` (Home, History, Upcoming), then `RES.S.LOAD_RESERVATION`.
+4. The booking-wizard lookups (shape A, `o_code` meanings per guide §10).
+5. Write codes, once the backend agrees a test record and account to use.
 
 ## Backend issues to raise
 

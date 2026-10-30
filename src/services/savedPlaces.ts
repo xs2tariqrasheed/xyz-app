@@ -1,5 +1,5 @@
 import { EMPTY_PLACE, type AddressSuggestion, type StructuredPlace, toCountryCode, toSuggestion } from '@/services/places';
-import { GatewayError, type GatewayJData, type GatewayResponse, mapRowsByPosition } from '@/services/gateway';
+import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 
 /**
  * The customer's own places, offered above the Google results in the address
@@ -13,14 +13,29 @@ import { GatewayError, type GatewayJData, type GatewayResponse, mapRowsByPositio
  * fields, so picking one needs no Google lookup.
  */
 
-/**
- * The 17 columns every address record set really carries, in order
- * (docs/XYZ_INTEGRATION_GUIDE.md §10). `USER_PROFILE_ADDRESSES` and
- * `CORPORATE_ADDRESSES` send these as their headings; `USER_ADDRESSES` sends
- * the same row under headings that do not match it, so it is read by position
- * with this list.
- */
-export const ADDRESS_RECORD_COLUMNS = [
+/** The `PROF.S.USER_ADDRESSES` headings the app reads (guide §10). */
+export const USER_ADDRESS_HEADINGS = [
+  'address_id',
+  'country',
+  'state',
+  'city',
+  'zip_code',
+  'building_num',
+  'street_name',
+  'cross_street',
+  'pickup_point',
+  'phone_number_us',
+  'phone_ext_us',
+  'dial_code_intl',
+  'phone_number_intl',
+  'phone_ext_intl',
+  'directions',
+] as const;
+
+export type UserAddressRow = Record<(typeof USER_ADDRESS_HEADINGS)[number], string>;
+
+/** The `PROF.S.USER_PROFILE_ADDRESSES` / `CORPORATE_ADDRESSES` headings the app reads (guide §10). */
+const ADDRESS_RECORD_HEADINGS = [
   'oCountry',
   'oState',
   'oCity',
@@ -30,31 +45,13 @@ export const ADDRESS_RECORD_COLUMNS = [
   'oPickupPoint',
   'oZip',
   'oDirections',
-  'oPhoneNum',
-  'oExt',
-  'oPhoneNumUS',
-  'oExtUS',
-  'oePickupCount',
-  'oeRowID',
-  'oeUsageFrequency',
-  'oeLastServiceDate',
 ] as const;
 
-/** One address row, each field under its verified column name. */
-export type AddressRecord = Record<(typeof ADDRESS_RECORD_COLUMNS)[number], string>;
+type AddressRecordRow = Record<(typeof ADDRESS_RECORD_HEADINGS)[number], string>;
 
-/**
- * Rows of any of the three address codes as {@link AddressRecord}s. Every row
- * must carry exactly the 17 verified columns; a row of any other length means
- * the layout changed, so the response fails closed rather than being read
- * under the wrong names.
- */
-export function toAddressRecords(response: GatewayResponse): AddressRecord[] {
-  const rows = response.JData ?? [];
-  if (rows.some((row) => !Array.isArray(row) || row.length !== ADDRESS_RECORD_COLUMNS.length)) {
-    throw new GatewayError('parsing', 'Address rows do not match the 17-column layout.');
-  }
-  return mapRowsByPosition(response, ADDRESS_RECORD_COLUMNS);
+/** `PROF.S.USER_ADDRESSES` rows, by heading. */
+export function toUserAddressRows(response: GatewayResponse): UserAddressRow[] {
+  return mapRowsByHeadings(response, USER_ADDRESS_HEADINGS);
 }
 
 /** An airport kept in the address book reads as an airport stop. */
@@ -70,42 +67,73 @@ export function corporateAddressesJData(accountNumber: string): GatewayJData {
   return { P_ACCOUNT_NUM: accountNumber.trim() };
 }
 
+type AddressFields = Pick<
+  StructuredPlace,
+  'country' | 'state' | 'city' | 'zip' | 'streetNumber' | 'streetName' | 'crossStreet' | 'pickupPoint' | 'directions'
+>;
+
 /**
- * The address record as a booking stop. The record has no coordinates, so
- * they stay empty and the stop is placed from its address.
+ * An address row as a booking stop; an airport kept in the address book reads
+ * as an airport stop. No address heading carries coordinates, so they stay
+ * empty and the stop is placed from its address.
  */
-export function toStructuredPlace(record: AddressRecord): StructuredPlace {
-  const streetName = record.oStreetName.trim();
-  const airport = AIRPORT_NAME.test(streetName);
+function stop(fields: AddressFields): StructuredPlace {
+  const airport = AIRPORT_NAME.test(fields.streetName);
   return {
     ...EMPTY_PLACE,
+    ...fields,
     kind: airport ? 'airport' : 'address',
-    country: toCountryCode(record.oCountry.trim()),
-    state: record.oState.trim(),
-    city: record.oCity.trim(),
-    zip: record.oZip.trim(),
-    streetNumber: record.oStreetNum.trim(),
-    streetName,
-    crossStreet: record.oCrossStreet.trim(),
-    pickupPoint: record.oPickupPoint.trim(),
-    directions: record.oDirections.trim(),
-    airportName: airport ? streetName : '',
+    airportName: airport ? fields.streetName : '',
   };
 }
 
 /**
- * Records → suggestions, keyed by `oePickupCount`; `source` keeps ids unique
- * across the three lists. A record with neither a street nor a city (the old
- * site had many ",MANHATTAN,NY" stubs, guide 19 of the PDF) is skipped as
- * unusable.
+ * Saved addresses as suggestions. Rows with neither a street nor a city are
+ * skipped as unusable; ids use the row position, because `address_id` is not
+ * unique in today's responses (guide §10).
  */
-export function toSavedSuggestions(
-  records: readonly AddressRecord[],
-  source: 'saved' | 'profile' | 'company',
-): AddressSuggestion[] {
-  return records.flatMap((record) => {
-    const place = toStructuredPlace(record);
-    if (!place.streetName && !place.city) return [];
-    return [toSuggestion(`${source}:${record.oePickupCount.trim()}`, place)];
-  });
+export function userAddressSuggestions(rows: readonly UserAddressRow[]): AddressSuggestion[] {
+  return toSuggestions(
+    rows.map((row) =>
+      stop({
+        country: toCountryCode(row.country.trim()),
+        state: row.state.trim(),
+        city: row.city.trim(),
+        zip: row.zip_code.trim(),
+        streetNumber: row.building_num.trim(),
+        streetName: row.street_name.trim(),
+        crossStreet: row.cross_street.trim(),
+        pickupPoint: row.pickup_point.trim(),
+        directions: row.directions.trim(),
+      }),
+    ),
+    'saved',
+  );
+}
+
+/** The profile's (`USER_PROFILE_ADDRESSES`) or the company's (`CORPORATE_ADDRESSES`) addresses as suggestions. */
+export function addressRecordSuggestions(response: GatewayResponse, source: 'profile' | 'company'): AddressSuggestion[] {
+  const rows: AddressRecordRow[] = mapRowsByHeadings(response, ADDRESS_RECORD_HEADINGS);
+  return toSuggestions(
+    rows.map((row) =>
+      stop({
+        country: toCountryCode(row.oCountry.trim()),
+        state: row.oState.trim(),
+        city: row.oCity.trim(),
+        zip: row.oZip.trim(),
+        streetNumber: row.oStreetNum.trim(),
+        streetName: row.oStreetName.trim(),
+        crossStreet: row.oCrossStreet.trim(),
+        pickupPoint: row.oPickupPoint.trim(),
+        directions: row.oDirections.trim(),
+      }),
+    ),
+    source,
+  );
+}
+
+function toSuggestions(places: StructuredPlace[], source: 'saved' | 'profile' | 'company'): AddressSuggestion[] {
+  return places.flatMap((place, index) =>
+    place.streetName || place.city ? [toSuggestion(`${source}:${index}`, place)] : [],
+  );
 }

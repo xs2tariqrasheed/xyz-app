@@ -133,14 +133,16 @@ Seen so far: `"1"` (code not supported, or an Oracle cursor error), `"9"` (inter
 
 `JData` is column-oriented: an array of rows, each an array of string values (never `null` so far; empty is `""`). `mapRows(response)` pairs each row with the heading keys and returns `Record<string, string>[]`. A heading may be a plain key or a `[key, displayName, type, …]` tuple — index 0 is always the key.
 
-**Two response shapes.** Check which one a code returns (§10) before mapping it:
+**Mapping rule: headings only** (applies to every action code):
 
-| Shape | What it is | Headings | Map with |
-|---|---|---|---|
-| **A — result values** | The procedure's OUT parameters: `o_code`, `o_message` and sometimes more (`o_Latitude`, `o_Longitude`). One row. | Match the row | `mapRows` |
-| **B — record set** | A cursor: one row per record (profile, addresses, orders, reservation, car types, questions). | **Often do not match.** The gateway sends a fixed heading list while the row carries the cursor's real columns — e.g. `LOAD_PROFILE` has 15 headings but 44 values per row, so mapping by name puts the password under `first_name`. | Position: a per-code column list, documented in §10 |
+1. Read the column names from `JMetaData.Headings`.
+2. Pair each heading with the `JData` value at the same position — `mapRows`. A caller that reads named headings uses `mapRowsByHeadings(response, headings)`, which fails closed when one of them is missing from the response.
+3. Access and display only values that have a heading. When a row has more values than headings, ignore every extra value: never name, map, read or display it, and never guess what it means.
+4. Don't invent field names. A field the code's headings don't include isn't in its response.
 
-Rule: **trust `Headings` only where §10 marks them accurate for that code.** Everywhere else read the row by position with `mapRowsByPosition(response, columns)` (`src/services/gateway.ts`), passing that code's column list from §10; a missing position becomes `''`. `npm run gateway:probe` flags a mismatch for you.
+Many record sets send more values per row than headings, or values that don't belong under the heading in their position. For example, `LOAD_PROFILE` sends 15 headings and 44 values, and its `first_name` heading pairs with the password. That's a gateway bug. Record it in §10 and the tracker's backend issues, and don't work around it by remapping positions.
+
+**Writes that send loaded values back** (`PROF.U.PROFILE`, address update and delete) are refused while the loaded response has values past its last heading (`hasUnheadedValues`). Its pairing can't be trusted to write real data back.
 
 - **Single record** (login, profile): use row 0.
 - **List** (addresses, orders): use every row. The row count is whatever the procedure returns — `P_TOTAL_RECORDS` is not honoured today.
@@ -348,7 +350,7 @@ Specs `reverse-engineer-implemented/guide/11`, `12` and `reverse-engineer-implem
 | Where | Action code | JData / notes |
 |---|---|---|
 | My Addresses list (`addresses.tsx`) | `PROF.S.USER_ADDRESSES` | The **same** request `SavedPlacesContext` makes for Home and the booking form; the context exposes it as `places` (booking suggestions) and `addresses` (editable entries, `toSavedAddresses` in `src/services/addressBook.ts`). |
-| Add / edit / delete a location | `PROF.I.USER_ADDRESS`, `PROF.U.USER_ADDRESS`, `PROF.D.USER_ADDRESS` | Through `useSavedPlaces().saveAddress` / `deleteAddress`, `retry: false`, then the shared list reloads. `P_PICKUP_COUNT` = the row's `oePickupCount` (position 13, §10). The international number goes in `P_PHONE_NUM` as dial code + number (no dial-code parameter). `P_COUNTRY` is the code (`US`). |
+| Add / edit / delete a location | `PROF.I.USER_ADDRESS`, `PROF.U.USER_ADDRESS`, `PROF.D.USER_ADDRESS` | Through `useSavedPlaces().saveAddress` / `deleteAddress`, `retry: false`, then the shared list reloads. `P_PICKUP_COUNT` = the row's `address_id`. Update and delete are refused while `USER_ADDRESSES` sends more values than headings (§10). The international number goes in `P_PHONE_NUM` as dial code + number (no dial-code parameter). `P_COUNTRY` is the code (`US`). |
 | My Contacts list (`contacts.tsx`) | `PROF.S.LOAD_PROFILE_COLUMN_VALUES` | `P_LOGIN_ID`. Rows mapped in `src/services/contacts.ts`; only the contact columns 3 home, 4 office, 5 fax, 6 cell, 8 e-mail are shown. |
 | Add / edit / remove a contact | `PROF.I.PROFILE_COLUMN_VALUE`, `PROF.U.PROFILE_COLUMN_VALUE`, `PROF.D.PROFILE_COLUMN_VALUE` | A contact is identified by column id + stored value. Changing a contact's **type** adds it under the new column, then deletes the old one (the contract has no move). |
 
@@ -413,64 +415,22 @@ App: `sessionFromLoginResponse` in `src/services/auth.ts` — `"0"` → session 
 | `RES.S.ZONE_THE_LOCATION` | `[["", ""]]` | Empty for a street address that did not zone |
 | `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | `[["5", "No Data Found", "", ""]]` | Headings `o_code, o_message, o_Latitude, o_Longitude`; `"5"` = no position |
 
-Record sets whose headings also match (17 values, same layout as each other): `PROF.S.USER_PROFILE_ADDRESSES` and `PROF.S.CORPORATE_ADDRESSES` — headings `oCountry, oState, oCity, oStreetNum, oStreetName, oCrossStreet, oPickupPoint, oZip, oDirections, oPhoneNum, oExt, oPhoneNumUS, oExtUS, oePickupCount, oeRowID, oeUsageFrequency, oeLastServiceDate`. `oCountry` is a code (`"01"` = US), `oeLastServiceDate` is `DD-MON-YY`. There is no dial-code or coordinate column. All three address codes are read through `toAddressRecords` (`src/services/savedPlaces.ts`): it fails closed on a row that is not 17 values, and each field is then read by its one verified name, with no fallback names.
+Record sets whose headings also match (17 values, same layout as each other), both ✅ migrated: `PROF.S.USER_PROFILE_ADDRESSES` and `PROF.S.CORPORATE_ADDRESSES` — headings `oCountry, oState, oCity, oStreetNum, oStreetName, oCrossStreet, oPickupPoint, oZip, oDirections, oPhoneNum, oExt, oPhoneNumUS, oExtUS, oePickupCount, oeRowID, oeUsageFrequency, oeLastServiceDate`. `oCountry` is a code (`"01"` = US), `oeLastServiceDate` is `DD-MON-YY`. Both are read by these headings (`addressRecordSuggestions` in `src/services/savedPlaces.ts`); no heading carries a dial code or coordinates.
 
-### Shape B codes (headings do not match — map by position)
+### Codes with more values than headings
 
-| Code | Headings sent | Values per row | Notes |
+Each is mapped by heading (§4): heading *n* pairs with value *n*, and the values past the last heading are ignored. Where the pairing is plainly wrong, the screen shows that wrong value until the gateway is fixed.
+
+| Code | Headings sent | Values per row | What heading pairing gives today |
 |---|---|---|---|
-| `PROF.S.LOAD_PROFILE` | 15 (`login_id … last_login`) | **44** | Positions below. Returns the **plaintext password** and **full card number** — backend issue. |
-| `PROF.S.USER_ADDRESSES` — ✅ migrated | 16 (`address_id … driver_notes`) | **17** | Same 17-column layout as `USER_PROFILE_ADDRESSES` above, read by position with `ADDRESS_RECORD_COLUMNS` (`src/services/savedPlaces.ts`) in `SavedPlacesContext`. The record id is position 13 (`oePickupCount`), unique per row and sent back as `P_PICKUP_COUNT`. Mapped by heading, every row got the id `01` (the country code) and React reported duplicate keys. |
-| `RES.S.ALL_ORDERS`, `RES.S.UPDATABLE_ORDERS` | 10 (`reservation_num … feedback_left`) | **112** | Positions below. Invalid JSON (receipt-image path). `P_TOTAL_RECORDS` not honoured. |
-| `RES.S.LOAD_RESERVATION` | 39 | **160** | Starts like an order row; positions not mapped yet. Invalid JSON. |
-| `RES.S.VEHICLE_TYPE` | 5 (`car_type, car_type_name, max_passengers, max_luggage, description`) | **2** | `[car_type, car_type_name]`: `["0","No Preference"]`, `["3","Sedan"]`, `["4","SUV"]`, `["H","Standard Wheelchair Vehicle"]`, `["K","Premium Wheelchair Vehicle"]` — the first two headings line up, the rest are absent. |
-| `RES.S.ALL_PREDEFINED_QUESTIONS` | 4 (`o_code, o_message, placeholder_col1, placeholder_col2`) | **2** | `[question_id, question_text]`, e.g. `["1", "How I can contact the driver?"]` — not a verdict. |
-| `PROF.S.ACCOUNT_REQUIREMENTS_RS`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` | 4 (`o_code, o_message, placeholder_col1, placeholder_col2`) | **1** | `[["X"]]` for an account without requirements. |
+| `PROF.S.LOAD_PROFILE` — ✅ migrated | 15: `login_id, first_name, last_name, email, phone_number_us, phone_ext_us, dial_code_intl, phone_number_intl, phone_ext_intl, fax_dial_code, fax_number, fax_ext, account_number, company_name, last_login` | **44** | `login_id` = the login id; `first_name` = **the password**; `last_name` = the first name; `email` = the last name; the phone, fax and account headings pair with phone fragments, a country code, a state and a city; `last_login` is empty. The 29 extra values (which include the full card number) are ignored. No preference or mailing-address headings, so the Preferences and Update Mailing Address screens show "not available". Profile updates are refused. |
+| `PROF.S.USER_ADDRESSES` — ✅ migrated | 16: `address_id, country, state, city, zip_code, building_num, street_name, cross_street, pickup_point, phone_number_us, phone_ext_us, dial_code_intl, phone_number_intl, phone_ext_intl, directions, driver_notes` | **17** | `address_id` = `"01"` on every row, then each heading pairs with the value meant for the next one (`country` = the state, `city` = the ZIP, `street_name` = the cross street…). List keys use the row position, because `address_id` isn't unique. Update and delete are refused; adding a location still works. |
+| `RES.S.ALL_ORDERS`, `RES.S.UPDATABLE_ORDERS` | 10: `reservation_num, passenger_name, pickup_date, pickup_time, pickup_location, destination, status, payment_method, voucher_num, feedback_left` | **112** | `reservation_num` = the login id; `passenger_name` = the reservation number; and so on. Invalid JSON (receipt-image path), repaired by `parseBody`. `P_TOTAL_RECORDS` isn't honoured. Not yet moved to heading-only reads. |
+| `RES.S.LOAD_RESERVATION` | 39 | **160** | Not yet reviewed. Invalid JSON, repaired. |
+| `RES.S.VEHICLE_TYPE` | 5: `car_type, car_type_name, max_passengers, max_luggage, description` | **2** | `car_type` and `car_type_name` pair correctly (`"3"` / `Sedan`); the other three headings have no value (`''`). |
+| `RES.S.ALL_PREDEFINED_QUESTIONS` | 4: `o_code, o_message, placeholder_col1, placeholder_col2` | **2** | `o_code` = the question id, `o_message` = the question text. |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` | 4: `o_code, o_message, placeholder_col1, placeholder_col2` | **1** | `o_code` = `"X"` for an account without requirements. |
 | `RES.S.COMMUNICATION_LOG`, `RES.S.VEHICLE_LOG` | 4 | — | No rows for the reservation tried. |
-
-**`PROF.S.LOAD_PROFILE` positions** — *to confirm*. The values follow the `PROF.U.PROFILE` parameter order:
-
-| Pos | Field | Sample | Pos | Field | Sample |
-|---|---|---|---|---|---|
-| 0 | login ID (upper case) | `<LOGIN ID>` | 22 | VIP number | `<VIP number>` |
-| 1 | **password** — never read | `<password>` | 23 | card type | `2` |
-| 2 | first name | `JENNIFER` | 24 | card holder name | `JENNIFER LEE` |
-| 3 | last name | `LEE` | 25 | **card number** — never read | `<card number>` |
-| 4–5 | phone number / ext | `212`, `` | 26 | verify code | `` |
-| 6–7 | US phone / ext | `212-`, `` | 27–28 | card month / year | `08`, `23` |
-| 8 | fax | `212-` | 29–32 | account requirements 1–4 | `` |
-| 9–11 | country code / state / city | `01`, `NY`, `MANHATTAN` | 33–39 | preferences (confirmation method, fleet, car year, car phone, special offer, smoking, IVR PIN) — order unclear | ``, ``, `5`, `Y`, `N`, `N`, `0` |
-| 12–16 | ZIP, building #, street, cross streets 1–2 | `` | 40 | e-mail | `<login id>` |
-| 17–18 | address phone / US phone | `<phone>`, `212-` | 41 | created? | `14-MAY-15` |
-| 19 | address type | `` | 42 | ? | `10-SEP-26` |
-| 20 | payment type | `A` | 43 | last login? | `10-SEP-26` |
-| 21 | account number | `<account>` | | | |
-
-**`RES.S.ALL_ORDERS` / `UPDATABLE_ORDERS` positions** — *to confirm*. They broadly follow the `RES.I.RESERVATION` parameter order, with the reservation number and a second date inserted:
-
-| Pos | Field | Sample |
-|---|---|---|
-| 0 | login ID (empty for rides booked by phone) | `<LOGIN ID>` |
-| 1 | reservation number | `W6091020246` |
-| 2–3 | passenger first / last name | `JENNIFER`, `LEE` |
-| 4, 5, 6 | pickup date `DD-MON-YY`, pickup date `MM/DD/YYYY`, pickup time | `10-SEP-26`, `09/10/2026`, `03:00 pm` |
-| 7–17 | pickup: type, country, state, city, ZIP, street #, street, cross street, cross street 2, point, directions / full address | `1`, `01`, `NY`, … |
-| 24 | pickup landmark | `OPERA CAFE LOUNGE` |
-| 25–34 | drop-off: type, country, state, city, ZIP, street #, street, cross streets, directions / full address | `1`, `01`, `NY`, `MANHATTAN`, … |
-| 42 | payment method | `3` |
-| 43 | account number | `<account>` |
-| 54–55 | fleet / car type | `XYZ`, `SND` |
-| 58 | phone | `<phone>` |
-| 60 | e-mail | `<login id>` |
-| 68 | VIP number | `<VIP number>` |
-| 69–71 | dates (booked / pickup / …) | `10-SEP-26` |
-| 72–73 | status code / status text | `6` `Confirmed`, `2` `Canceled`, `0` `Open` |
-| 75 | vehicle state | `UnLoaded` |
-| 76–77 | car # / driver # | `888`, `8888` |
-| 81, 83 | pickup / drop-off zone | `10305000` |
-| 91 | receipt image — an internal UNC path (`\\192.168…`), never usable by the app | |
-| 94–96 | ride timestamps `MM/DD/YYYY HH24:MI:SS` | `09/10/2026 12:20:16` |
-| 107–110 | pickup lat / lon, drop-off lat / lon | `40.5912764`, `-74.0887194`, … |
 
 ### Codes that fail on the gateway
 

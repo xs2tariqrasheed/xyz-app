@@ -22,8 +22,12 @@ export default function PreferencesScreen() {
   return (
     <Screen title={PREFERENCES_MESSAGES.SCREEN_TITLE}>
       <View style={styles.column}>
-        {profile ? (
+        {profile?.preferences ? (
           <PreferencesPanel initial={profile.preferences} onSave={updatePreferences} />
+        ) : profile ? (
+          <Panel title={PREFERENCES_MESSAGES.PANEL_TITLE}>
+            <Notice tone="info" title={PREFERENCES_MESSAGES.UNAVAILABLE} />
+          </Panel>
         ) : (
           <Panel title={PREFERENCES_MESSAGES.PANEL_TITLE}>
             {isLoading ? (

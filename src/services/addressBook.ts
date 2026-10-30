@@ -3,7 +3,7 @@ import { ADDRESS_BOOK_MESSAGES } from '@/constants/messages';
 import type { GatewayJData, GatewayResponse } from '@/services/gateway';
 import { assertResultCode } from '@/services/gatewayRows';
 import { toCountryCode } from '@/services/places';
-import type { AddressRecord } from '@/services/savedPlaces';
+import type { UserAddressRow } from '@/services/savedPlaces';
 import { MAX_INTL_DIGITS, toDigits } from '@/utils/phone';
 
 /**
@@ -30,36 +30,34 @@ function toCountryName(value: string): string {
 }
 
 /**
- * Address records → saved locations. A location's id is its `oePickupCount`,
- * which the update and delete codes take back as `P_PICKUP_COUNT`. Records with
- * no street and no city are skipped, as the booking pickers do.
- *
- * The record has one international number (`oPhoneNum`) and no separate dial
- * code, so the dial-code box starts empty.
+ * `PROF.S.USER_ADDRESSES` rows → saved locations, each field read by its
+ * heading. A location's id is its `address_id`, which the update and delete
+ * codes take back as `P_PICKUP_COUNT`. Rows with no street and no city are
+ * skipped, as the booking pickers do.
  */
-export function toSavedAddresses(records: readonly AddressRecord[]): SavedAddress[] {
-  return records.flatMap((record) => {
-    const street = record.oStreetName.trim();
-    const city = record.oCity.trim();
+export function toSavedAddresses(rows: readonly UserAddressRow[]): SavedAddress[] {
+  return rows.flatMap((row) => {
+    const street = row.street_name.trim();
+    const city = row.city.trim();
     if (!street && !city) return [];
 
     return [
       {
-        id: record.oePickupCount.trim(),
-        country: toCountryName(record.oCountry.trim()),
-        state: record.oState.trim(),
+        id: row.address_id.trim(),
+        country: toCountryName(row.country.trim()),
+        state: row.state.trim(),
         city,
-        zip: record.oZip.trim(),
-        building: record.oStreetNum.trim(),
+        zip: row.zip_code.trim(),
+        building: row.building_num.trim(),
         street,
-        crossStreet: record.oCrossStreet.trim(),
-        pickupPoint: record.oPickupPoint.trim(),
-        phoneUs: toDigits(record.oPhoneNumUS, 10),
-        phoneUsExt: record.oExtUS.trim(),
-        phoneIntlCode: '',
-        phoneIntl: record.oPhoneNum.trim(),
-        phoneIntlExt: record.oExt.trim(),
-        directions: record.oDirections.trim(),
+        crossStreet: row.cross_street.trim(),
+        pickupPoint: row.pickup_point.trim(),
+        phoneUs: toDigits(row.phone_number_us, 10),
+        phoneUsExt: row.phone_ext_us.trim(),
+        phoneIntlCode: toDigits(row.dial_code_intl, 4),
+        phoneIntl: row.phone_number_intl.trim(),
+        phoneIntlExt: row.phone_ext_intl.trim(),
+        directions: row.directions.trim(),
       },
     ];
   });

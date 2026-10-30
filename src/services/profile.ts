@@ -1,23 +1,19 @@
-import {
-  EMPTY_MAILING_ADDRESS,
-  type AddressType,
-  type MailingAddress,
-} from '@/components/account/mailingAddress';
+import type { AddressType, MailingAddress } from '@/components/account/mailingAddress';
 import type { PreferencesValue } from '@/components/preferences/preferences';
 import type { PersonalInfoValue } from '@/components/profile/PersonalInfoSection';
 import type { PhoneValue } from '@/components/ui/PhoneField';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { PROFILE_MESSAGES } from '@/constants/messages';
-import { COUNTRIES as REGION_COUNTRIES, UNITED_STATES } from '@/data/regions';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
-import { isYes } from '@/services/gatewayRows';
-import { digitsOnly, formatUsPhone } from '@/utils/contact';
+import { digitsOnly } from '@/utils/contact';
 import { COUNTRIES, findCountryByDial, toIntlDigits } from '@/utils/phone';
 
 /**
- * The signed-in customer's profile, mapped from a
- * `PROF.S.LOAD_PROFILE` row. Field names are renamed here so screens never
- * read raw gateway columns.
+ * The signed-in customer's profile, mapped from a `PROF.S.LOAD_PROFILE` row.
+ * Only the columns its `JMetaData.Headings` name are read, each value paired
+ * with the heading at the same position (`mapRows`); values past the last
+ * heading are ignored (docs/XYZ_INTEGRATION_GUIDE.md §10). Field names are
+ * renamed here so screens never read raw gateway columns.
  */
 
 export type CustomerProfile = {
@@ -31,12 +27,16 @@ export type CustomerProfile = {
   email: string;
   /** Corporate account the customer books against; '' for card-only profiles. */
   accountNumber: string;
-  /** Car preferences from registration, sent with every booking ('' when unset). */
-  carPreferences: { fleetName: string; carYear: string; smokingAllowed: string };
-  /** What the Preferences screen edits; a new booking's confirmation starts from it. */
-  preferences: PreferencesValue;
-  /** What the Update Mailing Address screen edits; blank when the profile has none. */
-  mailingAddress: MailingAddress;
+  /**
+   * What the Preferences screen edits. `null`: `LOAD_PROFILE` sends no
+   * preference headings, so the app has no preferences to show.
+   */
+  preferences: PreferencesValue | null;
+  /**
+   * What the Update Mailing Address screen edits. `null`: `LOAD_PROFILE` sends
+   * no address headings, so the app has no address to show.
+   */
+  mailingAddress: MailingAddress | null;
 };
 
 /** `P_CONFIRMATION_METHOD`: "EMAIL" is the sample; "PHONE" mirrors it. */
@@ -56,7 +56,7 @@ export class ProfileError extends Error {
   }
 }
 
-/** `PROF.S.LOAD_PROFILE` columns behind each personal info field. */
+/** The `PROF.S.LOAD_PROFILE` headings the app reads, one per field. */
 const COLUMNS = {
   firstName: 'first_name',
   lastName: 'last_name',
@@ -71,25 +71,6 @@ const COLUMNS = {
   lastLogin: 'last_login',
   email: 'email',
   accountNumber: 'account_number',
-  /** The contract's own spelling (`P_ACCOUNT_NUM`), should the row use it. */
-  accountNum: 'account_num',
-  preferredFleet: 'preferred_fleet',
-  carYear: 'car_year',
-  smokingCar: 'smoking_car',
-  confirmationMethod: 'confirmation_method',
-  specialOffer: 'special_offer',
-  // Mailing address: named like the `PROF.U.PROFILE` parameters without `P_`.
-  country: 'country',
-  state: 'state',
-  city: 'city',
-  zip: 'zip',
-  buildingNumber: 'building_num',
-  streetName: 'street_name',
-  crossStreet1: 'cross_street1',
-  crossStreet2: 'cross_street2',
-  addressPhoneUs: 'address_phone_us',
-  addressPhone: 'address_phone',
-  addressType: 'address_type',
 } as const;
 
 type ProfileRow = Record<string, string>;
@@ -113,71 +94,15 @@ export function toCustomerProfile(rows: ProfileRow[] | undefined): CustomerProfi
       fax: intlPhone(row, COLUMNS.faxDial, COLUMNS.faxNumber, COLUMNS.faxExt),
     },
     email: text(row, COLUMNS.email),
-    accountNumber: text(row, COLUMNS.accountNumber) || text(row, COLUMNS.accountNum),
-    carPreferences: {
-      fleetName: text(row, COLUMNS.preferredFleet),
-      carYear: text(row, COLUMNS.carYear),
-      smokingAllowed: text(row, COLUMNS.smokingCar).toUpperCase(),
-    },
-    preferences: {
-      confirmByPhone: isPhoneConfirmation(text(row, COLUMNS.confirmationMethod)),
-      subscribeSpecialOffers: isYes(text(row, COLUMNS.specialOffer)),
-    },
-    mailingAddress: toMailingAddress(row),
+    accountNumber: text(row, COLUMNS.accountNumber),
+    preferences: null,
+    mailingAddress: null,
   };
-}
-
-function toMailingAddress(row: ProfileRow): MailingAddress {
-  const country = countryName(text(row, COLUMNS.country));
-  const state = text(row, COLUMNS.state);
-  const [intlDialCode, intlPhone] = splitIntlDigits(digits(row, COLUMNS.addressPhone));
-
-  return {
-    ...EMPTY_MAILING_ADDRESS,
-    country,
-    state: country === UNITED_STATES ? state.toUpperCase() : state,
-    city: text(row, COLUMNS.city),
-    postalCode: country === UNITED_STATES ? digits(row, COLUMNS.zip) : text(row, COLUMNS.zip),
-    buildingNumber: text(row, COLUMNS.buildingNumber),
-    streetName: text(row, COLUMNS.streetName),
-    crossStreet: text(row, COLUMNS.crossStreet1),
-    // Apt # / Mail stop is saved in the second cross-street slot; see mailingAddressParams.
-    unit: text(row, COLUMNS.crossStreet2),
-    phone: formatUsPhone(digits(row, COLUMNS.addressPhoneUs)),
-    intlDialCode,
-    intlPhone,
-    addressType: toAddressType(text(row, COLUMNS.addressType)),
-  };
-}
-
-/** `P_COUNTRY` holds an ISO code ("US"); the form shows the name. Unknown values pass through. */
-function countryName(value: string): string {
-  if (!value) return UNITED_STATES;
-  const byCode = COUNTRIES.find((country) => country.code === value.toUpperCase());
-  if (byCode) return byCode.name;
-  return REGION_COUNTRIES.find((name) => name.toLowerCase() === value.toLowerCase()) ?? value;
 }
 
 /** The `P_COUNTRY` code for a country name from the address form. */
 function countryCode(name: string): string {
   return COUNTRIES.find((country) => country.name === name)?.code ?? name.trim();
-}
-
-/**
- * `address_phone` is saved as one run of digits — calling code, city code and
- * number together. The longest calling code it starts with becomes the
- * form's code field; the rest is the number. With no match it is all number.
- */
-function splitIntlDigits(value: string): [string, string] {
-  if (!value) return ['', ''];
-  const dial = COUNTRIES.map((country) => country.dial)
-    .filter((code) => value.startsWith(code) && value.length > code.length)
-    .sort((a, b) => b.length - a.length)[0];
-  return dial ? [`+${dial}`, value.slice(dial.length)] : ['', value];
-}
-
-function toAddressType(value: string): AddressType {
-  return value.toUpperCase() === ADDRESS_TYPE_CODES.home ? 'home' : 'office';
 }
 
 /**
@@ -202,56 +127,12 @@ export function mailingAddressParams(address: MailingAddress): GatewayJData {
   };
 }
 
-/** Anything other than a phone value (EMAIL, NONE, '') means no call-back. */
-function isPhoneConfirmation(value: string): boolean {
-  return /phone/i.test(value) || value.toUpperCase() === 'P';
-}
-
 /**
- * `PROF.U.PROFILE` parameters copied straight from the `PROF.S.LOAD_PROFILE`
- * column named like them without the `P_` prefix (`P_CC_YEAR` → `cc_year`),
- * in contract order.
- */
-const PASSTHROUGH_PARAMS = [
-  'P_PASSWORD',
-  'P_COUNTRY',
-  'P_STATE',
-  'P_CITY',
-  'P_ZIP',
-  'P_BUILDING_NUM',
-  'P_STREET_NAME',
-  'P_CROSS_STREET1',
-  'P_CROSS_STREET2',
-  'P_ADDRESS_PHONE',
-  'P_ADDRESS_PHONE_US',
-  'P_ADDRESS_TYPE',
-  'P_PAYMENT_TYPE',
-  'P_CC_TYPE',
-  'P_CARD_HOLDER_NAME',
-  'P_CARD_NUMBER',
-  'P_VERIFY_CODE',
-  'P_CC_MONTH',
-  'P_CC_YEAR',
-  'P_ACCOUNT_REQ1',
-  'P_ACCOUNT_REQ2',
-  'P_ACCOUNT_REQ3',
-  'P_ACCOUNT_REQ4',
-  'P_CONFIRMATION_METHOD',
-  'P_PREFERRED_FLEET',
-  'P_CAR_YEAR',
-  'P_CAR_PHONE',
-  'P_SPECIAL_OFFER',
-  'P_SMOKING_CAR',
-  'P_IVR_PIN',
-] as const;
-
-/**
- * Every parameter the loaded row can vouch for, with the value it holds.
+ * Every parameter a `LOAD_PROFILE` heading vouches for, with the value it holds.
  *
  * `PROF.U.PROFILE` replaces the whole profile, so an untouched field must go
- * back exactly as it came. A parameter whose column the row does not carry is
- * left out rather than sent blank — the update never clears data the app was
- * never shown.
+ * back exactly as it came. A parameter with no heading is left out rather
+ * than sent blank — the update never clears data the app was never shown.
  */
 function loadedProfileParams(row: ProfileRow): GatewayJData {
   const has = (column: string) => column in row;
@@ -268,11 +149,6 @@ function loadedProfileParams(row: ProfileRow): GatewayJData {
   // The contract has no fax extension parameter.
   if (has(COLUMNS.faxDial) || has(COLUMNS.faxNumber)) {
     params.P_FAX = joinedDigits(row, COLUMNS.faxDial, COLUMNS.faxNumber);
-  }
-
-  for (const param of PASSTHROUGH_PARAMS) {
-    const column = param.slice('P_'.length).toLowerCase();
-    if (has(column)) params[param] = text(row, column);
   }
   return params;
 }
@@ -344,11 +220,12 @@ export function updatePreferencesJData(
   row: ProfileRow,
   preferences: PreferencesValue,
 ): GatewayJData {
-  const loaded = loadedProfile(row);
+  const loaded = loadedProfile(row).preferences;
+  if (!loaded) throw new Error('The profile has no preferences to update.');
   return {
     P_LOGIN_ID: loginId,
     ...loadedProfileParams(row),
-    ...changedParams(preferencesParams(preferences), preferencesParams(loaded.preferences)),
+    ...changedParams(preferencesParams(preferences), preferencesParams(loaded)),
   };
 }
 
@@ -363,9 +240,10 @@ export function updateMailingAddressJData(
   row: ProfileRow,
   address: MailingAddress,
 ): GatewayJData {
-  const loaded = loadedProfile(row);
+  const loaded = loadedProfile(row).mailingAddress;
+  if (!loaded) throw new Error('The profile has no mailing address to update.');
   const edited = mailingAddressParams(address);
-  const changed = Object.keys(changedParams(edited, mailingAddressParams(loaded.mailingAddress))).length > 0;
+  const changed = Object.keys(changedParams(edited, mailingAddressParams(loaded))).length > 0;
   return {
     P_LOGIN_ID: loginId,
     ...loadedProfileParams(row),

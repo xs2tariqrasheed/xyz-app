@@ -4,14 +4,15 @@ import type { MailingAddress } from '@/components/account/mailingAddress';
 import type { PreferencesValue } from '@/components/preferences/preferences';
 import type { PersonalInfoValue } from '@/components/profile/PersonalInfoSection';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { MAILING_ADDRESS_MESSAGES, PREFERENCES_MESSAGES } from '@/constants/messages';
+import { MAILING_ADDRESS_MESSAGES, PREFERENCES_MESSAGES, PROFILE_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { usePostData } from '@/hooks/usePostData';
-import { type ErrorDisplay, type GatewayJData, mapRows } from '@/services/gateway';
+import { type ErrorDisplay, type GatewayJData, hasUnheadedValues, mapRows } from '@/services/gateway';
 import {
   assertProfileUpdated,
   type CustomerProfile,
+  ProfileError,
   toCustomerProfile,
   updateMailingAddressJData,
   updatePreferencesJData,
@@ -86,7 +87,10 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
 
   /** Sends the whole profile built from the loaded row, then reloads it. */
   const saveProfile = async (build: (loaded: Record<string, string>) => GatewayJData, rejected?: string) => {
-    if (!row) throw new Error('The profile has not loaded yet.');
+    if (!row || !data) throw new Error('The profile has not loaded yet.');
+    // The update sends the loaded values back; with values past the last
+    // heading, that pairing can't be trusted, so nothing is written.
+    if (hasUnheadedValues(data)) throw new ProfileError(PROFILE_MESSAGES.UPDATE_UNAVAILABLE);
     const response = await sendUpdate(
       ACTION_CODES.UPDATE_PROFILE,
       GATEWAY_VIEW_NAME,

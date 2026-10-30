@@ -38,12 +38,16 @@ export default function MailingAddressScreen() {
   return (
     <Screen title={M.SCREEN_TITLE} scrollRef={scrollRef}>
       <View style={styles.column}>
-        {profile ? (
+        {profile?.mailingAddress ? (
           <MailingAddressPanel
             initial={profile.mailingAddress}
             onSave={updateMailingAddress}
             onScrollTop={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
           />
+        ) : profile ? (
+          <Panel title={M.PANEL_TITLE}>
+            <Notice tone="info" title={M.UNAVAILABLE} />
+          </Panel>
         ) : (
           <Panel title={M.PANEL_TITLE}>
             {isLoading ? (
