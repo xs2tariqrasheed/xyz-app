@@ -261,7 +261,7 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 
 **Identify the user in later calls** by sending `P_LOGIN_ID: session.loginId` in `JData` (e.g. `PROF.S.LOAD_PROFILE`).
 
-**Password recovery** (`forgot-password.tsx`): `PROF.S.PASSWORD` with `{ P_LOGIN_ID }` (normalised like login) via `usePostData`. A returned `o_code` other than `"0"` → `AuthError(o_message)`; no `o_code` → sent. On success the screen shows "check your email".
+**Password recovery** (`forgot-password.tsx`): `PROF.S.PASSWORD` with `{ P_LOGIN_ID }` (normalised like login) via `usePostData`. The real answer is `o_code` / `o_message`: `"0"` / `Sendmail` when the password was mailed (§10). Anything but `"0"` → `AuthError(o_message)`; no `o_code` → `GatewayError('parsing')` (fail closed). On success the screen says the password was sent to the email.
 
 **Change password** (`change-password.tsx`, form in `src/components/account/ChangePasswordForm.tsx`): `PROF.U.PASSWORD` with `{ P_LOGIN_ID: session.loginId, P_OLD_PASSWORD, P_NEW_PASSWORD }` via `usePostData`, sent with `retry: false`. The confirm field is checked on the client only — the contract has no parameter for it. A returned `o_code` other than `"0"` (e.g. a wrong old password) → `AuthError(o_message)`; no `o_code` → changed. The session holds no password, so the user stays signed in.
 
@@ -288,7 +288,7 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 - **Fax** has no extension parameter, so registration hides the fax extension box.
 - **Car preferences** (optional, Billing step): `P_PREFERRED_FLEET`, `P_CAR_YEAR` (4 digits), `P_CAR_PHONE` (US, 10 digits), `P_SMOKING_CAR` (`Y`/`N`), `P_IVR_PIN` (4 digits).
 - **Account requirements** (two calls, as on the old site): `ACCOUNT_REQUIREMENTS` decides *whether* the account has requirement fields; only then does `ACCOUNT_REQUIREMENTS_RS` list them, one row per field (up to 4), each shown as a required field whose answer goes in `P_ACCOUNT_REQ1–4`. The answer is cached per account number, so leaving the field and then pressing Create account asks once; a new account number clears the answers. A refusal (`o_code` ≠ `"0"`) shows on the Account number field, and again above the form on Create account.
-  Neither code's outputs are documented and the gateway stub returns only `o_code` / `o_message` (and placeholders for `_RS`), so `registration.ts` reads them defensively: `accountHasRequirements` treats any extra column that is not a "no" (`N`, `0`, empty) as yes; `accountRequirementLabels` takes each row's label from the first of `REQUIREMENT_LABEL_COLUMNS`, else its first non-numeric value, and checks `o_code` only when the record set carries one. Against today's stub the account has no requirements, so `_RS` is never called.
+  `ACCOUNT_REQUIREMENTS` answers only `o_code` / `o_message` (§10). `accountHasRequirements` treats any further heading with a value that is not a "no" as yes, so with today's answer the account has no requirements and `_RS` is never called. `_RS` sends `o_code, o_message, placeholder_col1, placeholder_col2`. `accountRequirementLabels` reads each label from `o_message` alone, marked `TODO(schema-unverified)`, until an account with requirements confirms it.
 - **Unconfirmed codes**, each set in one place in the service: `P_PAYMENT_TYPE` corporate = `CA` (only `CC` is documented) and `P_ADDRESS_TYPE` office = `O` (only `H` is documented).
 
 On success the screen links back to login; the user is not signed in automatically.
@@ -317,10 +317,10 @@ Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens
 | Home dashboard, History tab | `RES.S.ALL_ORDERS` | `P_LOGIN_ID`, `P_DATE_FROM` / `P_DATE_TO` (`MM/DD/YYYY`), `P_TOTAL_RECORDS` (number). Payment filter runs on the client — the contract has no parameter for it. |
 | Upcoming tab | `RES.S.UPDATABLE_ORDERS` | `P_LOGIN_ID` |
 | Express panel, address fields | `PROF.S.USER_ADDRESSES` (+ `USER_PROFILE_ADDRESSES`, and `CORPORATE_ADDRESSES` with an account) | Listed above the Google results as "Your places". |
-| Step 1 | `PROF.S.LOAD_PROFILE` ✅, `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS` | Names pre-fill from the profile; "Reservation for" shows only when someone granted access. |
+| Step 1 | `PROF.S.LOAD_PROFILE` ✅, `PROF.S.PROFILE_WHO_GRANTED_ACCESS` | Names pre-fill from the profile; "Reservation for" shows only when someone granted access. |
 | Step 2, stop picked | `RES.S.GOOGLE_ZONE_NUM` (has lat/lon/ZIP) or `RES.S.ZONE_THE_LOCATION` | Google stops are resolved with Place Details first. No match / no answer → the customer must acknowledge the address (guide 13). Airport stops ask for airline, flight # and pickup option. |
 | Step 3 | `RES.S.BILLING_METHOD`, `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` ×4, `PROF.S.IS_VALID_VIP` ✅, `PROF.S.ACCOUNT_VIP_NUM` | Account-keyed reads mount only with an account number. Continue → `RES.S.VERIFY_ACCOUNT_REQUIREMENTS` (`P_IS_RES 'Y'`), or for a card `RES.I.CREDIT_CARD_APPROVAL` then `RES.S.CREDIT_CARD_APPROVAL` every 10 s for up to 90 s. |
-| Step 4 | `RES.S.VEHICLE_TYPE`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` (8 e-mail, 6 cell) | First car type is the default. Passengers 1–4, stops 0–4. |
+| Step 4 | `RES.S.VEHICLE_TYPE`, `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` (8 e-mail, 6 cell) | First car type is the default. Passengers 1–4, stops 0–4. |
 | Preview → Book / Save changes | `RES.I.RESERVATION` / `RES.U.RESERVATION` | Every contract parameter, `retry: false`, behind an in-flight lock. Then (needs a reservation number) the Email CC values via `RES.*RESERVATION_COLUMN_VALUE` and `RES.U.FORMAT_EMAIL_MESSAGE`, both best effort. |
 | Details | `RES.S.LOAD_RESERVATION`, `PROF.S.CAR_INFO`, `RES.S.COMMUNICATION_LOG`, `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | Edit / return trip / repeat reload the record and open the wizard. |
 | Cancel (rides, details) | `RES.U.CANCEL_RESERVATION` | Reason required, ≤ 50 characters, `retry: false`. |
@@ -351,7 +351,7 @@ Specs `reverse-engineer-implemented/guide/11`, `12` and `reverse-engineer-implem
 |---|---|---|
 | My Addresses list (`addresses.tsx`) | `PROF.S.USER_ADDRESSES` | The **same** request `SavedPlacesContext` makes for Home and the booking form; the context exposes it as `places` (booking suggestions) and `addresses` (editable entries, `toSavedAddresses` in `src/services/addressBook.ts`). |
 | Add / edit / delete a location | `PROF.I.USER_ADDRESS`, `PROF.U.USER_ADDRESS`, `PROF.D.USER_ADDRESS` | Through `useSavedPlaces().saveAddress` / `deleteAddress`, `retry: false`, then the shared list reloads. `P_PICKUP_COUNT` = the row's `address_id`. Update and delete are refused while `USER_ADDRESSES` sends more values than headings (§10). The international number goes in `P_PHONE_NUM` as dial code + number (no dial-code parameter). `P_COUNTRY` is the code (`US`). |
-| My Contacts list (`contacts.tsx`) | `PROF.S.LOAD_PROFILE_COLUMN_VALUES` | `P_LOGIN_ID`. Rows mapped in `src/services/contacts.ts`; only the contact columns 3 home, 4 office, 5 fax, 6 cell, 8 e-mail are shown. |
+| My Contacts list (`contacts.tsx`) | `PROF.S.PROFILE_COLUMN_VALUES` | `P_LOGIN_ID`. Rows mapped in `src/services/contacts.ts`; only the contact columns 3 home, 4 office, 5 fax, 6 cell, 8 e-mail are shown. |
 | Add / edit / remove a contact | `PROF.I.PROFILE_COLUMN_VALUE`, `PROF.U.PROFILE_COLUMN_VALUE`, `PROF.D.PROFILE_COLUMN_VALUE` | A contact is identified by column id + stored value. Changing a contact's **type** adds it under the new column, then deletes the old one (the contract has no move). |
 
 - **Validation** follows the old site (guide 11 §3, 12 §3, 26): a location needs country, state, city, building # (digits ≤ 6), street (4–30 street characters) and one callback number; ZIP is exactly 5 digits; pickup point ≤ 20; directions ≤ 500 without `"`. A contact phone is 10 digits not starting with 0/1; an e-mail ≤ 50; only an office phone takes an extension (≤ 5 digits).
@@ -404,10 +404,11 @@ App: `sessionFromLoginResponse` in `src/services/auth.ts` — `"0"` → session 
 
 | Code | Sample `JData` | Observed `o_code` meaning |
 |---|---|---|
-| `PROF.S.IS_UNIQUE_EMAIL` | `[["1", "Duplicate"]]` for a login in use | `"0"` = free (per contract), `"1"` = taken |
-| `PROF.S.IS_VALID_VIP` | `[["0", "LEE, JENNIFER"]]` | `"0"` = valid, `o_message` = customer name `LAST, FIRST` |
-| `PROF.S.IS_VALID_COMPANY_NAME` | `[["0", "Success"]]` | `"0"` = the name matches the account |
-| `PROF.S.ACCOUNT_REQUIREMENTS` | `[["0", "Account ok. No requirements"]]` | `"0"` + message; a requirement-bearing account not yet seen |
+| `PROF.S.IS_UNIQUE_EMAIL` — ✅ migrated | `[["0", "Success"]]` new address / `[["1", "Duplicate"]]` login in use | `"0"` = free, `"1"` = taken |
+| `PROF.S.IS_VALID_VIP` — ✅ migrated | `[["0", "LEE, JENNIFER"]]` / `[["1", "Invalid user information"]]` | `"0"` = valid, `o_message` = customer name `LAST, FIRST`; `"1"` = not on the account |
+| `PROF.S.IS_VALID_COMPANY_NAME` — ✅ migrated | `[["0", "Success"]]` / `[["1", "Invalid"]]` | `"0"` = the name matches the account, `"1"` = it doesn't |
+| `PROF.S.ACCOUNT_REQUIREMENTS` — ✅ migrated | `[["0", "Account ok. No requirements"]]` / `[["1", "Invalid account"]]` | `"0"` = usable (no requirements for the test account), `"1"` = unknown account; a requirement-bearing account not yet seen |
+| `PROF.S.PASSWORD` — ✅ migrated | `[["0", "Sendmail"]]` for `j.lee@xyzcar.com` (one real e-mail sent, 2026-10-30) | `"0"` = password mailed; a refusal not yet seen |
 | `PROF.S.ACCOUNT_VIP_NUM` | `[["<account>", "<VIP number>"]]` | No `o_code`: headings `["pAccountNum", "pVIPNum"]` |
 | `RES.S.BILLING_METHOD` | `[["1", "Corporate Account"]]` | `o_code` is the **method**, not an error: `"1"` = Corporate Account |
 | `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` | `[["0", "Corporate Account"]]` | `"0"` + account kind |
@@ -429,13 +430,37 @@ Each is mapped by heading (§4): heading *n* pairs with value *n*, and the value
 | `RES.S.LOAD_RESERVATION` | 39 | **160** | Not yet reviewed. Invalid JSON, repaired. |
 | `RES.S.VEHICLE_TYPE` | 5: `car_type, car_type_name, max_passengers, max_luggage, description` | **2** | `car_type` and `car_type_name` pair correctly (`"3"` / `Sedan`); the other three headings have no value (`''`). |
 | `RES.S.ALL_PREDEFINED_QUESTIONS` | 4: `o_code, o_message, placeholder_col1, placeholder_col2` | **2** | `o_code` = the question id, `o_message` = the question text. |
-| `PROF.S.ACCOUNT_REQUIREMENTS_RS`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` | 4: `o_code, o_message, placeholder_col1, placeholder_col2` | **1** | `o_code` = `"X"` for an account without requirements. |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` | 4: `o_code, o_message, placeholder_col1, placeholder_col2` | **1** | `o_code` = `"X"` for every account tried (the test account, an unknown number, an e-mail). No account with requirements known yet. |
 | `RES.S.COMMUNICATION_LOG`, `RES.S.VEHICLE_LOG` | 4 | — | No rows for the reservation tried. |
+
+### Profile codes renamed to the backend's names
+
+The app first sent `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES` and `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE`, which answered "Action code is not supported". The backend's test client (postman.eliteny.com, XYZCar Profile Module) names them without `LOAD_`. Under those names they answer with real headings, each read by heading:
+
+| Code | Headings | Read in |
+|---|---|---|
+| `PROF.S.PROFILE_WHO_GRANTED_ACCESS` — ✅ migrated | `oLoginID, oFirstName, oLastName, oPhoneNumberUS, oPhoneExtUS, oAccountNum, oVIPNum` | `toGrantors`, `useReservationLookups.ts` |
+| `PROF.S.PROFILE_COLUMN_VALUES` — ✅ migrated | `oColumnId, oColumnValue` | `toContacts`, `src/services/contacts.ts` |
+| `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` — ✅ migrated | `oColumnId, oColumnValue` | `toContactValues`, `useReservationLookups.ts` |
+
+The test login has no rows in any of the three yet.
+
+### PROF.I.PROFILE — create
+
+One real corporate registration was sent through the app on 2026-10-30. It used a fresh e-mail, the test account, a matching company name, a Home address, e-mail confirmation and no car preferences, with the value codes from the backend test client (`P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`, `P_PAYMENT_TYPE` `1`, `P_CONFIRMATION_METHOD` `ML`).
+
+| `o_code` | `o_message` |
+|---|---|
+| `"9"` | `INTERNAL ERROR : … ORA-12899: value too large for column "OPTIMA"."T_VIP_PROFILE"."PREFERRED_KNOCKOFF_CODE" (actual: 2, maximum: 1) ORA-01403: no data found` |
+
+- **No profile was created:** `IS_UNIQUE_EMAIL` still answers `Success` for that e-mail.
+- **Which value is too long isn't known.** The 2-character values sent were `P_COUNTRY` `01`, `P_STATE` `NY` and `P_CONFIRMATION_METHOD` `ML`. The column is a preference, so `P_CONFIRMATION_METHOD` is the likely one, but the backend must say which parameter fills `PREFERRED_KNOCKOFF_CODE` and which 1-character codes it takes.
+- **The app showed "Something went wrong":** the body's message has unescaped quotes, so it isn't valid JSON and its `o_code` can't be read.
+- The create is sent with `retry: false`.
 
 ### Codes that fail on the gateway
 
 | Code | Answer |
 |---|---|
-| `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` | `"1"` Action code is not supported |
 | `PROF.S.CAR_INFO` | `"1"` `ORA-01001: invalid cursor` |
 | `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | `"9"` `ORA-01400: cannot insert NULL into …RESERVATION_COLUMN_VALUES…` — a select code that tries an INSERT; invalid JSON (unescaped quotes) |

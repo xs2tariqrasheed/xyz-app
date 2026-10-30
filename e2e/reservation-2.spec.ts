@@ -371,5 +371,5 @@ test('authorises a card before booking with it', async ({ page }) => {
   await continueTo(page, 'Preferences');
   const approvalCall = await approval;
   expectContract(approvalCall, ACTION_CODES.START_CREDIT_CARD_APPROVAL);
-  expect(jDataOf(approvalCall)).toMatchObject({ P_CARD_TYPE: 'VISA', P_EXPIRATION_DATE: '12/2030' });
+  expect(jDataOf(approvalCall)).toMatchObject({ P_CARD_TYPE: '2', P_EXPIRATION_DATE: '12/2030' });
 });

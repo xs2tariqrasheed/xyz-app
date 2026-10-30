@@ -27,18 +27,26 @@ export class RegistrationError extends Error {
 }
 
 /**
- * `P_PAYMENT_TYPE` per billing choice. Only "CC" appears in the contract's
- * samples; the corporate-account code is an assumption to confirm with the
- * backend.
+ * `P_PAYMENT_TYPE` per billing choice. "1" (corporate account) is the backend
+ * test client's value, and `RES.S.BILLING_METHOD` answers "1" = Corporate Account.
  */
-export const PAYMENT_TYPE_CODES = { corporate: 'CA', card: 'CC' } as const;
+export const PAYMENT_TYPE_CODES = {
+  corporate: '1',
+  // TODO(schema-unverified): the credit-card code is not in any backend sample;
+  // confirm it with the backend and remove this comment.
+  card: 'CC',
+} as const;
 
-/** `P_CC_TYPE` per detected brand, in the old site's spelling. */
+/**
+ * `P_CC_TYPE` per detected brand: the old site's `CardType` codes
+ * (reverse-engineer-implemented/guide/04 §4.1); the backend's reservation test
+ * client sends the same numeric codes ("0").
+ */
 export const CARD_TYPE_CODES: Record<CardBrand, string> = {
-  visa: 'VISA',
-  mastercard: 'MASTER',
-  amex: 'AMEX',
-  discover: 'DISCOVER',
+  visa: '2',
+  mastercard: '1',
+  amex: '0',
+  discover: '5',
   unknown: '',
 };
 
@@ -76,22 +84,6 @@ const RESULT_COLUMNS: ReadonlySet<string> = new Set(['o_code', 'o_message']);
 
 /** Values that mean "no" in a flag or count column. */
 const NEGATIVE_VALUES: ReadonlySet<string> = new Set(['', 'N', 'NO', '0', 'FALSE']);
-
-/**
- * Columns an `ACCOUNT_REQUIREMENTS_RS` row may name its field in, first match
- * wins. The contract lists no outputs for either requirements code (the
- * gateway stub returns placeholders), so these follow the procedure's naming
- * style; a row with none of them falls back to its first text value.
- */
-export const REQUIREMENT_LABEL_COLUMNS = [
-  'requirement_label',
-  'req_label',
-  'requirement_name',
-  'req_name',
-  'requirement',
-  'label',
-  'description',
-] as const;
 
 /** `JData` for {@link ACTION_CODES.ACCOUNT_REQUIREMENTS} and `_RS` — both take the account only. */
 export function accountRequirementsJData(accountNumber: string): GatewayJData {
@@ -132,17 +124,17 @@ export function accountRequirementLabels(response: GatewayResponse, fallback: st
   return rows.map(requirementLabel).filter(Boolean).slice(0, MAX_ACCOUNT_REQUIREMENTS);
 }
 
-/** A row's field name: a known label column, else its first non-numeric value. */
+/**
+ * A row's field name. `_RS` sends the headings `o_code, o_message,
+ * placeholder_col1, placeholder_col2`; no account with requirements has been
+ * seen yet (docs/XYZ_INTEGRATION_GUIDE.md §10).
+ */
 function requirementLabel(row: Record<string, string>): string {
-  const named = REQUIREMENT_LABEL_COLUMNS.find((column) => row[column]?.trim());
-  if (named) return row[named].trim();
-
-  const text = Object.entries(row).find(
-    ([column, value]) => !RESULT_COLUMNS.has(column) && value.trim() && !/^\d+$/.test(value.trim()),
-  );
-  return text ? text[1].trim() : '';
+  // TODO(schema-unverified): assumed the field name arrives under `o_message`;
+  // confirm against an account with requirements and remove this comment. Do
+  // NOT replace with a list of fallback headings.
+  return row.o_message.trim();
 }
-
 
 /** `MM/YY` → ['MM', 'YYYY'], or blanks while incomplete. */
 function splitExpiry(expiry: string): [string, string] {
@@ -191,6 +183,9 @@ export function createProfileJData(draft: RegistrationDraft, requirementCount: n
     P_ACCOUNT_REQ4: requirement(3),
     P_CONFIRMATION_METHOD: preferences.confirmByPhone ? CONFIRMATION_CODES.phone : CONFIRMATION_CODES.email,
     P_PREFERRED_FLEET: car.preferredFleet.trim(),
+    // TODO(schema-unverified): the backend test client sends P_CAR_YEAR "90" and
+    // P_CAR_PHONE "N" (a Y/N flag, not a number); confirm both meanings with the
+    // backend and remove this comment.
     P_CAR_YEAR: car.carYear,
     P_CAR_PHONE: car.carPhone.number,
     P_SPECIAL_OFFER: preferences.subscribeSpecialOffers ? SPECIAL_OFFER_CODES.yes : SPECIAL_OFFER_CODES.no,

@@ -39,14 +39,30 @@ export type CustomerProfile = {
   mailingAddress: MailingAddress | null;
 };
 
-/** `P_CONFIRMATION_METHOD`: "EMAIL" is the sample; "PHONE" mirrors it. */
-export const CONFIRMATION_CODES = { email: 'EMAIL', phone: 'PHONE' } as const;
+/**
+ * `P_CONFIRMATION_METHOD`. "ML" (e-mail) is the backend test client's value
+ * for `PROF.I.PROFILE` and `RES.I.RESERVATION` (docs/XYZ_INTEGRATION_GUIDE.md §10).
+ */
+export const CONFIRMATION_CODES = {
+  email: 'ML',
+  // TODO(schema-unverified): the phone code is not in any backend sample;
+  // confirm it with the backend and remove this comment.
+  phone: 'PHONE',
+} as const;
 
 /** `P_SPECIAL_OFFER`: "N" is the sample; "Y" opts in. */
 export const SPECIAL_OFFER_CODES = { yes: 'Y', no: 'N' } as const;
 
-/** `P_ADDRESS_TYPE`. "H" is the documented sample; "O" mirrors it for office. */
-export const ADDRESS_TYPE_CODES: Record<AddressType, string> = { home: 'H', office: 'O' };
+/** `P_ADDRESS_TYPE`. "HOME" is the backend test client's value. */
+export const ADDRESS_TYPE_CODES: Record<AddressType, string> = {
+  home: 'HOME',
+  // TODO(schema-unverified): the office code is not in any backend sample;
+  // confirm it with the backend and remove this comment.
+  office: 'O',
+};
+
+/** `P_COUNTRY` for the United States: "01", as the backend test client sends and the records return. */
+const US_COUNTRY_CODE = '01';
 
 /** Thrown when the server refuses a profile update, as opposed to failing. */
 export class ProfileError extends Error {
@@ -102,7 +118,11 @@ export function toCustomerProfile(rows: ProfileRow[] | undefined): CustomerProfi
 
 /** The `P_COUNTRY` code for a country name from the address form. */
 function countryCode(name: string): string {
-  return COUNTRIES.find((country) => country.name === name)?.code ?? name.trim();
+  const code = COUNTRIES.find((country) => country.name === name)?.code;
+  if (code === 'US') return US_COUNTRY_CODE;
+  // TODO(schema-unverified): only the US code ("01") is in a backend sample;
+  // confirm the other countries' codes with the backend and remove this comment.
+  return code ?? name.trim();
 }
 
 /**

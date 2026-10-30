@@ -36,8 +36,8 @@ export const ACTION_CODES = {
   USER_PROFILE_ADDRESSES: 'PROF.S.USER_PROFILE_ADDRESSES',
   /** P_ACCOUNT_NUM → the company's own locations: the 17-column address record. */
   CORPORATE_ADDRESSES: 'PROF.S.CORPORATE_ADDRESSES',
-  /** P_LOGIN_ID, P_COLUMN_ID (contact type) → the profile's contacts of that type. */
-  LOAD_PROFILE_COLUMN_VALUES_BY_TYPE: 'PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE',
+  /** P_LOGIN_ID, P_COLUMN_ID (contact type) → oColumnId, oColumnValue: the profile's contacts of that type. */
+  PROFILE_COLUMN_VALUES_BY_TYPE: 'PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE',
 
   // ── Address book & contacts (reverse-engineer-implemented/guide/11, 12) ────────────────
   /** P_LOGIN_ID, P_COUNTRY, P_STATE, P_CITY, P_STREET_NUM, P_STREET_NAME, P_CROSS_STREET, P_PICKUP_POINT, P_ZIP, P_DIRECTIONS, P_PHONE_NUM, P_EXT, P_PHONE_NUM_US, P_EXT_US → o_code / o_message. */
@@ -46,8 +46,8 @@ export const ACTION_CODES = {
   UPDATE_USER_ADDRESS: 'PROF.U.USER_ADDRESS',
   /** P_LOGIN_ID, P_PICKUP_COUNT → o_code / o_message. */
   DELETE_USER_ADDRESS: 'PROF.D.USER_ADDRESS',
-  /** P_LOGIN_ID → every extra value on the profile (contacts and others), one row each (columns undocumented). */
-  LOAD_PROFILE_COLUMN_VALUES: 'PROF.S.LOAD_PROFILE_COLUMN_VALUES',
+  /** P_LOGIN_ID → oColumnId, oColumnValue: every extra value on the profile (contacts and others), one row each. */
+  PROFILE_COLUMN_VALUES: 'PROF.S.PROFILE_COLUMN_VALUES',
   /** P_LOGIN_ID, P_COLUMN_ID, P_COLUMN_VALUE → o_code / o_message. */
   ADD_PROFILE_COLUMN_VALUE: 'PROF.I.PROFILE_COLUMN_VALUE',
   /** P_LOGIN_ID, P_COLUMN_ID, P_COLUMN_VALUE_OLD, P_COLUMN_VALUE_NEW → o_code / o_message. */
@@ -62,8 +62,8 @@ export const ACTION_CODES = {
   VEHICLE_TYPE: 'RES.S.VEHICLE_TYPE',
 
   // ── Booking wizard (guides 13–17) ──────────────────────────────────────────
-  /** P_LOGIN_ID_TO → profiles that let this login book on their behalf. */
-  LOAD_PROFILE_WHO_GRANTED_ACCESS: 'PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS',
+  /** P_LOGIN_ID_TO → oLoginID, oFirstName, oLastName, oPhoneNumberUS, oPhoneExtUS, oAccountNum, oVIPNum: profiles that let this login book for them. */
+  PROFILE_WHO_GRANTED_ACCESS: 'PROF.S.PROFILE_WHO_GRANTED_ACCESS',
   /** P_ACCOUNT_NUM → which billing methods the account allows; o_code / o_message. */
   BILLING_METHOD: 'RES.S.BILLING_METHOD',
   /** P_LOGIN_ID, P_ACCOUNT_NUM, P_VIP_NUM → the account and VIP number on file. */

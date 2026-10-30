@@ -441,7 +441,7 @@
 | P\_PHONE\_NUMBER\_US | ‘2125551234’ |
 | P\_PHONE\_EXT\_US | ‘101’ |
 | P\_FAX | ‘2125559999’ |
-| P\_COUNTRY | ‘US’ |
+| P\_COUNTRY | ‘01’ |
 | P\_STATE | ‘NY’ |
 | P\_CITY | ‘New York’ |
 | P\_ZIP | ‘10001’ |
@@ -451,11 +451,11 @@
 | P\_CROSS\_STREET2 | ‘35th St’ |
 | P\_ADDRESS\_PHONE | ‘2125551234’ |
 | P\_ADDRESS\_PHONE\_US | ‘2125551234’ |
-| P\_ADDRESS\_TYPE | ‘H’ |
-| P\_PAYMENT\_TYPE | ‘CC’ |
+| P\_ADDRESS\_TYPE | ‘HOME’ |
+| P\_PAYMENT\_TYPE | ‘1’ |
 | P\_ACCOUNT\_NUM | ‘ACCT10023’ |
 | P\_VIP\_NUM | ‘VIP4521’ |
-| P\_CC\_TYPE | ‘VISA’ |
+| P\_CC\_TYPE | ‘2’ |
 | P\_CARD\_HOLDER\_NAME | ‘John Doe’ |
 | P\_CARD\_NUMBER | ‘4111111111111111’ |
 | P\_VERIFY\_CODE | ‘123’ |
@@ -465,7 +465,7 @@
 | P\_ACCOUNT\_REQ2 | ‘REQ001’ |
 | P\_ACCOUNT\_REQ3 | ‘REQ001’ |
 | P\_ACCOUNT\_REQ4 | ‘REQ001’ |
-| P\_CONFIRMATION\_METHOD | ‘EMAIL’ |
+| P\_CONFIRMATION\_METHOD | ‘ML’ |
 | P\_PREFERRED\_FLEET | ‘ABC Fleet’ |
 | P\_CAR\_YEAR | ‘2023’ |
 | P\_CAR\_PHONE | ‘2125551234’ |
@@ -679,19 +679,19 @@
 | :---- | :---- |
 | P\_LOGIN\_ID\_FROM | ‘jdoe2024’ |
 
-### **Action Code: PROF.S.LOAD\_PROFILE\_WHO\_GRANTED\_ACCESS** — ✅ Implemented
+### **Action Code: PROF.S.PROFILE\_WHO\_GRANTED\_ACCESS** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID\_TO | ‘msmith2024’ |
 
-### **Action Code: PROF.S.LOAD\_PROFILE\_COLUMN\_VALUES** — ✅ Implemented
+### **Action Code: PROF.S.PROFILE\_COLUMN\_VALUES** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |
 | P\_LOGIN\_ID | ‘jdoe2024’ |
 
-### **Action Code: PROF.S.LOAD\_PROFILE\_COLUMN\_VALUES\_BY\_TYPE** — ✅ Implemented
+### **Action Code: PROF.S.PROFILE\_COLUMN\_VALUES\_BY\_TYPE** — ✅ Implemented
 
 | Parameter | Sample Value |
 | :---- | :---- |

@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 
 import { ACTION_CODES, type ActionCode } from '../src/constants/actionCodes';
 import { sandboxClientIpLookup } from './support/clientIp';
+import { testAccount, testCredentials } from './support/credentials';
 import { gatewayRows, waitForGatewayAction } from './support/gateway';
 import { expectRecaptchaUnticked, tickRecaptcha } from './support/recaptcha';
 
@@ -9,11 +10,11 @@ import { expectRecaptchaUnticked, tickRecaptcha } from './support/recaptcha';
  * Login → Create an account → three-step registration wizard.
  *
  * The read-only lookups (unique email, company name, VIP, account
- * requirements) go through the real API gateway. `PROF.I.PROFILE` is
- * intercepted, so a run never creates a profile: the test checks the request
- * the app built and answers it itself. A test can also answer a lookup
- * itself, for answers the gateway stub cannot give (an account with
- * requirement fields, a refused account).
+ * requirements) go through the real API gateway with the corporate account
+ * from `e2e/e2e.local.env`. `PROF.I.PROFILE` is intercepted, so a run never
+ * creates a profile: the test checks the request the app built and answers it
+ * itself. A test can also answer a lookup itself, for answers no known account
+ * gives (an account with requirement fields, a refused account).
  */
 
 /** Every parameter of PROF.I.PROFILE (docs/XYZ Action Codes.md). */
@@ -31,8 +32,9 @@ const PROFILE_PARAMETERS = [
 
 /** The payment provider's published Visa test number. */
 const TEST_CARD = '4111111111111111';
-const PASSWORD = 'P@ssw0rd!2026';
-const ACCOUNT = { number: 'ACCT10023', name: 'Acme Corp', vip: 'VIP4521' };
+/** 4–10 characters, no quotation marks (guide 04 §4.2). */
+const PASSWORD = 'Pw!2026ab';
+const ACCOUNT = testAccount();
 
 /**
  * The stack keeps the login screen mounted (hidden) under /register, so
@@ -200,7 +202,7 @@ function expectedPersonAndAddress(email: string): Record<string, string> {
     P_PHONE_NUMBER_US: '2125551234',
     P_PHONE_EXT_US: '101',
     P_FAX: '',
-    P_COUNTRY: 'US',
+    P_COUNTRY: '01',
     P_STATE: 'NY',
     P_CITY: 'New York',
     P_ZIP: '10001',
@@ -210,7 +212,8 @@ function expectedPersonAndAddress(email: string): Record<string, string> {
     P_CROSS_STREET2: 'Suite 200',
     P_ADDRESS_PHONE: '',
     P_ADDRESS_PHONE_US: '2125559876',
-    P_ADDRESS_TYPE: 'H',
+    // Office is the form's default (guide 04 §4.3).
+    P_ADDRESS_TYPE: 'O',
   };
 }
 
@@ -262,7 +265,7 @@ test('registers with a corporate account and returns to login', async ({ page })
   await page.getByRole('checkbox', { name: 'Smoking car', exact: true }).click();
 
   // Leaving the account number asks the real gateway whether the account
-  // needs requirement fields. Its stub answers with only a result code — no.
+  // needs requirement fields. It answers with only a result code — no.
   await field(page, 'Account number').fill(ACCOUNT.number);
   const requirementsResponse = waitForGatewayAction(page, ACTION_CODES.ACCOUNT_REQUIREMENTS);
   await field(page, 'Account name').fill(ACCOUNT.name);
@@ -298,14 +301,14 @@ test('registers with a corporate account and returns to login', async ({ page })
   expect(Object.keys(sent).sort()).toEqual([...PROFILE_PARAMETERS].sort());
   expect(sent).toEqual({
     ...expectedPersonAndAddress(email),
-    // The gateway stub names no requirement fields, so none were asked for.
+    // The account names no requirement fields, so none were asked for.
     ...NO_ACCOUNT_REQUIREMENTS,
     P_PREFERRED_FLEET: 'ABC Fleet',
     P_CAR_YEAR: '2023',
     P_CAR_PHONE: '2125550000',
     P_SMOKING_CAR: 'Y',
     P_IVR_PIN: '4521',
-    P_PAYMENT_TYPE: 'CA',
+    P_PAYMENT_TYPE: '1',
     P_ACCOUNT_NUM: ACCOUNT.number,
     P_VIP_NUM: ACCOUNT.vip,
     P_CC_TYPE: '',
@@ -358,13 +361,13 @@ test('shows a refused card registration, then succeeds on retry', async ({ page 
     P_PAYMENT_TYPE: 'CC',
     P_ACCOUNT_NUM: '',
     P_VIP_NUM: '',
-    P_CC_TYPE: 'VISA',
+    P_CC_TYPE: '2',
     P_CARD_HOLDER_NAME: 'John Doe',
     P_CARD_NUMBER: TEST_CARD,
     P_VERIFY_CODE: '123',
     P_CC_MONTH: '12',
     P_CC_YEAR: '2030',
-    P_CONFIRMATION_METHOD: 'EMAIL',
+    P_CONFIRMATION_METHOD: 'ML',
     P_SPECIAL_OFFER: 'N',
   });
 
@@ -393,11 +396,13 @@ test('asks for the fields a corporate account requires', async ({ page }) => {
       headings: ['o_code', 'o_message', 'requirement_count'],
       rows: [['0', '', '2']],
     },
+    // The label under `o_message`, as accountRequirementLabels assumes
+    // (TODO(schema-unverified) there): no real account with requirements yet.
     [ACTION_CODES.ACCOUNT_REQUIREMENTS_RS]: {
-      headings: ['o_code', 'o_message', 'requirement_num', 'requirement_label'],
+      headings: ['o_code', 'o_message'],
       rows: [
-        ['0', '', '1', 'Cost center'],
-        ['0', '', '2', 'Employee ID'],
+        ['0', 'Cost center'],
+        ['0', 'Employee ID'],
       ],
     },
   };
@@ -478,4 +483,71 @@ test('stops at an account the server refuses', async ({ page }) => {
   // A different account number clears the refusal.
   await field(page, 'Account number').fill('ACCT20001');
   await expect(page.getByText('This account is closed.')).toHaveCount(1);
+});
+
+test('applies the field rules and shows the gateway refusals', async ({ page }) => {
+  const profile = await interceptCreateProfile(page);
+
+  // ── Step 1: password rules, then a login that is already registered ─────
+  await page.goto('/login');
+  await page.getByRole('link', { name: 'Create an account' }).click();
+  await expect(page).toHaveURL(/\/register$/);
+
+  const taken = testCredentials().email;
+  await field(page, 'Email address').fill(taken);
+  await field(page, 'Confirm email').fill(taken);
+  await field(page, 'First name').fill('John');
+  await field(page, 'Last name').fill('Doe');
+  await field(page, 'Callback phone (US)').fill('2125551234');
+
+  await field(page, 'Password').fill('abc');
+  await field(page, 'Confirm password').fill('abc');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText('Use 4 to 10 characters.')).toBeVisible();
+
+  await field(page, 'Password').fill('ab"cd');
+  await field(page, 'Confirm password').fill('ab"cd');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText("A password can't contain quotation marks.")).toBeVisible();
+
+  // The field stops at 10 characters.
+  await field(page, 'Password').fill('abcdefghijk');
+  await expect(field(page, 'Password')).toHaveValue('abcdefghij');
+
+  await field(page, 'Password').fill(PASSWORD);
+  await field(page, 'Confirm password').fill(PASSWORD);
+  const duplicateResponse = waitForGatewayAction(page, ACTION_CODES.IS_UNIQUE_EMAIL);
+  await page.getByRole('button', { name: 'Next' }).click();
+  const [duplicate] = await gatewayRows(await duplicateResponse);
+  expect(duplicate?.o_code).toBe('1');
+  // The gateway's own refusal is shown on the e-mail field, and the step stays.
+  await expect(page.getByText(duplicate.o_message, { exact: true })).toBeVisible();
+  await expect(page.getByText('Account & Personal Info')).toBeVisible();
+  expect(profile.calls).toHaveLength(0);
+});
+
+test('applies the billing rules and shows a refused company name', async ({ page }) => {
+  const profile = await interceptCreateProfile(page);
+  await completeAccountAndAddress(page, uniqueEmail());
+
+  // Account number: letters, digits and spaces only, at most 10.
+  await field(page, 'Account number').fill('ACCT-1');
+  await field(page, 'VIP number').fill('VIP1');
+  await tickRecaptcha(page);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByText('Use up to 10 letters, digits or spaces.')).toBeVisible();
+  await expect(page.getByText('Use up to 10 digits.')).toBeVisible();
+  await field(page, 'Account number').fill('ABCDEFGHIJKL');
+  await expect(field(page, 'Account number')).toHaveValue('ABCDEFGHIJ');
+
+  // A real account with the wrong company name: the gateway refuses it.
+  await field(page, 'Account number').fill(ACCOUNT.number);
+  await field(page, 'VIP number').fill('');
+  await field(page, 'Account name').fill('Wrong Company Ltd');
+  const companyResponse = waitForGatewayAction(page, ACTION_CODES.IS_VALID_COMPANY_NAME);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  const [company] = await gatewayRows(await companyResponse);
+  expect(company?.o_code).toBe('1');
+  await expect(page.getByText(company.o_message, { exact: true }).first()).toBeVisible();
+  expect(profile.calls).toHaveLength(0);
 });

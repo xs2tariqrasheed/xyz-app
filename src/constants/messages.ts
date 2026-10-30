@@ -58,9 +58,9 @@ export const FORGOT_PASSWORD_MESSAGES = {
   SUBMITTING: 'Sending…',
   REQUEST_FAILED_TITLE: 'Request not sent',
   /** Server refused the request without saying why. */
-  REQUEST_REJECTED: "We couldn't send a reset email for that login name.",
+  REQUEST_REJECTED: "We couldn't send your password for that login name.",
   SUCCESS_TITLE: 'Email sent',
-  SUCCESS_MESSAGE: 'Check your email for instructions to reset your password.',
+  SUCCESS_MESSAGE: 'Your password has been sent to your email.',
   BACK_TO_LOGIN: 'Back to log in',
 } as const;
 
@@ -70,10 +70,10 @@ export const CHANGE_PASSWORD_MESSAGES = {
   OLD_PASSWORD_LABEL: 'Old password',
   OLD_PASSWORD_PLACEHOLDER: 'Your current password',
   NEW_PASSWORD_LABEL: 'New password',
-  NEW_PASSWORD_PLACEHOLDER: 'At least 8 characters',
+  NEW_PASSWORD_PLACEHOLDER: '4 to 10 characters',
   CONFIRM_PASSWORD_LABEL: 'Confirm new password',
   CONFIRM_PASSWORD_PLACEHOLDER: 'Re-type the new password',
-  RULE_LENGTH: 'At least 8 characters',
+  RULE_LENGTH: '4 to 10 characters, no quotation marks',
   RULE_CASE: 'An upper and a lower case letter',
   RULE_NUMBER: 'At least one number',
   OLD_PASSWORD_REQUIRED: 'Enter your current password.',
@@ -267,7 +267,8 @@ export const REGISTER_MESSAGES = {
   EMAIL_INVALID: "That doesn't look like an email address.",
   CONFIRM_EMAIL_MISMATCH: "The email addresses don't match.",
   PASSWORD_REQUIRED: 'Choose a password.',
-  PASSWORD_TOO_SHORT: 'Use at least 8 characters.',
+  PASSWORD_LENGTH: 'Use 4 to 10 characters.',
+  PASSWORD_INVALID: "A password can't contain quotation marks.",
   CONFIRM_PASSWORD_MISMATCH: "The passwords don't match.",
   /** Server refused the email without saying why. */
   EMAIL_TAKEN: 'An account already uses this email address.',
@@ -278,13 +279,16 @@ export const REGISTER_MESSAGES = {
   BILLING_CARD: 'Credit card',
   BILLING_CARD_CAPTION: 'Billed straight to your card',
   ACCOUNT_NUMBER_LABEL: 'Account number',
-  ACCOUNT_NUMBER_PLACEHOLDER: 'e.g. CORP-48213',
+  ACCOUNT_NUMBER_PLACEHOLDER: 'e.g. CORP48213',
   COMPANY_NAME_LABEL: 'Account name',
   COMPANY_NAME_PLACEHOLDER: 'e.g. Acme Corp',
   VIP_NUMBER_LABEL: 'VIP number',
-  VIP_NUMBER_PLACEHOLDER: 'e.g. VIP-204',
+  VIP_NUMBER_PLACEHOLDER: 'e.g. 2045',
   ACCOUNT_NUMBER_REQUIRED: 'Enter the account number.',
+  ACCOUNT_NUMBER_INVALID: 'Use up to 10 letters, digits or spaces.',
   COMPANY_NAME_REQUIRED: 'Enter the account name.',
+  COMPANY_NAME_INVALID: "Use up to 50 characters, without quotation marks.",
+  VIP_NUMBER_FORMAT: 'Use up to 10 digits.',
   /** Server refused the account / name pair without saying why. */
   COMPANY_INVALID: "That account number and name don't match.",
   /** Server refused the VIP number without saying why. */
@@ -292,6 +296,7 @@ export const REGISTER_MESSAGES = {
   /** Server refused the account's requirements lookup without saying why. */
   ACCOUNT_NOT_AVAILABLE: "This account can't be used for registration.",
   CARD_HOLDER_REQUIRED: 'Enter the name on the card.',
+  CARD_HOLDER_INVALID: 'Use 2 to 30 letters, spaces, periods or apostrophes.',
   CARD_NUMBER_REQUIRED: 'Enter the card number.',
   CARD_NUMBER_INVALID: 'Check the card number.',
   CARD_BRAND_UNSUPPORTED: 'We accept Visa, Mastercard, Amex and Discover.',

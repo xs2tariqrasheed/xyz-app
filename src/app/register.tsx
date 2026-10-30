@@ -13,6 +13,7 @@ import { BillingStep } from '@/components/register/BillingStep';
 import {
   EMPTY_REGISTRATION,
   hasErrors,
+  isVipNumber,
   REGISTRATION_STEPS,
   type BillingErrors,
   EMPTY_REQUIREMENTS,
@@ -51,6 +52,9 @@ type Rejection = { key: string; message: string };
 /** The requirement fields an account asked for, remembered with the account number. */
 type Requirements = { accountNumber: string; labels: readonly string[] };
 
+const companyKey = (draft: RegistrationDraft) =>
+  `${draft.billing.accountNumber.trim()}|${draft.billing.companyName.trim()}`;
+
 const vipKey = (draft: RegistrationDraft) =>
   `${draft.billing.accountNumber.trim()}|${draft.billing.vipNumber.trim()}`;
 
@@ -83,6 +87,7 @@ export default function RegisterScreen() {
   const [emailRejection, setEmailRejection] = useState<Rejection | null>(null);
   const [vipRejection, setVipRejection] = useState<Rejection | null>(null);
   const [accountRejection, setAccountRejection] = useState<Rejection | null>(null);
+  const [companyRejection, setCompanyRejection] = useState<Rejection | null>(null);
   const [requirements, setRequirements] = useState<Requirements | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'checking' | 'submitting' | null>(null);
@@ -113,7 +118,12 @@ export default function RegisterScreen() {
     if (!billingErrors.accountNumber && accountRejection?.key === draft.billing.accountNumber.trim()) {
       billingErrors.accountNumber = accountRejection.message;
     }
-    if (vipRejection?.key === vipKey(draft)) billingErrors.vipNumber = vipRejection.message;
+    // The gateway's refusal of the account / name pair belongs on the name field.
+    if (!billingErrors.companyName && companyRejection?.key === companyKey(draft)) {
+      billingErrors.companyName = companyRejection.message;
+    }
+    // The client's own rule wins: a malformed VIP is never sent for checking.
+    if (!billingErrors.vipNumber && vipRejection?.key === vipKey(draft)) billingErrors.vipNumber = vipRejection.message;
   }
   const humanError = attempted[2] && !human ? CAPTCHA_MESSAGES.REQUIRED : undefined;
 
@@ -141,8 +151,9 @@ export default function RegisterScreen() {
     actionCode: ActionCode,
     jData: GatewayJData,
     fallback: string,
+    { retry = true }: { retry?: boolean } = {},
   ) => {
-    const response = await request.mutateAsync(actionCode, GATEWAY_VIEW_NAME, jData);
+    const response = await request.mutateAsync(actionCode, GATEWAY_VIEW_NAME, jData, { retry });
     assertRegistrationStep(response, fallback);
   };
 
@@ -178,7 +189,7 @@ export default function RegisterScreen() {
   /** Early VIP check when the field is left; Create account checks it again. */
   const checkVipOnBlur = async () => {
     const { accountNumber, vipNumber } = draft.billing;
-    if (!accountNumber.trim() || !vipNumber.trim()) return;
+    if (!accountNumber.trim() || !isVipNumber(vipNumber.trim())) return;
 
     const key = vipKey(draft);
     try {
@@ -259,12 +270,21 @@ export default function RegisterScreen() {
   const verifyCorporateAccount = async () => {
     const { accountNumber, companyName, vipNumber } = draft.billing;
 
-    await check(
-      companyCheck,
-      ACTION_CODES.IS_VALID_COMPANY_NAME,
-      companyNameJData(accountNumber, companyName),
-      REGISTER_MESSAGES.COMPANY_INVALID,
-    );
+    const companyRejectionKey = companyKey(draft);
+    try {
+      await check(
+        companyCheck,
+        ACTION_CODES.IS_VALID_COMPANY_NAME,
+        companyNameJData(accountNumber, companyName),
+        REGISTER_MESSAGES.COMPANY_INVALID,
+      );
+      setCompanyRejection(null);
+    } catch (error) {
+      if (error instanceof RegistrationError) {
+        setCompanyRejection({ key: companyRejectionKey, message: error.message });
+      }
+      throw error;
+    }
 
     if (vipNumber.trim()) {
       const key = vipKey(draft);
@@ -313,6 +333,8 @@ export default function RegisterScreen() {
         ACTION_CODES.CREATE_PROFILE,
         createProfileJData(draft, labels.length),
         REGISTER_MESSAGES.PROFILE_REJECTED,
+        // A write: a lost response must not create the profile twice.
+        { retry: false },
       );
       setDone(true);
     } catch (error) {

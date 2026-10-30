@@ -26,10 +26,29 @@ export const REGISTRATION_STEPS = [
   { title: REGISTER_MESSAGES.STEP_BILLING_TITLE, short: REGISTER_MESSAGES.STEP_BILLING_SHORT },
 ] as const;
 
-export const PASSWORD_MIN_LENGTH = 8;
+/** Login passwords: 4–10 characters, no `'` or `"` (reverse-engineer-guide/26 §5). */
+export const PASSWORD_MIN_LENGTH = 4;
+export const PASSWORD_MAX_LENGTH = 10;
+
+/** A VIP number as the old site took it: digits only, at most 10. */
+export function isVipNumber(value: string): boolean {
+  return /^\d+$/.test(value) && value.length <= BILLING_LIMITS.vipNumber;
+}
+
+/** True when `password` has an allowed length and no quotation mark. */
+export function isAllowedPassword(password: string): boolean {
+  return (
+    password.length >= PASSWORD_MIN_LENGTH &&
+    password.length <= PASSWORD_MAX_LENGTH &&
+    !/['"]/.test(password)
+  );
+}
 
 /** `PROF.I.PROFILE` carries at most four account requirement values. */
 export const MAX_ACCOUNT_REQUIREMENTS = 4;
+
+/** Billing field limits (reverse-engineer-implemented/guide/04 §4.1). */
+export const BILLING_LIMITS = { accountNumber: 10, companyName: 50, vipNumber: 10, cardHolder: 30 } as const;
 
 export const IVR_PIN_LENGTH = 4;
 
@@ -127,8 +146,10 @@ export function validateAccount(value: AccountValue): AccountErrors {
   }
 
   if (!value.password) errors.password = REGISTER_MESSAGES.PASSWORD_REQUIRED;
-  else if (value.password.length < PASSWORD_MIN_LENGTH) {
-    errors.password = REGISTER_MESSAGES.PASSWORD_TOO_SHORT;
+  else if (value.password.length < PASSWORD_MIN_LENGTH || value.password.length > PASSWORD_MAX_LENGTH) {
+    errors.password = REGISTER_MESSAGES.PASSWORD_LENGTH;
+  } else if (!isAllowedPassword(value.password)) {
+    errors.password = REGISTER_MESSAGES.PASSWORD_INVALID;
   }
 
   if (value.confirmPassword !== value.password) {
@@ -157,8 +178,20 @@ export function validateBilling(
 ): BillingErrors {
   if (value.method === 'corporate') {
     const errors: BillingErrors = {};
-    if (!value.accountNumber.trim()) errors.accountNumber = REGISTER_MESSAGES.ACCOUNT_NUMBER_REQUIRED;
-    if (!value.companyName.trim()) errors.companyName = REGISTER_MESSAGES.COMPANY_NAME_REQUIRED;
+    const accountNumber = value.accountNumber.trim();
+    if (!accountNumber) errors.accountNumber = REGISTER_MESSAGES.ACCOUNT_NUMBER_REQUIRED;
+    else if (accountNumber.length > BILLING_LIMITS.accountNumber || !/^[A-Za-z0-9 ]+$/.test(accountNumber)) {
+      errors.accountNumber = REGISTER_MESSAGES.ACCOUNT_NUMBER_INVALID;
+    }
+
+    const companyName = value.companyName.trim();
+    if (!companyName) errors.companyName = REGISTER_MESSAGES.COMPANY_NAME_REQUIRED;
+    else if (companyName.length > BILLING_LIMITS.companyName || companyName.includes('"')) {
+      errors.companyName = REGISTER_MESSAGES.COMPANY_NAME_INVALID;
+    }
+
+    const vipNumber = value.vipNumber.trim();
+    if (vipNumber && !isVipNumber(vipNumber)) errors.vipNumber = REGISTER_MESSAGES.VIP_NUMBER_FORMAT;
 
     const requirements = requirementLabels.map((_, index) =>
       value.requirements[index]?.trim() ? undefined : REGISTER_MESSAGES.REQUIREMENT_REQUIRED,
@@ -171,7 +204,11 @@ export function validateBilling(
   const brand = detectBrand(card.number);
   const cardErrors: CardFieldsErrors = {};
 
-  if (!card.holder.trim()) cardErrors.holder = REGISTER_MESSAGES.CARD_HOLDER_REQUIRED;
+  const holder = card.holder.trim();
+  if (!holder) cardErrors.holder = REGISTER_MESSAGES.CARD_HOLDER_REQUIRED;
+  else if (holder.length < 2 || holder.length > BILLING_LIMITS.cardHolder || !/^[A-Za-z .']+$/.test(holder)) {
+    cardErrors.holder = REGISTER_MESSAGES.CARD_HOLDER_INVALID;
+  }
 
   if (digitsOnly(card.number).length === 0) cardErrors.number = REGISTER_MESSAGES.CARD_NUMBER_REQUIRED;
   else if (brand === 'unknown') cardErrors.number = REGISTER_MESSAGES.CARD_BRAND_UNSUPPORTED;

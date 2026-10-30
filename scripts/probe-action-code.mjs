@@ -8,8 +8,8 @@
  *     npm run gateway:probe -- PROF.S.CHECK_LOGIN_CREDENTIALS '{"P_LOGIN_ID":"…","P_PASSWORD":"…"}'
  *
  * Prints the raw body, then the shape — heading count against every row
- * length, flagged MISMATCH when they differ (then the headings cannot be
- * trusted and the code is mapped by position) — then each row paired with
+ * length, flagged MISMATCH when they differ (the app pairs by heading and
+ * ignores values past the last one, guide §4) — then each row paired with
  * the headings, plus any values past the last heading.
  *
  * Reads the gateway settings from `.env` and builds the same envelope as
@@ -127,7 +127,7 @@ if (repaired) console.log('Invalid JSON: stray backslashes repaired (as parseBod
 console.log(`Headings (${headings.length}): ${JSON.stringify(headings)}`);
 console.log(`Rows: ${rows.length}  Row length(s): ${lengths.join(', ') || '-'}`);
 if (rows.length > 0 && lengths.some((length) => length !== headings.length)) {
-  console.log('MISMATCH: headings do not match the rows — map this code by position.');
+  console.log('MISMATCH: headings ≠ row length — values past the last heading are ignored (guide §4).');
 }
 
 rows.forEach((row, index) => {

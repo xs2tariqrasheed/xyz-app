@@ -13,12 +13,13 @@ import { CAPTCHA_MESSAGES, REGISTER_MESSAGES } from '@/constants/messages';
 import { breakpoints, colors, space } from '@/theme';
 
 import { CarPreferencesFields } from './CarPreferencesFields';
-import type {
-  BillingChoice,
-  BillingErrors,
-  CarPreferences,
-  CarPreferencesErrors,
-  RegistrationBilling,
+import {
+  BILLING_LIMITS,
+  type BillingChoice,
+  type BillingErrors,
+  type CarPreferences,
+  type CarPreferencesErrors,
+  type RegistrationBilling,
 } from './registration';
 
 /** Brand when the tile is chosen, muted otherwise — matches the reservation tiles. */
@@ -105,6 +106,7 @@ export function BillingStep({
                 label={REGISTER_MESSAGES.ACCOUNT_NUMBER_LABEL}
                 required
                 value={billing.accountNumber}
+                maxLength={BILLING_LIMITS.accountNumber}
                 onChangeText={(accountNumber) => patch({ accountNumber })}
                 onBlur={onAccountBlur}
                 error={billingErrors.accountNumber}
@@ -118,6 +120,7 @@ export function BillingStep({
                 label={REGISTER_MESSAGES.COMPANY_NAME_LABEL}
                 required
                 value={billing.companyName}
+                maxLength={BILLING_LIMITS.companyName}
                 onChangeText={(companyName) => patch({ companyName })}
                 error={billingErrors.companyName}
                 placeholder={REGISTER_MESSAGES.COMPANY_NAME_PLACEHOLDER}
@@ -130,6 +133,7 @@ export function BillingStep({
             <TextField
               label={REGISTER_MESSAGES.VIP_NUMBER_LABEL}
               value={billing.vipNumber}
+              maxLength={BILLING_LIMITS.vipNumber}
               onChangeText={(vipNumber) => patch({ vipNumber })}
               onBlur={onVipBlur}
               error={billingErrors.vipNumber}

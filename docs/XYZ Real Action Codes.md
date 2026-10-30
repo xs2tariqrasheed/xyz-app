@@ -40,12 +40,12 @@ Probed on 2026-10-30 with a test login unless stated.
 | `RES.S.UPDATABLE_ORDERS` | R | 2026-10-30 | B | No (10 vs 112) | Move to heading-only reads | Same row as `ALL_ORDERS` |
 | `RES.S.LOAD_RESERVATION` | R | 2026-10-30 | B | No (39 vs 160) | Move to heading-only reads | Invalid JSON, now repaired |
 | `RES.S.ALL_PREDEFINED_QUESTIONS` | R | 2026-10-30 | B | No | Move to heading-only reads | `[question_id, text]` under `o_code/o_message` headings |
-| `PROF.S.ACCOUNT_REQUIREMENTS_RS` | R | 2026-10-30 | B | No | Move to heading-only reads | `[["X"]]` for an account without requirements. Needs an account with requirements. |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS` | R | 2026-10-30 | B | No (4 vs 1) | Needs data | `[["X"]]` for every account tried. The label is read from `o_message` alone (`TODO(schema-unverified)`). Needs an account with requirements. |
 | `RES.S.ACCOUNT_REQUIREMENTS_LIST` | R | 2026-10-30 | B | No | Move to heading-only reads | As above |
-| `PROF.S.IS_UNIQUE_EMAIL` | R | 2026-10-30 | A | Yes | Ready | `"1"` / `Duplicate` for a login in use |
-| `PROF.S.IS_VALID_COMPANY_NAME` | R | 2026-10-30 | A | Yes | Ready | `"0"` / `Success` |
-| `PROF.S.IS_VALID_VIP` | R | 2026-10-30 | A | Yes | Ready | `o_message` = customer name on success |
-| `PROF.S.ACCOUNT_REQUIREMENTS` | R | 2026-10-30 | A | Yes | Ready | `"0"` / `Account ok. No requirements` |
+| `PROF.S.IS_UNIQUE_EMAIL` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / `Success` free, `"1"` / `Duplicate` taken |
+| `PROF.S.IS_VALID_COMPANY_NAME` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / `Success`, `"1"` / `Invalid` |
+| `PROF.S.IS_VALID_VIP` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / customer name, `"1"` / `Invalid user information` |
+| `PROF.S.ACCOUNT_REQUIREMENTS` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / `Account ok. No requirements`, `"1"` / `Invalid account` |
 | `PROF.S.ACCOUNT_VIP_NUM` | R | 2026-10-30 | A | Yes (`pAccountNum, pVIPNum`) | Ready | No `o_code` |
 | `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` | R | 2026-10-30 | A | Yes | Ready | `"0"` / `Corporate Account` |
 | `RES.S.BILLING_METHOD` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | `"1"` = Corporate Account (a method, not an error) |
@@ -54,15 +54,15 @@ Probed on 2026-10-30 with a test login unless stated.
 | `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | `"5"` / `No Data Found` |
 | `RES.S.COMMUNICATION_LOG` | R | 2026-10-30 | ? | — | Needs data | No rows for the reservation tried |
 | `RES.S.VEHICLE_LOG` | R | 2026-10-30 | ? | — | Needs data | No rows for the reservation tried |
-| `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS` | R | 2026-10-30 | — | — | Blocked | Action code is not supported |
-| `PROF.S.LOAD_PROFILE_COLUMN_VALUES` | R | 2026-10-30 | — | — | Blocked | Action code is not supported |
-| `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` | R | 2026-10-30 | — | — | Blocked | Action code is not supported |
+| `PROF.S.PROFILE_WHO_GRANTED_ACCESS` | R | 2026-10-30 | B | Yes | ✅ Migrated | Was `LOAD_PROFILE_WHO_GRANTED_ACCESS` (not supported). Headings `oLoginID … oVIPNum`; no rows for the test login. |
+| `PROF.S.PROFILE_COLUMN_VALUES` | R | 2026-10-30 | B | Yes | ✅ Migrated | Was `LOAD_PROFILE_COLUMN_VALUES` (not supported). Headings `oColumnId, oColumnValue`; no rows yet. |
+| `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` | R | 2026-10-30 | B | Yes | ✅ Migrated | Was `LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` (not supported). Headings `oColumnId, oColumnValue`; no rows yet. |
 | `PROF.S.CAR_INFO` | R | 2026-10-30 | — | — | Blocked | `ORA-01001: invalid cursor` |
 | `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | R | 2026-10-30 | — | — | Blocked | `ORA-01400`: the select tries an INSERT |
 | `RES.S.LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE` | R | — | — | — | Not probed | Its sibling above writes. Ask the backend first. |
 | `RES.S.VERIFY_ACCOUNT_REQUIREMENTS` | R | — | — | — | Not probed | Needs an account with requirements |
 | `RES.S.CREDIT_CARD_APPROVAL` | R | — | — | — | Not probed | Needs a request number from `RES.I.CREDIT_CARD_APPROVAL` |
-| `PROF.S.PASSWORD` | R | — | — | — | Not probed | Sends a password-recovery e-mail |
+| `PROF.S.PASSWORD` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / `Sendmail`. Sent once through the app for the test login, which mailed one real e-mail. |
 | `RES.I.RESERVATION` | W | — | — | — | Not probed: writes data | Creates a real reservation |
 | `RES.U.RESERVATION` | W | — | — | — | Not probed: writes data | |
 | `RES.U.CANCEL_RESERVATION` | W | — | — | — | Not probed: writes data | |
@@ -73,7 +73,7 @@ Probed on 2026-10-30 with a test login unless stated.
 | `RES.U.FORMAT_EMAIL_MESSAGE` | W | — | — | — | Not probed: writes data | Sends an e-mail |
 | `RES.I.ASKED_QUESTIONS` | W | — | — | — | Not probed: writes data | |
 | `PROF.U.PASSWORD` | W | — | — | — | Not probed: writes data | Changes the test login's password |
-| `PROF.I.PROFILE` | W | — | — | — | Not probed: writes data | Creates a profile |
+| `PROF.I.PROFILE` | W | 2026-10-30 | A | Yes | Blocked | One real corporate create: `"9"` / `ORA-12899 … PREFERRED_KNOCKOFF_CODE (actual: 2, maximum: 1)`. No profile created. The backend must say which parameter fills that column and its codes (likely `P_CONFIRMATION_METHOD`). |
 | `PROF.U.PROFILE` | W | — | — | — | Not probed: writes data | Replaces the whole profile. Map `LOAD_PROFILE` first. |
 | `PROF.I.USER_ADDRESS` | W | — | — | — | Not probed: writes data | |
 | `PROF.U.USER_ADDRESS` | W | — | — | — | Not probed: writes data | |
@@ -102,6 +102,7 @@ Every code moves to **heading-only reads** (guide §4): pair each heading with i
 - **Invalid JSON:** backslashes in the receipt-image path (`\\192.168.168.19\Receipt_Images\…`) and quotes in Oracle error messages are not escaped.
 - **Raw Oracle errors** reach the client in `JHeader.Message`.
 - **`RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` performs an INSERT**, failing with ORA-01400.
-- **Not supported:** `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES`, `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE`. **Broken:** `PROF.S.CAR_INFO` (ORA-01001).
+- **`PROF.I.PROFILE` fails in the database:** `ORA-12899` on `T_VIP_PROFILE.PREFERRED_KNOCKOFF_CODE` (a 2-character value into a 1-character column). Which parameter fills it, and its codes, are needed. Codes still missing from any sample: card `P_PAYMENT_TYPE`, office `P_ADDRESS_TYPE`, phone `P_CONFIRMATION_METHOD`, non-US `P_COUNTRY`, and what `P_CAR_YEAR` / `P_CAR_PHONE` hold.
+- **Broken:** `PROF.S.CAR_INFO` (ORA-01001).
 - **`P_TOTAL_RECORDS` is ignored** by `RES.S.ALL_ORDERS`.
 - **`o_code` conventions differ per code** (`BILLING_METHOD`, `GOOGLE_ZONE_NUM`, `LATITUDE_LONGITUDE_FOR_CAR`). Ask for the documented outputs of each procedure.

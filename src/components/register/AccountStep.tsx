@@ -10,7 +10,7 @@ import { TextField } from '@/components/ui/TextField';
 import { REGISTER_MESSAGES } from '@/constants/messages';
 import { breakpoints, colors, space } from '@/theme';
 
-import type { AccountErrors, AccountValue } from './registration';
+import { type AccountErrors, type AccountValue, PASSWORD_MAX_LENGTH } from './registration';
 
 export type AccountStepProps = {
   account: AccountValue;
@@ -73,6 +73,7 @@ export function AccountStep({
 
       <View style={rowStyle}>
         <PasswordField
+          maxLength={PASSWORD_MAX_LENGTH}
           style={styles.field}
           label={REGISTER_MESSAGES.PASSWORD_LABEL}
           required
@@ -86,6 +87,7 @@ export function AccountStep({
           returnKeyType="next"
         />
         <PasswordField
+          maxLength={PASSWORD_MAX_LENGTH}
           style={styles.field}
           label={REGISTER_MESSAGES.CONFIRM_PASSWORD_LABEL}
           required

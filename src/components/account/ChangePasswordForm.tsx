@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { PASSWORD_MIN_LENGTH } from '@/components/register/registration';
+import { isAllowedPassword, PASSWORD_MAX_LENGTH } from '@/components/register/registration';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { FormCard } from '@/components/ui/FormCard';
@@ -32,7 +32,7 @@ const RULES = [
   {
     id: 'length',
     label: CHANGE_PASSWORD_MESSAGES.RULE_LENGTH,
-    test: (value: string) => value.length >= PASSWORD_MIN_LENGTH,
+    test: isAllowedPassword,
   },
   {
     id: 'case',
@@ -157,6 +157,7 @@ export function ChangePasswordForm() {
       ) : null}
 
       <PasswordField
+        maxLength={PASSWORD_MAX_LENGTH}
         key={`current-${formKey}`}
         label={CHANGE_PASSWORD_MESSAGES.OLD_PASSWORD_LABEL}
         required
@@ -172,6 +173,7 @@ export function ChangePasswordForm() {
       />
 
       <PasswordField
+        maxLength={PASSWORD_MAX_LENGTH}
         key={`next-${formKey}`}
         label={CHANGE_PASSWORD_MESSAGES.NEW_PASSWORD_LABEL}
         required
@@ -202,6 +204,7 @@ export function ChangePasswordForm() {
       </View>
 
       <PasswordField
+        maxLength={PASSWORD_MAX_LENGTH}
         key={`confirm-${formKey}`}
         label={CHANGE_PASSWORD_MESSAGES.CONFIRM_PASSWORD_LABEL}
         required

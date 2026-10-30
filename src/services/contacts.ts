@@ -1,11 +1,11 @@
 import { CONTACTS_MESSAGES } from '@/constants/messages';
-import type { GatewayJData, GatewayResponse } from '@/services/gateway';
-import { assertResultCode, pick, recordSet, toInt } from '@/services/gatewayRows';
+import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
+import { assertResultCode, toInt } from '@/services/gatewayRows';
 import { type Contact, contactType, contactTypeByColumn, fromStoredValue } from '@/utils/contacts';
 
 /**
  * My Contacts (reverse-engineer-implemented/guide/12) over the gateway. Contacts are
- * profile "column values": `PROF.S.LOAD_PROFILE_COLUMN_VALUES` lists them, and
+ * profile "column values": `PROF.S.PROFILE_COLUMN_VALUES` lists them, and
  * `PROF.I` / `PROF.U` / `PROF.D.PROFILE_COLUMN_VALUE` add, change and remove
  * one, identified by its column id and value.
  */
@@ -18,32 +18,24 @@ export class ContactsError extends Error {
   }
 }
 
-/**
- * The load's outputs are undocumented. Column names per field: the contract's
- * own parameter names first, then the old site's (`GetPhoneList` /
- * `GetEmailList`, guide 05 §3.3).
- */
-const COLUMNS = {
-  columnId: ['column_id', 'contact_type_id', 'contacttypeid', 'type_id', 'contact_type'],
-  value: ['column_value', 'contact_number', 'completecontactnumber', 'contactnumber', 'value', 'o_columnvalue'],
-} as const;
+/** The `PROF.S.PROFILE_COLUMN_VALUES` headings (docs/XYZ_INTEGRATION_GUIDE.md §10). */
+const CONTACT_HEADINGS = ['oColumnId', 'oColumnValue'] as const;
 
 /**
- * Rows → contacts. The same column space holds non-contact values (the
- * contract's sample stores a ride reason), so only the five contact types are
- * kept. A refusal (`o_code` ≠ "0") throws {@link ContactsError}.
+ * Rows → contacts, each field read by its heading. The same column space holds
+ * non-contact values (the contract's sample stores a ride reason), so only the
+ * five contact types are kept.
  */
 export function toContacts(response: GatewayResponse): Contact[] {
-  const rows = recordSet(response, (message) => new ContactsError(message), CONTACTS_MESSAGES.LOAD_REJECTED);
-  return rows.flatMap((row) => {
-    const type = contactTypeByColumn(toInt(pick(row, COLUMNS.columnId), -1));
-    const stored = pick(row, COLUMNS.value);
+  return mapRowsByHeadings(response, CONTACT_HEADINGS).flatMap((row) => {
+    const type = contactTypeByColumn(toInt(row.oColumnId, -1));
+    const stored = row.oColumnValue.trim();
     if (!type || !stored) return [];
     return [{ id: `${type.columnId}:${stored}`, type: type.id, stored, ...fromStoredValue(type.id, stored) }];
   });
 }
 
-/** `JData` for {@link ACTION_CODES.LOAD_PROFILE_COLUMN_VALUES}. */
+/** `JData` for {@link ACTION_CODES.PROFILE_COLUMN_VALUES}. */
 export function contactsJData(loginId: string): GatewayJData {
   return { P_LOGIN_ID: loginId };
 }

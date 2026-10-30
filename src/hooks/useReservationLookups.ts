@@ -4,8 +4,7 @@ import type { SelectOption } from '@/components/ui/SelectField';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
 import { useFetchData } from '@/hooks/useFetchData';
 import { type AccountOnFile, accountVipJData, toAccountOnFile } from '@/services/billing';
-import { type GatewayResponse, mapRows } from '@/services/gateway';
-import { pick } from '@/services/gatewayRows';
+import { type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 import type { AddressSuggestion } from '@/services/places';
 import { addressRecordSuggestions, userAddressesJData } from '@/services/savedPlaces';
 import { toVehicleTypes, type VehicleType } from '@/services/vehicleTypes';
@@ -63,41 +62,39 @@ export function useCompanyPlaces(accountNumber: string): Lookup<AddressSuggestio
   return useLookup(ACTION_CODES.CORPORATE_ADDRESSES, { P_ACCOUNT_NUM: accountNumber.trim() }, toCompanyPlaces);
 }
 
-const GRANTOR_COLUMNS = {
-  loginId: ['login_id_from', 'login_id', 'p_login_id_from'],
-  firstName: ['first_name'],
-  lastName: ['last_name'],
-} as const;
+/** The `PROF.S.PROFILE_WHO_GRANTED_ACCESS` headings the step reads (guide §10). */
+const GRANTOR_HEADINGS = ['oLoginID', 'oFirstName', 'oLastName'] as const;
 
 const toGrantors = (response: GatewayResponse): SelectOption<string>[] =>
-  mapRows(response).flatMap((row) => {
-    const loginId = pick(row, GRANTOR_COLUMNS.loginId);
+  mapRowsByHeadings(response, GRANTOR_HEADINGS).flatMap((row) => {
+    const loginId = row.oLoginID.trim();
     if (!loginId) return [];
-    const name = [pick(row, GRANTOR_COLUMNS.firstName), pick(row, GRANTOR_COLUMNS.lastName)].filter(Boolean).join(' ');
+    const name = [row.oFirstName.trim(), row.oLastName.trim()].filter(Boolean).join(' ');
     return [{ value: loginId, label: name || loginId, description: name ? loginId : undefined }];
   });
 
 /**
- * `PROF.S.LOAD_PROFILE_WHO_GRANTED_ACCESS` — people who let this login book
+ * `PROF.S.PROFILE_WHO_GRANTED_ACCESS` — people who let this login book
  * for them (Step 1 "Reservation for").
  */
 export function useGrantedProfiles(loginId: string): Lookup<SelectOption<string>> {
-  return useLookup(ACTION_CODES.LOAD_PROFILE_WHO_GRANTED_ACCESS, { P_LOGIN_ID_TO: loginId }, toGrantors);
+  return useLookup(ACTION_CODES.PROFILE_WHO_GRANTED_ACCESS, { P_LOGIN_ID_TO: loginId }, toGrantors);
 }
 
 /** Contact types (guide 01): 3 home, 4 office, 6 cell, 8 e-mail. */
 export const CONTACT_COLUMN_IDS = { home: 3, office: 4, cell: 6, email: 8 } as const;
 
-const CONTACT_VALUE_COLUMNS = ['contact_number', 'column_value', 'o_columnvalue', 'value', 'contactnumber'];
+/** The `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` headings the step reads (guide §10). */
+const CONTACT_VALUE_HEADINGS = ['oColumnValue'] as const;
 
 const toContactValues = (response: GatewayResponse): string[] => [
-  ...new Set(mapRows(response).map((row) => pick(row, CONTACT_VALUE_COLUMNS)).filter(Boolean)),
+  ...new Set(mapRowsByHeadings(response, CONTACT_VALUE_HEADINGS).map((row) => row.oColumnValue.trim()).filter(Boolean)),
 ];
 
-/** `PROF.S.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` — the profile's contacts of one type. */
+/** `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` — the profile's contacts of one type. */
 export function useContactValues(loginId: string, columnId: number): Lookup<string> {
   return useLookup(
-    ACTION_CODES.LOAD_PROFILE_COLUMN_VALUES_BY_TYPE,
+    ACTION_CODES.PROFILE_COLUMN_VALUES_BY_TYPE,
     { P_LOGIN_ID: loginId, P_COLUMN_ID: columnId },
     toContactValues,
   );

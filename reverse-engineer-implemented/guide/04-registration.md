@@ -96,3 +96,30 @@ Request: entire form (fields of §4) with `hfactive=0` or `hfactive=2`.
 - Store account requirement definitions as data (label, type, required, regex) instead of server-generated HTML/JS.
 - Credit-card registrations → `status=PendingApproval` + notify customer service. Tokenise cards.
 - **Unknown**: exact server error strings; requirement field definitions per account.
+
+## 8. Gateway (real data)
+
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10). Every check answers `o_code` / `o_message`; `"0"` passes, and any other code shows the gateway's `o_message` on its field.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `PROF.S.IS_UNIQUE_EMAIL` | Account step → Next | `"0"` / `Success`; `"1"` / `Duplicate` |
+| `PROF.S.IS_VALID_COMPANY_NAME` | Create account (corporate) | `"0"` / `Success`; `"1"` / `Invalid` |
+| `PROF.S.IS_VALID_VIP` | VIP field left, Create account | `"0"` / customer name; `"1"` / `Invalid user information` |
+| `PROF.S.ACCOUNT_REQUIREMENTS` | Account number left, Create account | `"0"` / `Account ok. No requirements`; `"1"` / `Invalid account` |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS` | Only when the account has requirements | `[["X"]]` under 4 headings for every account tried |
+| `PROF.I.PROFILE` | Create account | `"9"` / `ORA-12899 … PREFERRED_KNOCKOFF_CODE (actual: 2, maximum: 1)`: no profile created (one real try, 2026-10-30) |
+
+Value codes follow the backend test client: `P_COUNTRY` `01` (US), `P_ADDRESS_TYPE` `HOME`, `P_PAYMENT_TYPE` `1` (corporate), `P_CONFIRMATION_METHOD` `ML`, and `P_CC_TYPE` 2/1/0/5 (Visa/MC/AmEx/Discover). Card payment, office address, phone confirmation and car preferences are still unconfirmed (`TODO(schema-unverified)`).
+
+Client rules added to match §4:
+- **Password:** 4–10 characters, no `'` or `"`. Change Password uses the same rule.
+- **Account number:** ≤ 10 letters, digits or spaces.
+- **Company name:** ≤ 50 characters, no `"`.
+- **VIP number:** ≤ 10 digits.
+- **Card holder:** 2–30 letters, spaces, `.` or `'`.
+
+**Still unverified:**
+- `PROF.I.PROFILE` fails in the database: one parameter fills the 1-character `PREFERRED_KNOCKOFF_CODE` column with 2 characters, likely `P_CONFIRMATION_METHOD` `ML`. The backend must name the parameter and its codes. After that, check the corporate and card answers (guide §5.3: corporate signs in, card goes to customer service).
+- A company name that doesn't match the account is refused by `PROF.S.IS_VALID_COMPANY_NAME` with `Invalid`, shown on the Account name field. The match is loose: for the test account `XYZ` passes, `XYZ Corp` doesn't.
+- Any account with requirements, so the requirement labels (read from `o_message`, `TODO(schema-unverified)`) are unconfirmed.

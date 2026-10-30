@@ -86,13 +86,17 @@ export function passwordRecoveryJData(loginId: string): GatewayJData {
 }
 
 /**
- * Throws when the procedure refused to send the recovery email. The contract
- * lists no outputs for this code, so a response without `o_code` counts as
- * sent — the gateway itself already accepted the call.
+ * Throws unless the procedure sent the recovery email. It answers `o_code` /
+ * `o_message`: "0" / "Sendmail" when it mailed the password
+ * (docs/XYZ_INTEGRATION_GUIDE.md §10). Any other code is a refusal; a
+ * response without `o_code` fails closed.
  */
 export function assertPasswordRecoverySent(response: GatewayResponse): void {
   const result = mapRows(response)[0];
-  if (result && 'o_code' in result && result.o_code !== DB_SUCCESS_CODE) {
+  if (!result || !('o_code' in result)) {
+    throw new GatewayError('parsing', 'The password recovery response has no result code.');
+  }
+  if (result.o_code !== DB_SUCCESS_CODE) {
     throw new AuthError(result.o_message || FORGOT_PASSWORD_MESSAGES.REQUEST_REJECTED);
   }
 }

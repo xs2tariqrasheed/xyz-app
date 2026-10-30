@@ -34,3 +34,14 @@ Response: **HTML view** (confirmation or error) that replaces the page content. 
 
 ## 7. Revamp notes
 Implement token-based reset: `POST /auth/password/forgot {email}` (always neutral response) → e-mail link with single-use expiring token → `POST /auth/password/reset {token, newPassword}`.
+
+## 8. Gateway (real data)
+
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10).
+
+| Action code | JData | Real answer |
+|---|---|---|
+| `PROF.S.PASSWORD` | `P_LOGIN_ID` (trimmed, lower-cased) | `o_code` / `o_message`: `"0"` / `Sendmail` when the password was mailed |
+
+- `"0"` → the success panel ("Your password has been sent to your email."). Any other code → the gateway's `o_message`. No `o_code` → a general error (fail closed).
+- **Not yet seen:** the answer for an unknown login name.
