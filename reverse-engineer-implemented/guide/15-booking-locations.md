@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §8 Gateway (real data).
 
 # Module 15 — Booking Step 2: Pickup & Drop-off Locations
 
@@ -90,3 +92,15 @@ Above plus field validators: "Invalid Pickup FlightNo. Please enter only alpha n
 
 ## 7. Revamp notes
 Location model: `{kind: street|airport|landmark|asDirected, savedAddressId?, country, state, city, zip, streetNo, street, crossStreet1, crossStreet2, pickupPoint, areaName, airportCode, airline, flightNo, arrivingFrom, terminal, meetOption: C|D|B|A, landmarkName, directions, lat, lng, validated: bool, zoneMatched: bool, saveToAddressBook: bool}` for both pickup and drop-off. Server must re-check service area, zone and MetLife rule.
+
+## 8. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.S.GOOGLE_ZONE_NUM` | Google stop | Always `"1"` + zone; only `"0"` is a match today. |
+| `RES.S.ZONE_THE_LOCATION` | Saved / typed street | `["", ""]` for every input. |
+| `RES.S.LOAD_RESERVATION` | Editing a ride | Stops read from `opu*` / `odo*`; the kind from `oputype` / `odotype` (`1` street, `2` airport, `3` landmark). Airline / flight / terminal are read only for an airport drop-off: on street rides those headings carry address text (backend issue). |
+
+- `P_PU_ADDRESS_ADD` / `P_DO_ADDRESS_ADD` go out as `N`, as every stored ride carries; the Google subpremise is no longer sent there.

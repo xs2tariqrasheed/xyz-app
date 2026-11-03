@@ -13,6 +13,7 @@ import {
   CC_EMAILS_MAX_LENGTH,
   type PreferencesErrors,
   type PreferencesValue,
+  RIDE_PURPOSE_MAX,
 } from '@/components/reservation/PreferencesSection';
 import type {
   LegDetails,
@@ -205,9 +206,6 @@ export function checkPreferences(
   const car = findVehicleType(vehicleTypes, preferences.carType);
   if (!car) errors.carType = RESERVATION_MESSAGES.CAR_TYPE_REQUIRED;
   else if (car.callToBook) errors.carType = RESERVATION_MESSAGES.PREMIUM_WHEELCHAIR;
-  else if (car.seats !== null && preferences.passengers > car.seats) {
-    errors.passengers = RESERVATION_MESSAGES.OVER_CAPACITY;
-  }
 
   const email = preferences.email.trim();
   if (!email) errors.email = RESERVATION_MESSAGES.EMAIL_REQUIRED;
@@ -217,6 +215,11 @@ export function checkPreferences(
   else if (ccEmailList(preferences.ccEmails).some((address) => !isValidEmail(address))) {
     errors.ccEmails = RESERVATION_MESSAGES.CC_EMAIL_INVALID;
   }
+
+  // `RES.I.RESERVATION` fails (`ORA-01400`) without a ride purpose (guide §10).
+  const ridePurpose = preferences.ridePurpose.trim();
+  if (!ridePurpose) errors.ridePurpose = RESERVATION_MESSAGES.RIDE_PURPOSE_REQUIRED;
+  else if (ridePurpose.length > RIDE_PURPOSE_MAX) errors.ridePurpose = RESERVATION_MESSAGES.RIDE_PURPOSE_TOO_LONG;
 
   const us = preferences.callbackUs.number;
   const intl = preferences.callbackIntl.number;

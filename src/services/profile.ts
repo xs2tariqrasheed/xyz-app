@@ -7,7 +7,7 @@ import { PROFILE_MESSAGES } from '@/constants/messages';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 import { UNITED_STATES } from '@/data/regions';
 import { digitsOnly, formatUsPhone } from '@/utils/contact';
-import { MONTHS_SHORT } from '@/utils/datetime';
+import { parseDayMonthYear } from '@/services/gatewayRows';
 import { COUNTRIES, findCountryByDial, toIntlDigits } from '@/utils/phone';
 
 /**
@@ -427,12 +427,3 @@ function intlPhone(value: string, ext: string): PhoneValue {
   return { country: findCountryByDial(dial)?.code ?? null, number, ext };
 }
 
-/** "10-SEP-26" (DD-MON-YY, local day; guide §10) → Date, or `null` when unreadable. */
-function parseDayMonthYear(value: string): Date | null {
-  const match = /^(\d{1,2})-([A-Z]{3})-(\d{2})$/i.exec(value);
-  if (!match) return null;
-  const month = MONTHS_SHORT.findIndex((name) => name.toUpperCase() === match[2].toUpperCase());
-  if (month < 0) return null;
-  const date = new Date(2000 + Number(match[3]), month, Number(match[1]));
-  return Number.isNaN(date.getTime()) ? null : date;
-}

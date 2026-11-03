@@ -566,14 +566,10 @@ export const RESERVATION_MESSAGES = {
 
   // Step 4 — preferences (guide 17)
   CAR_TYPE_LABEL: 'Car type',
-  /** Follows the seat count: "Up to 3 riders". */
-  CAR_SEATS_PREFIX: 'Up to',
-  CAR_SEATS_SUFFIX: 'riders',
   CAR_TYPE_REQUIRED: 'Choose a car type.',
   CAR_TYPES_EMPTY: 'No car types are available right now.',
   CAR_TYPES_FAILED: 'Car types could not be loaded.',
   RETRY: 'Try again',
-  OVER_CAPACITY: 'This car seats fewer passengers. Choose a larger car.',
   EMAIL_REQUIRED: 'Enter the e-mail address for the confirmation.',
   EMAIL_INVALID: 'Enter an email address in the form name@example.com.',
   CC_EMAIL_LABEL: 'Email CC',
@@ -584,6 +580,8 @@ export const RESERVATION_MESSAGES = {
   US_PHONE_INVALID: 'A US number needs all 10 digits, area code first, not starting with 0 or 1.',
   RIDE_PURPOSE_LABEL: 'Trip purpose',
   RIDE_PURPOSE_PLACEHOLDER: 'e.g. Client meeting',
+  RIDE_PURPOSE_REQUIRED: 'Enter the trip purpose.',
+  RIDE_PURPOSE_TOO_LONG: 'Use 50 characters at most for the trip purpose.',
   FROM_CONTACTS: 'From your contacts',
   PREMIUM_WHEELCHAIR: 'Please call XYZ at 929-XYZLimo to book this vehicle.',
 
@@ -594,6 +592,10 @@ export const RESERVATION_MESSAGES = {
   BOOK_FAILED_TITLE: 'Reservation not booked',
   SAVE_FAILED_TITLE: 'Changes not saved',
   BOOK_REJECTED: 'The reservation was not accepted.',
+  BOOK_DUPLICATE_TITLE: 'Already booked',
+  BOOK_DUPLICATE: (reservationNumber: string) =>
+    `You already have a reservation with these details: ${reservationNumber}. Nothing new was booked.`,
+  BOOK_DUPLICATE_NO_NUMBER: 'You already have a reservation with these details. Nothing new was booked.',
   STEP_FAILED_TITLE: 'Check this step',
   RECEIPT_THANKS: 'Thank you',
   RECEIPT_NUMBER: 'for making a reservation with us. Your reservation number is',
@@ -799,9 +801,6 @@ export const FEEDBACK_MESSAGES = {
   QUESTION_REQUIRED: 'Choose a question.',
   QUESTIONS_EMPTY: 'There are no questions to choose from right now.',
   QUESTIONS_FAILED: 'The questions could not be loaded.',
-  // The live site's questions (guide 21), used while the gateway returns none.
-  QUESTION_CONTACT_DRIVER: 'How can I contact the driver?',
-  QUESTION_VEHICLE_LATE: 'Why is the vehicle late?',
   MESSAGE_LABEL: 'Message',
   MESSAGE_PLACEHOLDER: 'Anything we should know',
   MESSAGE_INVALID: 'Use 200 characters at most: letters, digits, spaces and full stops.',

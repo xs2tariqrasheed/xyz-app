@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §7 Gateway (real data).
 
 # Module 19 — Open Reservations ("Update/Cancel Reservation") & Cancellation
 
@@ -49,3 +51,12 @@ Dialog text: "You have selected to cancel reservation <ride no>. This action is 
 
 ## 6. Revamp notes
 `GET /me/reservations?status=open` and `POST /reservations/{rideNo}/cancel {reason}` (≤50). Enforce authorisation (own rides / authorised employees) and cut-off rules server-side **[cut-off rules U]**. Define the update/modify capability with the business (not observable).
+
+## 7. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.S.UPDATABLE_ORDERS` | Upcoming tab | 112 headings; 4 rows for the test login. |
+| `RES.U.CANCEL_RESERVATION` | Cancel with a reason (≤ 50) | `o_code, o_message`; `"1"` / `Invalid reservation number.` for the test ride, shown as sent. A successful cancel not seen. |

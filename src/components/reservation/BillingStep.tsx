@@ -13,6 +13,7 @@ import { useFetchData } from '@/hooks/useFetchData';
 import { usePostData } from '@/hooks/usePostData';
 import {
   accountJData,
+  accountMethods,
   ALL_BILLING_METHODS,
   assertAccountCheck,
   BillingError,
@@ -20,6 +21,7 @@ import {
   requirementListJData,
   type RequirementField,
   toAllowedMethods,
+  toCardSpecific,
   toRequirementField,
 } from '@/services/billing';
 import type { GatewayResponse } from '@/services/gateway';
@@ -29,7 +31,7 @@ import { vipJData } from '@/services/registration';
  * Step 3 with the account's own rules (reverse-engineer-implemented/guide/16):
  *
  * - `RES.S.BILLING_METHOD` — which billing methods the account allows;
- * - `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` — whether the account is accepted;
+ * - `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` — whether the account takes cards only;
  * - `RES.S.ACCOUNT_REQUIREMENTS_LIST` (1–4) — the account's own fields;
  * - `PROF.S.IS_VALID_VIP` — when the VIP field is left.
  *
@@ -65,13 +67,16 @@ export function BillingStep(props: BillingStepProps) {
   return account ? <AccountBillingStep {...props} account={account} /> : <Billing {...props} rules={DEFAULT_ACCOUNT_RULES} />;
 }
 
-/** Reads a refusal as an error message, and a mapping as its value. */
+/**
+ * Reads a refusal as its error message, and a mapping as its value. An answer
+ * that can't be read fails closed with the step's own refusal copy.
+ */
 function readAccount<T>(data: GatewayResponse | undefined, map: (response: GatewayResponse) => T): { value?: T; error?: string } {
   if (!data) return {};
   try {
     return { value: map(data) };
   } catch (error) {
-    return { error: error instanceof BillingError ? error.message : undefined };
+    return { error: error instanceof BillingError ? error.message : RESERVATION_MESSAGES.ACCOUNT_REJECTED };
   }
 }
 
@@ -86,16 +91,14 @@ function AccountBillingStep({ account, ...props }: BillingStepProps & { account:
 
   const rules = useMemo<AccountRules>(() => {
     const allowed = readAccount(method.data, toAllowedMethods);
-    const accepted = readAccount(specific.data, (response) =>
-      assertAccountCheck(response, RESERVATION_MESSAGES.ACCOUNT_REJECTED),
-    );
+    const cardSpecific = readAccount(specific.data, toCardSpecific);
     const requirementFields = [req1.data, req2.data, req3.data, req4.data].flatMap((data, position) => {
       const field = readAccount(data, (response) => toRequirementField(REQUIREMENT_INDEXES[position], response));
       return field.value ? [field.value] : [];
     });
-    const accountError = allowed.error ?? accepted.error;
+    const accountError = allowed.error ?? cardSpecific.error;
     return {
-      allowedMethods: allowed.value ?? ALL_BILLING_METHODS,
+      allowedMethods: accountMethods(allowed.value ?? ALL_BILLING_METHODS, cardSpecific.value ?? false),
       requirementFields,
       errors: accountError ? { account: accountError } : {},
     };

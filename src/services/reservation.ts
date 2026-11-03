@@ -10,18 +10,15 @@ import {
 } from '@/components/reservation/RideAddressInfoSection';
 import type { PhoneValue } from '@/components/ui/PhoneField';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
-import { CHARGE_LABELS, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
+import { CHARGE_LABELS, COMMON_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import { cardTypeCode, contractExpiry, requirementParams } from '@/services/billing';
-import { type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
+import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 import {
   assertResultCode,
-  type GatewayRow,
-  hasColumn,
-  isYes,
+  parseDayMonthYear,
   parseGatewayDate,
-  pick,
-  recordSet,
-  toInt,
+  readRecords,
+  readResult,
 } from '@/services/gatewayRows';
 import {
   EMPTY_PLACE,
@@ -31,8 +28,7 @@ import {
   toCountryCode,
   toSuggestion,
 } from '@/services/places';
-import { CONFIRMATION_CODES } from '@/services/profile';
-import type { PaymentMethod, RideStatus } from '@/services/rides';
+import { ORDER_HEADINGS, PAYMENT_METHOD_LABELS, type PaymentMethod, type RideStatus, toPaymentMethod, toRideStatus } from '@/services/rides';
 import { IDLE_ZONE } from '@/services/zones';
 import { addDays, nextSlot, pad2, startOfDay, type TimeValue } from '@/utils/datetime';
 import { digitsOnly } from '@/utils/payment';
@@ -57,6 +53,21 @@ export class ReservationError extends Error {
   }
 }
 
+/**
+ * `RES.I.RESERVATION` answered `"5"`: a booking with the same details already
+ * exists, and nothing new was created (guide §10, the old site's
+ * `isduplicate`). Carries that booking's number, or `null` when none came back.
+ */
+export class DuplicateReservationError extends ReservationError {
+  constructor(
+    message: string,
+    readonly reservationNumber: string | null,
+  ) {
+    super(message);
+    this.name = 'DuplicateReservationError';
+  }
+}
+
 /** The four answers the wizard collects; the preview and receipt read them back. */
 export type ReservationDraft = {
   info: PassengerRideInfoValue;
@@ -73,27 +84,52 @@ export type ReservationDraft = {
  */
 export type DraftMode = 'new' | 'edit' | 'return' | 'repeat';
 
-// ── Codes the contract leaves open ─────────────────────────────────────────
-// Each is set here only; confirm with the backend before real data arrives.
-
-/** `P_PU_TYPE` / `P_DO_TYPE`. The sample "A" sits beside airport values; "S" and "L" mirror it. */
-export const PLACE_TYPE_CODES: Record<PlaceKind, string> = { address: 'S', airport: 'A', landmark: 'L' };
+// ── Value codes ────────────────────────────────────────────────────────────
+// Each is set here only. Read from the rides the gateway stores
+// (`RES.S.ALL_ORDERS` / `LOAD_RESERVATION`, guide §10) and the backend test
+// client's samples; the contract's own samples (`A`, `CC`, `EMAIL`, `WEB`) are
+// not what the gateway takes.
 
 /**
- * `P_PAYMENT_METHOD`. "CC" is the documented sample and "CA" matches
- * registration's corporate code; "AC" (account + card) is an assumption.
+ * `P_PU_TYPE` / `P_DO_TYPE` (and `oputype` / `odotype`): stored rides use `1`
+ * for a street address, `2` with an airport name and `3` with a landmark name.
+ */
+export const PLACE_TYPE_CODES: Record<PlaceKind, string> = { address: '1', airport: '2', landmark: '3' };
+
+/**
+ * `P_PAYMENT_METHOD`, numbered as `RES.S.BILLING_METHOD`'s account types:
+ * `1` Corporate Account (the test client's sample), `2` Credit Card With
+ * Corporate Account.
+ * TODO(schema-unverified): assumed card only is `3`; stored rides also carry `3` on an account. Confirm against guide §10
  */
 export const PAYMENT_METHOD_CODES: Record<BillingMethodId, string> = {
-  corporate: 'CA',
-  'corporate-card': 'AC',
-  card: 'CC',
+  corporate: '1',
+  'corporate-card': '2',
+  card: '3',
 };
 
-/** `P_RESERVATION_MAKE_FOR`: "SELF" is the sample; "OTHER" marks a booking for someone who granted access. */
-export const MAKE_FOR_CODES = { self: 'SELF', other: 'OTHER' } as const;
+/**
+ * `P_RESERVATION_MAKE_FOR`: stored rides booked by the customer for themself carry `1`.
+ * TODO(schema-unverified): assumed a booking for someone who granted access is `2`; confirm against guide §10
+ */
+export const MAKE_FOR_CODES = { self: '1', other: '2' } as const;
 
-/** `P_CALL_SOURCE` — the sample value; the app books through the same web channel. */
-export const CALL_SOURCE = 'WEB';
+/**
+ * `P_CONFIRMATION_METHOD`: `ML` (e-mail) as the test client sends it; stored
+ * rides with a phone callback (`oneedphone` `Y`) carry `SND`.
+ * TODO(schema-unverified): assumed SND is "confirm by phone"; confirm against guide §10
+ */
+export const RESERVATION_CONFIRMATION_CODES = { email: 'ML', phone: 'SND' } as const;
+
+/** `P_CALL_SOURCE`, as the backend test client sends it. */
+export const CALL_SOURCE = 'W';
+
+/**
+ * `P_PU_ADDRESS_ADD` / `P_DO_ADDRESS_ADD`: every stored ride and the test
+ * client carry `N`, a flag rather than the contract's "Suite 200".
+ * TODO(schema-unverified): assumed N leaves the address book alone; confirm against guide §10
+ */
+export const ADDRESS_ADD_CODE = 'N';
 
 /**
  * `P_COLUMN_ID`s of the extra values stored on a reservation. They follow the
@@ -123,16 +159,24 @@ export function contractDate(date: Date): string {
   return `${pad2(date.getMonth() + 1)}/${pad2(date.getDate())}/${date.getFullYear()}`;
 }
 
-/** `P_RESERVATION_TIME`: 24-hour `HH:mm`, as in the contract's "14:30". */
+/**
+ * `P_RESERVATION_TIME`: 12-hour `hh:mm AM|PM`, as the test client's update
+ * sends it ("11:35 AM"). A 24-hour "14:30" is refused with
+ * `ORA-01849: hour must be between 1 and 12` (guide §10).
+ */
 export function contractTime(time: TimeValue): string {
-  const hours = (time.hour % 12) + (time.meridiem === 'PM' ? 12 : 0);
-  return `${pad2(hours)}:${pad2(time.minute)}`;
+  const hour = time.hour % 12 === 0 ? 12 : time.hour % 12;
+  return `${pad2(hour)}:${pad2(time.minute)} ${time.meridiem}`;
 }
 
 /** When the ride is wanted: the chosen slot, or right now for a live call. */
 export function pickupMoment(info: PassengerRideInfoValue, now: Date): { date: string; time: string } {
   if (info.isLive) {
-    return { date: contractDate(now), time: `${pad2(now.getHours())}:${pad2(now.getMinutes())}` };
+    const hours = now.getHours();
+    return {
+      date: contractDate(now),
+      time: contractTime({ hour: hours % 12 || 12, minute: now.getMinutes(), meridiem: hours < 12 ? 'AM' : 'PM' }),
+    };
   }
   return { date: contractDate(info.date), time: contractTime(info.time) };
 }
@@ -172,7 +216,7 @@ function pickupParams(place: StructuredPlace | null, leg: LegDetails, notes: str
     P_PU_CROSS_STREET2: '',
     P_PU_POINT: p.pickupPoint,
     P_PU_DIRECTIONS: notes.trim(),
-    P_PU_ADDRESS_ADD: p.addressAdd,
+    P_PU_ADDRESS_ADD: place ? ADDRESS_ADD_CODE : '',
     P_PU_AIRPORT_NAME: airport ? p.airportName : '',
     P_PU_AIRLINE_NAME: airport ? leg.airport.airline.trim() : '',
     P_PU_FLIGHT_NUMBER: airport ? leg.airport.flightNumber.trim() : '',
@@ -197,7 +241,7 @@ function dropoffParams(place: StructuredPlace | null, leg: LegDetails, notes: st
     P_DO_CROSS_STREET: p.crossStreet,
     P_DO_CROSS_STREET2: '',
     P_DO_DIRECTIONS: notes.trim(),
-    P_DO_ADDRESS_ADD: p.addressAdd,
+    P_DO_ADDRESS_ADD: place ? ADDRESS_ADD_CODE : '',
     P_DO_AIRPORT_NAME: airport ? p.airportName : '',
     P_DO_AIRLINE_NAME: airport ? leg.airport.airline.trim() : '',
     P_DO_FLIGHT_NUMBER: airport ? leg.airport.flightNumber.trim() : '',
@@ -270,7 +314,7 @@ function bookingParams(draft: ReservationDraft, { loginId, now, carPreferences }
       ...dropoffParams(destination.place, destination, addresses.destinationNotes),
       ...paymentParams(billing),
       P_FLEET_NAME: carPreferences?.fleetName ?? '',
-      P_CONFIRMATION_METHOD: preferences.confirmByPhone ? CONFIRMATION_CODES.phone : CONFIRMATION_CODES.email,
+      P_CONFIRMATION_METHOD: preferences.confirmByPhone ? RESERVATION_CONFIRMATION_CODES.phone : RESERVATION_CONFIRMATION_CODES.email,
       ...phoneParams(preferences.callbackUs, preferences.callbackIntl),
       P_EMAIL: preferences.email.trim(),
       P_NEED_PHONE: preferences.confirmByPhone ? 'Y' : 'N',
@@ -340,20 +384,31 @@ export function updateReservationJData(
   };
 }
 
-/** Columns a new reservation's number may come back under (undocumented). */
-const BOOKED_NUMBER_COLUMNS = ['o_reservation_num', 'reservation_num', 'o_res_num', 'o_ride_no', 'rideno', 'o_reservation_number'];
+/** `RES.I.RESERVATION`'s `o_code` when a booking with the same details already exists (guide §10). */
+const DUPLICATE_CODE = '5';
 
 /**
- * Throws unless the booking or update was accepted. Returns the reservation
- * number when the server sends one — `null` otherwise; it is never made up.
+ * Throws unless the booking or update was accepted (`o_code` "0"). A new
+ * booking answers its reservation number in `o_message` (`W6110231278`,
+ * guide §10); `null` when it is empty — a number is never made up. `"5"`
+ * throws a {@link DuplicateReservationError} with the existing booking's number.
+ * TODO(schema-unverified): assumed RES.U.RESERVATION answers the same; confirm against guide §10
  */
 export function assertReservationSaved(response: GatewayResponse): { reservationNumber: string | null } {
-  const row = assertResultCode(
+  const answer = readResult(response);
+  if (answer.code === DUPLICATE_CODE) {
+    const existing = answer.message || null;
+    throw new DuplicateReservationError(
+      existing ? RESERVATION_MESSAGES.BOOK_DUPLICATE(existing) : RESERVATION_MESSAGES.BOOK_DUPLICATE_NO_NUMBER,
+      existing,
+    );
+  }
+  const result = assertResultCode(
     response,
     (message) => new ReservationError(message),
     RESERVATION_MESSAGES.BOOK_REJECTED,
   );
-  return { reservationNumber: pick(row, BOOKED_NUMBER_COLUMNS) || null };
+  return { reservationNumber: result.message || null };
 }
 
 // ── Cancel ─────────────────────────────────────────────────────────────────
@@ -396,19 +451,21 @@ export type ReservationRecord = {
   reservationNumber: string;
   voucherNumber: string;
   status: RideStatus;
-  /** The status word as the server spelled it, for display. */
+  /** The call status as the server spelled it (`oecallstatusdesc`), for display. */
   statusLabel: string;
   firstName: string;
   lastName: string;
   rideAt: Date | null;
-  originateAt: Date | null;
+  /** The day the reservation was made; the record carries no time for it. */
+  originateOn: Date | null;
   operatorName: string;
   pickup: RecordStop;
   /** `null` for an "as directed" ride with no destination. */
   destination: RecordStop | null;
   billing: {
-    method: BillingMethodId;
-    paymentMethod: PaymentMethod;
+    /** The wizard method the stored payment code reads as; `null` for a code the app doesn't know. */
+    method: BillingMethodId | null;
+    /** The payment as shown: the method's label, or "not available". */
     paymentLabel: string;
     accountNumber: string;
     vipNumber: string;
@@ -416,15 +473,16 @@ export type ReservationRecord = {
     /** As the server sent it — already masked; never a full number. */
     cardMasked: string;
     cardHolder: string;
-    cardExpiry: string;
     voucherNumber: string;
     invoiceNumber: string;
+    invoicePosted: boolean;
     approvalDate: string;
     transactionDate: string;
     transactionAmount: string;
   };
   driver: { carNumber: string; carColor: string; carModel: string; driverName: string; driverNumber: string };
   preferences: {
+    /** `ocartype`, a `RES.S.VEHICLE_TYPE` code. */
     carType: string;
     confirmByPhone: boolean;
     phoneUs: string;
@@ -433,8 +491,9 @@ export type ReservationRecord = {
     phoneIntlExt: string;
     email: string;
     ccEmail: string;
-    passengers: number;
-    stops: number;
+    /** `null` when the stored value is not a number. */
+    passengers: number | null;
+    stops: number | null;
     ridePurpose: string;
     makeFor: string;
     loginIdMakeFor: string;
@@ -444,236 +503,257 @@ export type ReservationRecord = {
     smokingAllowed: string;
   };
   charges: ChargeLine[];
-  cancelReason: string;
 };
 
 /**
- * Column candidates per field. The contract's parameter name without `P_`
- * (lower case) comes first — today's gateway follows it — then the old
- * site's labels (guide 20).
+ * Pickup / drop-off headings. `LOAD_RESERVATION` sends the order headings
+ * (`ORDER_HEADINGS`, `src/services/rides.ts`) plus these (guide §10).
  */
-const C = {
-  reservationNumber: ['reservation_num', 'reservationid', 'ride_no', 'rideno'],
-  voucherNumber: ['voucher_num', 'voucher_number', 'voucherno'],
-  status: ['status', 'call_status', 'callstatus'],
-  firstName: ['first_name', 'firstname'],
-  lastName: ['last_name', 'lastname'],
-  date: ['reservation_date', 'ride_date', 'pickup_date', 'ridedate'],
-  time: ['reservation_time', 'ride_time', 'pickup_time', 'ridetime'],
-  originateDate: ['originate_date', 'booked_date', 'created_date'],
-  originateTime: ['originate_time', 'booked_time', 'created_time'],
-  operator: ['operator_name', 'operator'],
-  paymentMethod: ['payment_method', 'payment_type'],
-  accountNumber: ['account_number', 'account_num'],
-  vipNumber: ['vip_number', 'vip_num'],
-  cardType: ['card_type', 'cc_type'],
-  cardNumber: ['card_number', 'cardno', 'cc_number'],
-  cardHolder: ['card_holder_name', 'cc_persons_name'],
-  cardExpiry: ['expiration_date', 'cc_expiration'],
-  invoiceNumber: ['invoice_num', 'invoice_number'],
-  approvalDate: ['approval_date'],
-  transactionDate: ['transaction_date'],
-  transactionAmount: ['transaction_amount', 'transaction_amt'],
-  carColor: ['car_color'],
-  carModel: ['car_model'],
-  driverName: ['driver_name'],
-  driverNumber: ['driver_num', 'driver_number'],
-  carType: ['car_type'],
-  confirmation: ['confirmation_method', 'confirmation_by'],
-  needPhone: ['need_phone'],
-  phoneUs: ['phone_number_us'],
-  phoneUsExt: ['phone_ext_us'],
-  phoneIntl: ['phone_number', 'phone_number_intl'],
-  phoneIntlExt: ['phone_ext', 'phone_ext_intl'],
-  email: ['email'],
-  ccEmail: ['cc_email', 'email_cc'],
-  passengers: ['number_of_passengers', 'no_of_passengers'],
-  stops: ['number_of_stops', 'no_of_stops'],
-  ridePurpose: ['ride_purpose'],
-  makeFor: ['reservation_make_for'],
-  loginIdMakeFor: ['login_id_reservation_make_for'],
-  fleetName: ['fleet_name'],
-  carYear: ['car_year'],
-  smokingAllowed: ['smoking_allowed'],
-  cancelReason: ['cancel_reason', 'reason'],
-} as const;
+const STOP_HEADINGS = [
+  'oputype', 'opucountry', 'opuzipcode', 'opucrossstreet', 'opucrossstreet2', 'opupoint', 'opudirections',
+  'opuairlinename', 'opuflightnumber', 'opuflightarrivingfrom', 'opuairportoption',
+  'odotype', 'odocountry', 'odozipcode', 'odocrossstreet', 'odocrossstreet2', 'ododirections',
+  'odoairlinename', 'odoflightnumber', 'odoterminalnumber', 'odoflightdestinationcity',
+  'oepickuplat', 'oepickuplon', 'oedropofflat', 'oedropofflon',
+] as const;
 
-const CHARGE_COLUMNS: readonly { label: string; columns: readonly string[] }[] = [
-  { label: CHARGE_LABELS.fare, columns: ['fare'] },
-  { label: CHARGE_LABELS.tolls, columns: ['tolls_parking', 'tolls'] },
-  { label: CHARGE_LABELS.tips, columns: ['tips'] },
-  { label: CHARGE_LABELS.waitingTime, columns: ['waiting_time'] },
-  { label: CHARGE_LABELS.stops, columns: ['stops_charge', 'stops_amount'] },
-  { label: CHARGE_LABELS.stopWaitingTime, columns: ['stop_waiting_time'] },
-  { label: CHARGE_LABELS.serviceCharge, columns: ['service_charge'] },
-  { label: CHARGE_LABELS.phoneUsage, columns: ['phone_usage'] },
-  { label: CHARGE_LABELS.package, columns: ['package'] },
-  { label: CHARGE_LABELS.additionalPassenger, columns: ['additional_passenger'] },
-  { label: CHARGE_LABELS.misc, columns: ['misc'] },
-  { label: CHARGE_LABELS.taxes, columns: ['taxes'] },
-  { label: CHARGE_LABELS.stateSalesTax, columns: ['state_sales_tax'] },
-  { label: CHARGE_LABELS.nysSurcharge, columns: ['nys_surcharge'] },
-  { label: CHARGE_LABELS.total, columns: ['total_call_charges', 'total_charges'] },
-];
+/**
+ * Charges. `cc*` are the call's charges; `idd*` the posted invoice's, which
+ * alone carries a total, read once `oeinvoiceposted` is `Y`.
+ * TODO(schema-unverified): assumed idd* is the invoice and cc* the call; confirm against guide §10
+ */
+const CALL_CHARGES = [
+  { label: CHARGE_LABELS.fare, heading: 'ccfare' },
+  { label: CHARGE_LABELS.tolls, heading: 'cctolls' },
+  { label: CHARGE_LABELS.tips, heading: 'cctips' },
+  { label: CHARGE_LABELS.waitingTime, heading: 'ccwaitingamount' },
+  { label: CHARGE_LABELS.stops, heading: 'ccstops' },
+  { label: CHARGE_LABELS.stopWaitingTime, heading: 'ccstopwaitingamount' },
+  { label: CHARGE_LABELS.serviceCharge, heading: 'ccservicecharge' },
+  { label: CHARGE_LABELS.phoneUsage, heading: 'ccphone' },
+  { label: CHARGE_LABELS.package, heading: 'ccpackage' },
+  { label: CHARGE_LABELS.additionalPassenger, heading: 'ccadditonalpassenger' },
+  { label: CHARGE_LABELS.misc, heading: 'ccmisc' },
+  { label: CHARGE_LABELS.stateSalesTax, heading: 'ccstatesalestax' },
+  { label: CHARGE_LABELS.nysSurcharge, heading: 'ccnyssurcharge' },
+] as const;
 
-/** `pu_*` / `do_*` columns of one end of the ride. */
-function toStop(row: GatewayRow, prefix: 'pu' | 'do'): RecordStop | null {
-  const col = (name: string) => [`${prefix}_${name}`];
-  const typeText = pick(row, col('type'));
-  const airportName = pick(row, col('airport_name'));
-  const landmarkName = pick(row, col('landmark_name'));
-  const kind: PlaceKind = /^a(irport)?$/i.test(typeText) || (!typeText && airportName)
-    ? 'airport'
-    : /^l(andmark)?$/i.test(typeText) || (!typeText && landmarkName)
-      ? 'landmark'
-      : 'address';
+const INVOICE_CHARGES = [
+  { label: CHARGE_LABELS.fare, heading: 'iddfare' },
+  { label: CHARGE_LABELS.tolls, heading: 'iddtolls' },
+  { label: CHARGE_LABELS.tips, heading: 'iddtips' },
+  { label: CHARGE_LABELS.waitingTime, heading: 'iddwaitingamount' },
+  { label: CHARGE_LABELS.stops, heading: 'iddstops' },
+  { label: CHARGE_LABELS.stopWaitingTime, heading: 'iddstopwaitingamount' },
+  { label: CHARGE_LABELS.serviceCharge, heading: 'iddservicecharge' },
+  { label: CHARGE_LABELS.phoneUsage, heading: 'iddphone' },
+  { label: CHARGE_LABELS.package, heading: 'iddpackage' },
+  { label: CHARGE_LABELS.additionalPassenger, heading: 'iddadditonalpassenger' },
+  { label: CHARGE_LABELS.misc, heading: 'iddmisc' },
+  { label: CHARGE_LABELS.stateSalesTax, heading: 'iddstatesalestax' },
+  { label: CHARGE_LABELS.nysSurcharge, heading: 'iddnyssurcharge' },
+  { label: CHARGE_LABELS.total, heading: 'iddtotal' },
+] as const;
 
-  const place: StructuredPlace = {
-    ...EMPTY_PLACE,
-    kind,
-    country: toCountryCode(pick(row, col('country'))),
-    state: pick(row, col('state')),
-    city: pick(row, col('city')),
-    zip: pick(row, col('zip_code')),
-    streetNumber: pick(row, col('street_number')),
-    streetName: pick(row, col('street_name')),
-    crossStreet: pick(row, col('cross_street')),
-    addressAdd: pick(row, col('address_add')),
-    pickupPoint: pick(row, col('point')),
-    airportName,
-    landmarkName,
-    latitude: pick(row, prefix === 'pu' ? ['pickup_lat'] : ['dropoff_lat']),
-    longitude: pick(row, prefix === 'pu' ? ['pickup_lon'] : ['dropoff_lon']),
-  };
+/** Every `LOAD_RESERVATION` heading the app reads (guide §10). */
+const RESERVATION_HEADINGS = [
+  ...ORDER_HEADINGS,
+  ...STOP_HEADINGS,
+  'oaccountnumber', 'oevipnumber', 'ocardtype', 'ocardholdername', 'ocardnumber',
+  'ofleetname', 'oconfirmationmethod', 'ophonenumber', 'ophoneext', 'ophonenumberus', 'ophoneextus', 'oemail',
+  'oneedphone', 'ocartype', 'ocaryear', 'onumberofpassengers', 'onumberofstops', 'osmokingallowed',
+  'oeoriginatedatetime', 'oecarnum', 'oereservationmakefor', 'oeridepurpose', 'oeccemail', 'oeloginidreservationmakefor',
+  'oeapprovaldate', 'oeoperatorname', 'oevouchernum', 'oecarcolor', 'oecarmodel', 'oedrivernum', 'oedrivername',
+  'oetransactiondate', 'oetransactionamount', 'iddinvoicenum',
+  ...CALL_CHARGES.map((charge) => charge.heading),
+  ...INVOICE_CHARGES.map((charge) => charge.heading),
+] as const;
 
-  const empty = !place.city && !place.streetName && !airportName && !landmarkName;
-  if (empty) return null;
+type ReservationRow = Record<(typeof RESERVATION_HEADINGS)[number], string>;
 
+/** The stored place-type code (`oputype` / `odotype`) as a place kind; `null` when unknown. */
+function toPlaceKind(code: string): PlaceKind | null {
+  const kind = (Object.keys(PLACE_TYPE_CODES) as PlaceKind[]).find((key) => PLACE_TYPE_CODES[key] === code.trim());
+  return kind ?? null;
+}
+
+/** The pickup end, read from its `opu*` headings. */
+function toPickupStop(row: ReservationRow): RecordStop {
+  const kind = toPlaceKind(row.oputype) ?? 'address';
   return {
-    place,
-    directions: pick(row, col('directions')),
-    crossStreet2: pick(row, col('cross_street2')),
-    airport: {
-      airline: pick(row, col('airline_name')),
-      flightNumber: pick(row, col('flight_number')),
-      arrivingFrom: pick(row, col('flight_arriving_from')),
-      pickupOption: toPickupOption(pick(row, col('airport_option'))),
-      terminal: pick(row, col('terminal_number')),
-      flyingTo: pick(row, col('flight_destination_city')),
+    place: {
+      ...EMPTY_PLACE,
+      kind,
+      country: toCountryCode(row.opucountry),
+      state: row.opustate.trim(),
+      city: row.opucity.trim(),
+      zip: row.opuzipcode.trim(),
+      streetNumber: row.opustreetnumber.trim(),
+      streetName: row.opustreetname.trim(),
+      crossStreet: row.opucrossstreet.trim(),
+      pickupPoint: row.opupoint.trim(),
+      airportName: kind === 'airport' ? row.opuairportname.trim() : '',
+      landmarkName: kind === 'landmark' ? row.opulandmarkname.trim() : '',
+      latitude: row.oepickuplat.trim(),
+      longitude: row.oepickuplon.trim(),
     },
+    directions: row.opudirections.trim(),
+    crossStreet2: row.opucrossstreet2.trim(),
+    airport:
+      kind === 'airport'
+        ? {
+            airline: row.opuairlinename.trim(),
+            flightNumber: row.opuflightnumber.trim(),
+            arrivingFrom: row.opuflightarrivingfrom.trim(),
+            pickupOption: toPickupOption(row.opuairportoption),
+            terminal: '',
+            flyingTo: '',
+          }
+        : EMPTY_AIRPORT_DETAILS,
   };
 }
 
+/**
+ * The drop-off end, read from its `odo*` headings; `null` when nothing is
+ * stored (an "as directed" ride). The airline, flight, terminal and
+ * destination-city headings are read only for an airport: on stored street
+ * rides they carry address text (a backend issue, guide §10).
+ */
+function toDropoffStop(row: ReservationRow): RecordStop | null {
+  const kind = toPlaceKind(row.odotype);
+  if (!kind) return null;
+  return {
+    place: {
+      ...EMPTY_PLACE,
+      kind,
+      country: toCountryCode(row.odocountry),
+      state: row.odostate.trim(),
+      city: row.odocity.trim(),
+      zip: row.odozipcode.trim(),
+      streetNumber: row.odostreetnumber.trim(),
+      streetName: row.odostreetname.trim(),
+      crossStreet: row.odocrossstreet.trim(),
+      airportName: kind === 'airport' ? row.odoairportname.trim() : '',
+      landmarkName: kind === 'landmark' ? row.odolandmarkname.trim() : '',
+      latitude: row.oedropofflat.trim(),
+      longitude: row.oedropofflon.trim(),
+    },
+    directions: row.ododirections.trim(),
+    crossStreet2: row.odocrossstreet2.trim(),
+    airport:
+      kind === 'airport'
+        ? {
+            airline: row.odoairlinename.trim(),
+            flightNumber: row.odoflightnumber.trim(),
+            arrivingFrom: '',
+            pickupOption: '',
+            terminal: row.odoterminalnumber.trim(),
+            flyingTo: row.odoflightdestinationcity.trim(),
+          }
+        : EMPTY_AIRPORT_DETAILS,
+  };
+}
+
+const EMPTY_AIRPORT_DETAILS: AirportDetails = {
+  airline: '',
+  flightNumber: '',
+  arrivingFrom: '',
+  pickupOption: '',
+  terminal: '',
+  flyingTo: '',
+};
+
 function toPickupOption(value: string): AirportPickupOption | '' {
-  const code = value.trim().toUpperCase();
+  const code = value.trim();
   return code === 'A' || code === 'B' || code === 'C' || code === 'D' ? code : '';
 }
 
+/** The wizard method a stored `opaymentmethod` code reads as; `null` when unknown. */
+function toBillingMethod(code: string): BillingMethodId | null {
+  const method = (Object.keys(PAYMENT_METHOD_CODES) as BillingMethodId[]).find(
+    (key) => PAYMENT_METHOD_CODES[key] === code.trim(),
+  );
+  return method ?? null;
+}
+
+/** A whole number, or `null` when the stored value isn't one (some rides store letters). */
+function wholeNumber(value: string): number | null {
+  return /^\d+$/.test(value.trim()) ? Number(value.trim()) : null;
+}
+
+/** The charge lines the record carries a value for. */
+function toCharges(row: ReservationRow): ChargeLine[] {
+  const lines = row.oeinvoiceposted.trim() === 'Y' ? INVOICE_CHARGES : CALL_CHARGES;
+  return lines.flatMap(({ label, heading }) => {
+    const amount = row[heading].trim();
+    return amount ? [{ label, amount }] : [];
+  });
+}
+
 /**
- * `RES.S.LOAD_RESERVATION` is not migrated to its real headings yet (guide
- * §10), so its status and payment are still read as words.
+ * The record, read by its headings (guide §10). `null` when the gateway has
+ * none for the number (it answers `dummy` alone).
  */
-function statusFromWords(value: string): RideStatus {
-  const text = value.trim().toLowerCase();
-  if (/cancel/.test(text)) return 'canceled';
-  if (/progress|dispatch|on.?board|en.?route|in.?car|picked/.test(text)) return 'in-progress';
-  if (/complete|billed|closed|done|dropped/.test(text)) return 'completed';
-  return 'confirmed';
-}
-
-function paymentFromWords(value: string): PaymentMethod {
-  const text = value.trim().toLowerCase();
-  if (/voucher/.test(text) || text === 'v') return 'voucher';
-  if (/card|^cc$|^c$|visa|master|amex|discover/.test(text)) return 'credit-card';
-  if (/cash/.test(text)) return 'cash';
-  return 'account';
-}
-
-/** Which wizard method a stored payment reads as. */
-function toBillingMethod(paymentText: string): BillingMethodId {
-  const code = paymentText.trim().toUpperCase();
-  if (code === PAYMENT_METHOD_CODES['corporate-card']) return 'corporate-card';
-  const method = paymentFromWords(paymentText);
-  return method === 'credit-card' ? 'card' : 'corporate';
-}
-
-const EMPTY_STOP: RecordStop = {
-  place: EMPTY_PLACE,
-  directions: '',
-  crossStreet2: '',
-  airport: { airline: '', flightNumber: '', arrivingFrom: '', pickupOption: '', terminal: '', flyingTo: '' },
-};
-
-/** Maps the first row; `null` when the response carries no reservation. */
 export function toReservationRecord(response: GatewayResponse): ReservationRecord | null {
-  const rows = recordSet(response, (message) => new ReservationError(message), RIDES_MESSAGES.LOAD_RESERVATION_FAILED);
-  const row = rows[0];
-  if (!row || !hasColumn(row, C.reservationNumber)) return null;
+  const row = readRecords(response, RESERVATION_HEADINGS)[0];
+  if (!row || !row.oreservationnumber.trim()) return null;
 
-  const paymentLabel = pick(row, C.paymentMethod);
-  const confirmation = pick(row, C.confirmation);
+  const paymentMethod: PaymentMethod | null = toPaymentMethod(row.opaymentmethod);
 
   return {
-    reservationNumber: pick(row, C.reservationNumber),
-    voucherNumber: pick(row, C.voucherNumber),
-    status: statusFromWords(pick(row, C.status)),
-    statusLabel: pick(row, C.status),
-    firstName: pick(row, C.firstName),
-    lastName: pick(row, C.lastName),
-    rideAt: parseGatewayDate(pick(row, C.date), pick(row, C.time)),
-    originateAt: parseGatewayDate(pick(row, C.originateDate), pick(row, C.originateTime)),
-    operatorName: pick(row, C.operator),
-    pickup: toStop(row, 'pu') ?? EMPTY_STOP,
-    destination: toStop(row, 'do'),
+    reservationNumber: row.oreservationnumber.trim(),
+    voucherNumber: row.oevouchernum.trim(),
+    status: toRideStatus(row.oecallstatusdesc, row.oecurrentstatusdesc),
+    statusLabel: row.oecallstatusdesc.trim(),
+    firstName: row.ofirstname.trim(),
+    lastName: row.olastname.trim(),
+    rideAt: parseGatewayDate(row.oreservationdate, row.oreservationtime),
+    originateOn: parseDayMonthYear(row.oeoriginatedatetime.trim()),
+    operatorName: row.oeoperatorname.trim(),
+    pickup: toPickupStop(row),
+    destination: toDropoffStop(row),
     billing: {
-      method: toBillingMethod(paymentLabel),
-      paymentMethod: paymentFromWords(paymentLabel),
-      paymentLabel,
-      accountNumber: pick(row, C.accountNumber),
-      vipNumber: pick(row, C.vipNumber),
-      cardType: pick(row, C.cardType),
-      cardMasked: maskStoredCard(pick(row, C.cardNumber)),
-      cardHolder: pick(row, C.cardHolder),
-      cardExpiry: pick(row, C.cardExpiry),
-      voucherNumber: pick(row, C.voucherNumber),
-      invoiceNumber: pick(row, C.invoiceNumber),
-      approvalDate: pick(row, C.approvalDate),
-      transactionDate: pick(row, C.transactionDate),
-      transactionAmount: pick(row, C.transactionAmount),
+      method: toBillingMethod(row.opaymentmethod),
+      paymentLabel: paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : COMMON_MESSAGES.NOT_AVAILABLE,
+      accountNumber: row.oaccountnumber.trim(),
+      vipNumber: row.oevipnumber.trim(),
+      cardType: row.ocardtype.trim(),
+      cardMasked: maskStoredCard(row.ocardnumber),
+      cardHolder: row.ocardholdername.trim(),
+      voucherNumber: row.oevouchernum.trim(),
+      invoiceNumber: row.iddinvoicenum.trim(),
+      invoicePosted: row.oeinvoiceposted.trim() === 'Y',
+      approvalDate: row.oeapprovaldate.trim(),
+      transactionDate: row.oetransactiondate.trim(),
+      transactionAmount: row.oetransactionamount.trim(),
     },
     driver: {
-      // `PROF.S.CAR_INFO` is keyed by the real `oecarnum` heading (sent twice;
-      // `mapRows` keeps the later value). The rest of this record still awaits
-      // its own migration (guide §10).
-      carNumber: 'oecarnum' in row ? row.oecarnum.trim() : '',
-      carColor: pick(row, C.carColor),
-      carModel: pick(row, C.carModel),
-      driverName: pick(row, C.driverName),
-      driverNumber: pick(row, C.driverNumber),
+      // `oecarnum` is sent twice; `mapRows` keeps the later value (guide §10).
+      carNumber: row.oecarnum.trim(),
+      carColor: row.oecarcolor.trim(),
+      carModel: row.oecarmodel.trim(),
+      driverName: row.oedrivername.trim(),
+      driverNumber: row.oedrivernum.trim(),
     },
     preferences: {
-      carType: pick(row, C.carType),
-      confirmByPhone: /phone/i.test(confirmation) || isYes(pick(row, C.needPhone)),
-      phoneUs: digitsOnly(pick(row, C.phoneUs)),
-      phoneUsExt: digitsOnly(pick(row, C.phoneUsExt)),
-      phoneIntl: digitsOnly(pick(row, C.phoneIntl)),
-      phoneIntlExt: digitsOnly(pick(row, C.phoneIntlExt)),
-      email: pick(row, C.email),
-      ccEmail: pick(row, C.ccEmail),
-      passengers: toInt(pick(row, C.passengers), 1),
-      stops: toInt(pick(row, C.stops), 0),
-      ridePurpose: pick(row, C.ridePurpose),
-      makeFor: pick(row, C.makeFor) || MAKE_FOR_CODES.self,
-      loginIdMakeFor: pick(row, C.loginIdMakeFor),
-      fleetName: pick(row, C.fleetName),
-      carYear: pick(row, C.carYear),
-      smokingAllowed: pick(row, C.smokingAllowed),
+      carType: row.ocartype.trim(),
+      confirmByPhone: row.oneedphone.trim() === 'Y',
+      phoneUs: digitsOnly(row.ophonenumberus),
+      phoneUsExt: digitsOnly(row.ophoneextus),
+      phoneIntl: digitsOnly(row.ophonenumber),
+      phoneIntlExt: digitsOnly(row.ophoneext),
+      email: row.oemail.trim(),
+      ccEmail: row.oeccemail.trim(),
+      passengers: wholeNumber(row.onumberofpassengers),
+      stops: wholeNumber(row.onumberofstops),
+      ridePurpose: row.oeridepurpose.trim(),
+      makeFor: row.oereservationmakefor.trim(),
+      loginIdMakeFor: row.oeloginidreservationmakefor.trim(),
+      fleetName: row.ofleetname.trim(),
+      carYear: row.ocaryear.trim(),
+      smokingAllowed: row.osmokingallowed.trim(),
     },
-    charges: CHARGE_COLUMNS.flatMap(({ label, columns }) => {
-      const amount = pick(row, columns);
-      return amount ? [{ label, amount }] : [];
-    }),
-    cancelReason: pick(row, C.cancelReason),
+    charges: toCharges(row),
   };
 }
 
@@ -747,7 +827,7 @@ export function recordToDraft(
       date: keepTime ? startOfDay(rideAt) : startOfDay(today),
       time: keepTime ? nextSlot(new Date(rideAt.getTime() - 60_000)) : nextSlot(today),
       bookingFor:
-        record.preferences.makeFor !== MAKE_FOR_CODES.self ? record.preferences.loginIdMakeFor : '',
+        record.preferences.makeFor === MAKE_FOR_CODES.other ? record.preferences.loginIdMakeFor : '',
     },
     addresses: {
       pickup: stopToSuggestion(from, `record:${record.reservationNumber}:from`),
@@ -759,7 +839,7 @@ export function recordToDraft(
     },
     billing: {
       ...base.billing,
-      method: record.billing.method,
+      method: record.billing.method ?? base.billing.method,
       accountNumber: record.billing.accountNumber || base.billing.accountNumber,
       vipNumber: record.billing.vipNumber,
       card: { ...base.billing.card, holder: record.billing.cardHolder },
@@ -776,8 +856,8 @@ export function recordToDraft(
       callbackIntl: intlPhoneValue(record.preferences.phoneIntl, record.preferences.phoneIntlExt),
       email: record.preferences.email || base.preferences.email,
       ccEmails: record.preferences.ccEmail,
-      passengers: Math.max(1, record.preferences.passengers),
-      stops: Math.max(0, record.preferences.stops),
+      passengers: Math.max(1, record.preferences.passengers ?? base.preferences.passengers),
+      stops: Math.max(0, record.preferences.stops ?? base.preferences.stops),
       ridePurpose: record.preferences.ridePurpose,
     },
   };
@@ -840,7 +920,7 @@ export function emailMessageJData(
     P_TO_COUNTY1: dropoff.country,
     P_DROPOFF_DIRECTIONS1: addresses.destinationNotes.trim(),
     P_SCHEDULED_DISPATCH_TIME1: `${when.date} ${when.time}`,
-    P_RESERVATION_CONFIRMATION1: preferences.confirmByPhone ? CONFIRMATION_CODES.phone : CONFIRMATION_CODES.email,
+    P_RESERVATION_CONFIRMATION1: preferences.confirmByPhone ? RESERVATION_CONFIRMATION_CODES.phone : RESERVATION_CONFIRMATION_CODES.email,
     P_CALL_TYPE1: addresses.pickupLeg.place ? PLACE_TYPE_CODES[pu.kind] : '',
     P_DO_TYPE1: addresses.destinationLeg.place ? PLACE_TYPE_CODES[dropoff.kind] : '',
     P_CARRIER_CODE1: account,
@@ -881,19 +961,21 @@ export function columnUpdateJData(
   };
 }
 
-const COLUMN_VALUE_COLUMNS = ['o_columnvalue', 'column_value', 'o_column_value', 'value', 'contact_number'];
+/** `LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE` headings (guide §10). */
+const COLUMN_VALUE_HEADINGS = ['ocolumnid', 'ocolumnvalue'] as const;
 
-/** Values of `LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE`, placeholders dropped. */
+/** Values of `LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE`, read by `ocolumnvalue`. */
 export function toColumnValues(response: GatewayResponse): string[] {
-  const rows = recordSet(response, (message) => new ReservationError(message), RESERVATION_MESSAGES.BOOK_REJECTED);
-  return [...new Set(rows.map((row) => pick(row, COLUMN_VALUE_COLUMNS)).filter(Boolean))];
+  return [...new Set(readRecords(response, COLUMN_VALUE_HEADINGS).map((row) => row.ocolumnvalue.trim()).filter(Boolean))];
 }
 
-/** `o_ColumnValue` of `LOAD_RESERVATION_COLUMN_SINGLE_VALUE`; '' when there is none. */
+/**
+ * `o_columnvalue` of `LOAD_RESERVATION_COLUMN_SINGLE_VALUE` (`"0"` / `Success`
+ * with the value, guide §10); '' for any other answer.
+ */
 export function toSingleColumnValue(response: GatewayResponse): string {
-  const row = mapRows(response)[0];
-  if (row && hasColumn(row, ['o_code']) && pick(row, ['o_code']) !== DB_SUCCESS_CODE) return '';
-  return pick(row, COLUMN_VALUE_COLUMNS);
+  if (readResult(response).code !== DB_SUCCESS_CODE) return '';
+  return mapRowsByHeadings(response, ['o_columnvalue'] as const)[0]?.o_columnvalue.trim() ?? '';
 }
 
 /**
@@ -924,27 +1006,19 @@ export function communicationLogJData(loginId: string, reservationNumber: string
 
 export type CommunicationEntry = { id: string; at: Date | null; channel: string; text: string };
 
-const LOG_COLUMNS = {
-  id: ['log_id', 'message_id', 'id'],
-  date: ['sent_date', 'log_date', 'date'],
-  time: ['sent_time', 'log_time', 'time'],
-  channel: ['channel', 'method', 'type', 'message_type'],
-  text: ['message_text', 'message', 'description', 'log_text', 'subject'],
-} as const;
+/**
+ * `RES.S.COMMUNICATION_LOG` headings (guide §10): the questions asked about
+ * the ride (`RES.I.ASKED_QUESTIONS`) and their answers.
+ */
+const LOG_HEADINGS = ['asked_question_id', 'question', 'additional_message', 'asked_question_datetime', 'answer'] as const;
 
-/** Messages and confirmations sent for a ride (columns undocumented; stub filler dropped). */
+/** The questions asked about a ride, each with the customer's message and any answer. */
 export function toCommunicationLog(response: GatewayResponse): CommunicationEntry[] {
-  const rows = recordSet(response, (message) => new ReservationError(message), RIDES_MESSAGES.LOAD_RESERVATION_FAILED);
-  return rows.flatMap((row, index) => {
-    const text = pick(row, LOG_COLUMNS.text);
-    if (!text) return [];
-    return [
-      {
-        id: pick(row, LOG_COLUMNS.id) || String(index),
-        at: parseGatewayDate(pick(row, LOG_COLUMNS.date), pick(row, LOG_COLUMNS.time)),
-        channel: pick(row, LOG_COLUMNS.channel),
-        text,
-      },
-    ];
-  });
+  return readRecords(response, LOG_HEADINGS).map((row, index) => ({
+    id: row.asked_question_id.trim() || String(index),
+    // TODO(schema-unverified): assumed asked_question_datetime is MM/DD/YYYY hh:mm:ss; confirm against guide §10
+    at: parseGatewayDate(row.asked_question_datetime),
+    channel: row.question.trim(),
+    text: [row.additional_message.trim(), row.answer.trim()].filter(Boolean).join('\n') || COMMON_MESSAGES.NOT_AVAILABLE,
+  }));
 }

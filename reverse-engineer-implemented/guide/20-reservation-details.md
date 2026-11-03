@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §6 Gateway (real data).
 
 # Module 20 — Reservation / Ride Details
 
@@ -66,3 +68,17 @@ Reason (cancellation reason, when cancelled).
  "charges":{"fare":0,"phoneUsage":0,"tollsParking":0,"package":0,"tips":0,"additionalPassenger":0,"waitingTime":0,"misc":0,"stops":0,"taxes":0,"stopWaitingTime":0,"stateSalesTax":0,"serviceCharge":0,"nysSurcharge":0,"total":0},
  "cancelReason":null}
 ```
+
+## 6. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.S.LOAD_RESERVATION` | Details open | Read by `RESERVATION_HEADINGS`: status `oecallstatusdesc` / `oecurrentstatusdesc`, voucher `oevouchernum`, operator `oeoperatorname`, driver `oedrivername` / `oedrivernum` / `oecarcolor` / `oecarmodel`, car `oecarnum` (sent twice), charges `cc*` or, once invoiced, `idd*` with `iddtotal` and `iddinvoicenum`. |
+| `RES.S.VEHICLE_TYPE` | Car Type row | The record's `ocartype` code is shown by its name. |
+| `RES.S.COMMUNICATION_LOG` | Messages card | The asked-questions log (`question`, `additional_message`, `answer`, `asked_question_datetime`); no rows yet. |
+| `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | Extra contact | `o_code, o_message, o_columnvalue`; a column with no value fails with ORA-01400 and shows nothing. |
+
+- **Not available:** the originate time (`oeoriginatedatetime` is a date only), the cancel reason (no heading), and any empty field.
+- `LOAD_RESERVATION` returns another customer's record for any number (no ownership check, backend issue).

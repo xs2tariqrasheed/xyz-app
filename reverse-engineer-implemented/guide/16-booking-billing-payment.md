@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §8 Gateway (real data).
 
 # Module 16 — Booking Step 3: Billing Method & Payment
 
@@ -69,3 +71,19 @@ Message while waiting: "Credit Card authorization is being obtained. It may take
 - Account requirement schema endpoint: `GET /corporate-accounts/{no}/requirements`.
 - Card capture via gateway tokenisation; authorisation async job with status polling or webhook (`PENDING` ≙ `CCcall`).
 - **Unknown**: authorisation amount, decline message texts, requirement field definitions.
+
+## 8. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.S.BILLING_METHOD` | Account entered | `o_code` is the account type: `"1"` Corporate Account, `"2"` Credit Card With Corporate Account, `"5"` Invalid Account Number. (a refusal). |
+| `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` | Account entered | `"0"` Corporate Account, `"1"` Credit Card Specific (card methods only), `"5"` a refusal. |
+| `RES.S.ACCOUNT_REQUIREMENTS_LIST` | Account entered, 1–4 | `account_num, requirement_num, value, description, company_num`: one row per allowed answer (`29311` #1: `BUS` / BUSINESS, `PERS` / PERSONAL); `dummy` = none. |
+| `RES.S.VERIFY_ACCOUNT_REQUIREMENTS` | Continue | `"0"` / `Account ok. No requirements`; `"1"` / `Invalid account` or `Failed`. |
+| `RES.I.CREDIT_CARD_APPROVAL` | Card, Continue | `"0"` + the **request number** in `o_message` (test client's sample card only). |
+| `RES.S.CREDIT_CARD_APPROVAL` | Every 10 s, up to 90 s | `"0"` + the **approval number** (`753371` → `186254`); `"1"` / `Invalid request number.` keeps waiting. |
+
+- `P_EXPIRATION_DATE` goes out as `MM-YYYY`, as the backend test client sends it (unconfirmed).
+- No heading carries a requirement's label, so the field keeps its "Requirement n" caption.

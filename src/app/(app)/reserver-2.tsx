@@ -41,7 +41,7 @@ import {
 } from '@/hooks/useReservationLookups';
 import { BillingError } from '@/services/billing';
 import { getErrorDisplay } from '@/services/gateway';
-import { ReservationError } from '@/services/reservation';
+import { DuplicateReservationError, ReservationError } from '@/services/reservation';
 import {
   checkAddresses,
   checkBilling,
@@ -67,7 +67,8 @@ type StepErrors = {
 
 const NO_ERRORS: StepErrors = { passenger: {}, address: {}, billing: {}, preferences: {} };
 
-type Banner = { title: string; message: string } | null;
+/** A form-level message; a duplicate booking also links to the reservation that already exists. */
+type Banner = { title: string; message: string; existingReservation?: string | null; tone?: 'danger' | 'warning' } | null;
 
 /**
  * "Make a reservation" with the steps across the top and a live summary
@@ -148,6 +149,15 @@ export default function MakeReservationTopStepsScreen() {
   };
 
   const showError = (error: unknown, title: string) => {
+    if (error instanceof DuplicateReservationError) {
+      setBanner({
+        title: RESERVATION_MESSAGES.BOOK_DUPLICATE_TITLE,
+        message: error.message,
+        existingReservation: error.reservationNumber,
+        tone: 'warning',
+      });
+      return;
+    }
     if (error instanceof ReservationError || error instanceof BillingError) {
       setBanner({ title, message: error.message });
       return;
@@ -303,7 +313,25 @@ export default function MakeReservationTopStepsScreen() {
 
             <View style={[styles.columns, wide ? styles.columnsWide : null]}>
               <View style={styles.formColumn}>
-                {banner ? <Alert tone="danger" title={banner.title} message={banner.message} /> : null}
+                {banner ? (
+                  <View style={styles.banner}>
+                    <Alert tone={banner.tone ?? 'danger'} title={banner.title} message={banner.message} />
+                    {banner.existingReservation ? (
+                      <View style={styles.bannerAction}>
+                        <Button
+                          label={RESERVATION_MESSAGES.VIEW_RESERVATION}
+                          variant="outline"
+                          onPress={() =>
+                            router.push({
+                              pathname: '/reservation-info',
+                              params: { rideno: banner.existingReservation ?? '' },
+                            })
+                          }
+                        />
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
 
                 <SectionCard step={stepIndex + 1} title={section.title} state="active">
                   {section.id === 'passenger' ? (
@@ -414,6 +442,8 @@ export default function MakeReservationTopStepsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  banner: { gap: space.sm },
+  bannerAction: { alignSelf: 'flex-start' },
   flex: { flex: 1 },
 
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.xl },

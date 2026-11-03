@@ -7,8 +7,10 @@ export const EMPTY_VALUE = '—';
 
 export type InfoRowProps = {
   label: string;
-  /** Plain value. Blank, `null` or `undefined` renders a muted dash. */
+  /** Plain value. Blank, `null` or `undefined` renders `emptyLabel`, muted. */
   value?: string | number | null;
+  /** What a blank value shows; a muted dash unless the screen says otherwise. */
+  emptyLabel?: string;
   /** Rich value — a badge, a link — rendered instead of `value`. */
   children?: React.ReactNode;
 };
@@ -20,7 +22,7 @@ export type InfoRowProps = {
  * the classic right-aligned label column once there is width for the two to
  * share a line.
  */
-export function InfoRow({ label, value, children }: InfoRowProps) {
+export function InfoRow({ label, value, emptyLabel = EMPTY_VALUE, children }: InfoRowProps) {
   const { width } = useWindowDimensions();
   const inline = width >= breakpoints.sm;
 
@@ -36,7 +38,7 @@ export function InfoRow({ label, value, children }: InfoRowProps) {
       <View style={[styles.value, inline ? styles.valueInline : null]}>
         {children ?? (
           <Text style={[styles.text, empty ? styles.textEmpty : null]}>
-            {empty ? EMPTY_VALUE : text}
+            {empty ? emptyLabel : text}
           </Text>
         )}
       </View>

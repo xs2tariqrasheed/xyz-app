@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §7 Gateway (real data).
 
 # Module 14 — Booking Step 1: Passenger, "Reservation For", Ride Date & Time
 
@@ -50,3 +52,15 @@ Changing "Reservation for" after step 1 shows: "Please note that changing 'I wan
 
 ## 6. Revamp notes
 Model: `{passengerType: self|other|employee, employeeId?, firstName, lastName, rideReasonId?, readyNow: bool, pickupAt?: datetime}`. Expose `GET /me/authorized-employees`, `GET /ride-reasons` (account-scoped). Fix "now + 20 min" helper (minute overflow) if reused.
+
+## 7. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `PROF.S.LOAD_PROFILE` | Step 1 opens | `ofirstname`, `olastname` pre-fill the passenger. |
+| `PROF.S.PROFILE_WHO_GRANTED_ACCESS` | "Reservation for" | `ologinid, ofirstname, olastname`; no rows for the test login. |
+| `RES.I.RESERVATION` | Book | `P_RESERVATION_DATE` `MM/DD/YYYY`; `P_RESERVATION_TIME` must be 12-hour `hh:mm AM\|PM` ("14:30" fails with ORA-01849). A live ride sends the current time the same way. |
+
+- `P_RESERVATION_MAKE_FOR`: stored rides booked for oneself carry `1`; the app sends `2` for someone who granted access (unconfirmed).

@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §6 Gateway (real data).
 
 # Module 22 — Round Trip / Repeat Reservation
 
@@ -28,3 +30,14 @@ Create a new reservation (e.g. the return leg) pre-filled from an existing ride,
 ## 5. Revamp notes
 - `POST /reservations/{rideNo}/clone {type: "return"|"repeat"}` → draft (swap pickup/drop for return), then normal draft submit (POST + idempotency key).
 - ⚠ Do **not** create bookings on GET (legacy `/Reservation/Confirmation` is a GET that books).
+
+## 6. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.S.LOAD_RESERVATION` | Return trip / Repeat | The record re-opens the wizard; an unknown payment code keeps the form's default method. |
+| `RES.I.RESERVATION` | Book | As module 13. |
+
+- **`"0"` = booked.** `RES.I.RESERVATION` answered `"0"` with the new number (`W6110231278`, `W6110331282`); the app shows it on the receipt. That those rides then don't appear in `LOAD_RESERVATION` or the order lists is a database issue (backend). `"5"` means a matching booking already exists (its number in `o_message`). A blank trip purpose fails with `ORA-01400`, so the form requires it.

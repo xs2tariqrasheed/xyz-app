@@ -286,7 +286,7 @@ function RequirementInput({
         label={label}
         required
         value={value}
-        options={field.options.map((option) => ({ value: option, label: option }))}
+        options={field.options}
         onChange={onChange}
         error={error}
       />

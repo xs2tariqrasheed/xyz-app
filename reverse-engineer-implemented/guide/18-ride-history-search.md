@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §7 Gateway (real data).
 
 # Module 18 — Ride History Search ("Previous orders")
 
@@ -50,3 +52,12 @@ Observed: 19 rides for a 3-month window, no paging needed **[paging behaviour U]
 
 ## 6. Revamp notes
 `GET /me/reservations?from=&to=&payment=all|card|voucher&sort=&dir=` → `{items:[{rideNo, passengerName, pickupAt, pickupShort, dropShort, status, paymentMethod, voucherAvailable}], total}`. Enforce the 3-month back / forward window server-side if business requires.
+
+## 7. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.S.ALL_ORDERS` | History tab, Home, Receipts | 112 headings; read by `ORDER_HEADINGS` (migrated earlier). |
+| `RES.S.LOAD_RESERVATION` | A ride opened | 160 headings; one record per number. |

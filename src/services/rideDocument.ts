@@ -1,6 +1,7 @@
 import { SUPPORT_PHONE } from '@/components/reservation/RideReceiptSection';
 import {
   CHARGE_LABELS,
+  COMMON_MESSAGES,
   RECEIPTS_MESSAGES,
   RESERVATION_INFO_MESSAGES,
   RIDE_DOCUMENT_MESSAGES,
@@ -8,7 +9,6 @@ import {
 } from '@/constants/messages';
 import { placeLocalityLine, placeStreetLine } from '@/services/places';
 import type { ChargeLine, RecordStop, ReservationRecord } from '@/services/reservation';
-import { PAYMENT_METHOD_LABELS } from '@/services/rides';
 import { colors } from '@/theme';
 import { formatClockTime, formatSlashDate } from '@/utils/datetime';
 
@@ -38,9 +38,9 @@ export function hasVoucherNumber(record: ReservationRecord): boolean {
   return record.voucherNumber.length > 0;
 }
 
-/** A receipt exists for every ride that has been completed (billed). */
+/** A receipt exists once the ride's invoice is posted (`oeinvoiceposted`), as in the ride lists. */
 export function hasRideReceipt(record: ReservationRecord): boolean {
-  return record.status === 'completed';
+  return record.billing.invoicePosted;
 }
 
 /** Charges line that carries the server's total, styled apart from the items. */
@@ -50,6 +50,11 @@ export function isTotalCharge(charge: ChargeLine): boolean {
 
 export function stopLine(stop: RecordStop): string {
   return [placeStreetLine(stop.place), placeLocalityLine(stop.place)].filter(Boolean).join(', ');
+}
+
+/** Fields the record has no value for show "not available" (gateway data, CLAUDE.md). */
+function shown(fields: RideDocumentField[]): RideDocumentField[] {
+  return fields.map((field) => (field.value ? field : { ...field, value: COMMON_MESSAGES.NOT_AVAILABLE }));
 }
 
 function dateTime(at: Date | null): string {
@@ -72,15 +77,15 @@ export function toVoucherDocument(record: ReservationRecord): RideDocument {
     kind: 'voucher',
     title: VOUCHER_MESSAGES.SCREEN_TITLE,
     number: record.voucherNumber || RESERVATION_INFO_MESSAGES.NOT_ISSUED,
-    fields: [
+    fields: shown([
       { label: VOUCHER_MESSAGES.ACCOUNT, value: record.billing.accountNumber },
       { label: VOUCHER_MESSAGES.JOB, value: record.reservationNumber },
       { label: VOUCHER_MESSAGES.DRIVER, value: record.driver.driverNumber },
       { label: VOUCHER_MESSAGES.CAR, value: record.driver.carNumber },
       { label: VOUCHER_MESSAGES.SCHEDULED, value: dateTime(record.rideAt) },
       ...routeFields(record),
-      { label: VOUCHER_MESSAGES.STOPS, value: String(record.preferences.stops) },
-    ],
+      { label: VOUCHER_MESSAGES.STOPS, value: record.preferences.stops === null ? '' : String(record.preferences.stops) },
+    ]),
     charges: record.charges,
   };
 }
@@ -95,18 +100,18 @@ export function toReceiptDocument(record: ReservationRecord): RideDocument {
     kind: 'receipt',
     title: RECEIPTS_MESSAGES.RECEIPT_TITLE,
     number: record.reservationNumber,
-    fields: [
+    fields: shown([
       { label: RECEIPTS_MESSAGES.RESERVATION, value: record.reservationNumber },
       { label: RECEIPTS_MESSAGES.RIDE_DATE, value: dateTime(record.rideAt) },
       ...routeFields(record),
-      { label: RECEIPTS_MESSAGES.PAYMENT, value: billing.paymentLabel || PAYMENT_METHOD_LABELS[billing.paymentMethod] },
+      { label: RECEIPTS_MESSAGES.PAYMENT, value: billing.paymentLabel },
       ...(last4 ? [{ label: RECEIPTS_MESSAGES.CARD, value: RECEIPTS_MESSAGES.CARD_ENDING(billing.cardType, last4) }] : []),
       ...optional(RECEIPTS_MESSAGES.ACCOUNT, billing.accountNumber),
       ...optional(RECEIPTS_MESSAGES.VOUCHER, billing.voucherNumber || record.voucherNumber),
       ...optional(RECEIPTS_MESSAGES.INVOICE, billing.invoiceNumber),
       ...optional(RECEIPTS_MESSAGES.APPROVAL_DATE, billing.approvalDate),
       ...optional(RECEIPTS_MESSAGES.TRANSACTION_DATE, billing.transactionDate),
-    ],
+    ]),
     charges: record.charges,
   };
 }

@@ -10,7 +10,7 @@ Everything needed to call the gateway, handle its response and wire a new action
 | Action codes & protocol constants | [src/constants/actionCodes.ts](../src/constants/actionCodes.ts) |
 | Env config | [src/config/gateway.ts](../src/config/gateway.ts), [.env.example](../.env.example) |
 | Auth | [src/context/AuthContext.tsx](../src/context/AuthContext.tsx), [src/services/auth.ts](../src/services/auth.ts), `src/services/authStorage(.web).ts` |
-| Inspect a code's real response | [scripts/probe-action-code.mjs](../scripts/probe-action-code.mjs) — `npm run gateway:probe -- <CODE> '<JData JSON>'` |
+| Inspect a code's real response | [scripts/probe-action-code.mjs](../scripts/probe-action-code.mjs) — `npm run gateway:probe -- <CODE> '<JData JSON>'`; add `--summary [--show=h1,h2] [--rows]` to see the shape without the raw body (card and password columns print as their format only) and `--vars=e2e/e2e.local.env` to fill `${E2E_…}` in the JData |
 
 ---
 
@@ -147,7 +147,9 @@ A heading whose value is plainly wrong for its name is a gateway bug: record it 
 **Two levels of success.** `JHeader.ActionCode == 0` only means the gateway executed the procedure. The procedure's own verdict, where it returns one, is `o_code` / `o_message` in row 0 — but **their meaning is per code**, not a fixed rule:
 
 - Login: `o_code "0"` = accepted, and `o_message` then carries **data** (the VIP number); `"1"` = refused, `o_message` = the reason.
-- `RES.S.GOOGLE_ZONE_NUM` answers `o_code "1"` with the zone number in `o_message`; `RES.S.BILLING_METHOD` answers `"1"` = "Corporate Account"; `RES.S.LATITUDE_LONGITUDE_FOR_CAR` answers `"5"` = "No Data Found"; `RES.S.ZONE_THE_LOCATION` can answer an empty `o_code`.
+- `RES.S.GOOGLE_ZONE_NUM` answers `o_code "1"` with the zone number in `o_message`; `RES.S.BILLING_METHOD`'s `o_code` is the account type (`"1"` Corporate Account, `"2"` Credit Card With Corporate Account); `RES.S.LATITUDE_LONGITUDE_FOR_CAR` answers `"5"` = "No Data Found"; `RES.S.ZONE_THE_LOCATION` can answer an empty `o_code`.
+- `RES.I.RESERVATION` and `RES.I.CREDIT_CARD_APPROVAL` answer `"0"` with **data** in `o_message` (the reservation / request number), as `RES.S.CREDIT_CARD_APPROVAL` does with the approval number.
+- A record set with nothing for the inputs answers a single `dummy` heading (`"X"`); `readRecords` reads it as no rows.
 
 So read the code's entry in §10 and decide in its service what each `o_code` means. Where a code does follow "0 = success", check it in the service and fail closed when it is missing (`DB_SUCCESS_CODE`, `assertResultCode`).
 
@@ -308,7 +310,7 @@ Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens
 | Billing rules, requirements, card approval | `src/services/billing.ts` |
 | Zones · saved places · car types · rides · tracking · questions | `src/services/zones.ts`, `savedPlaces.ts`, `vehicleTypes.ts`, `rides.ts`, `tracking.ts`, `feedback.ts` |
 | Step checks (guide 26) | `src/services/reservationValidation.ts` |
-| Defensive row readers (`pick`, `recordSet`; `assertResultCode` reads `o_code` / `o_message` by exact name) | `src/services/gatewayRows.ts` |
+| Row readers, all by exact heading: `readRecords` (a record set; `dummy` alone = no rows), `readResult` / `assertResultCode` (`o_code` / `o_message`), `refusalMessage` (`"9"` → the screen's own copy) | `src/services/gatewayRows.ts` |
 | Step lookups / open-for-edit | `src/hooks/useReservationLookups.ts`, `src/hooks/useReservationActions.ts` |
 
 | Where | Action code | JData / notes |
@@ -318,27 +320,33 @@ Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens
 | Express panel, address fields | `PROF.S.USER_ADDRESSES` (+ `USER_PROFILE_ADDRESSES`, and `CORPORATE_ADDRESSES` with an account) | Listed above the Google results as "Your places". All three are read by the same 17 headings (`ocountry` … `oepickupcount`, §10). Express sends nothing itself: it opens the booking form's Preview with a live ("ready now") draft, and zones both stops by street. |
 | Step 1 | `PROF.S.LOAD_PROFILE` ✅, `PROF.S.PROFILE_WHO_GRANTED_ACCESS` | Names pre-fill from the profile; "Reservation for" shows only when someone granted access. |
 | Step 2, stop picked | `RES.S.GOOGLE_ZONE_NUM` (has lat/lon/ZIP) or `RES.S.ZONE_THE_LOCATION` | Google stops are resolved with Place Details first. No match / no answer → the customer must acknowledge the address (guide 13). Airport stops ask for airline, flight # and pickup option. |
-| Step 3 | `RES.S.BILLING_METHOD`, `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` ×4, `PROF.S.IS_VALID_VIP` ✅, `PROF.S.ACCOUNT_VIP_NUM` | Account-keyed reads mount only with an account number. Continue → `RES.S.VERIFY_ACCOUNT_REQUIREMENTS` (`P_IS_RES 'Y'`), or for a card `RES.I.CREDIT_CARD_APPROVAL` then `RES.S.CREDIT_CARD_APPROVAL` every 10 s for up to 90 s. |
-| Step 4 | `RES.S.VEHICLE_TYPE`, `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` (8 e-mail, 6 cell) | First car type is the default. Passengers 1–4, stops 0–4. |
-| Preview → Book / Save changes | `RES.I.RESERVATION` / `RES.U.RESERVATION` | Every contract parameter, `retry: false`, behind an in-flight lock. Then (needs a reservation number) the Email CC values via `RES.*RESERVATION_COLUMN_VALUE` and `RES.U.FORMAT_EMAIL_MESSAGE`, both best effort. |
-| Details | `RES.S.LOAD_RESERVATION`, `PROF.S.CAR_INFO`, `RES.S.COMMUNICATION_LOG`, `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | Edit / return trip / repeat reload the record and open the wizard. |
+| Step 3 | `RES.S.BILLING_METHOD`, `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` ×4, `PROF.S.IS_VALID_VIP` ✅, `PROF.S.ACCOUNT_VIP_NUM` | Account-keyed reads mount only with an account number. `BILLING_METHOD`'s `o_code` is the account type (`1` → corporate or card, `2` → corporate + card or card, `3` → card); `IS_CREDIT_CARD_SPECIFIC_ACCOUNT` `"1"` narrows that to the card methods; any other code, or an answer that can't be read, shows the account refusal and blocks Continue. Each requirement is a select of its rows' `description`, sending `value`. Continue → `RES.S.VERIFY_ACCOUNT_REQUIREMENTS` (`P_IS_RES 'Y'`, `"0"` = accepted), or for a card `RES.I.CREDIT_CARD_APPROVAL` (`"0"` + request number) then `RES.S.CREDIT_CARD_APPROVAL` every 10 s for up to 90 s (`"0"` + approval number; anything else keeps waiting). |
+| Step 4 | `RES.S.VEHICLE_TYPE`, `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` (8 e-mail, 6 cell) | Tiles from `oevehiclecode` / `oevehicledesc`; the first (`0` No Preference) is the default. `K` must be booked by phone (guide 17). No seat count is sent, so there is no capacity check. Passengers 1–4, stops 0–4. |
+| Preview → Book / Save changes | `RES.I.RESERVATION` / `RES.U.RESERVATION` | Every contract parameter, `retry: false`, behind an in-flight lock. `"0"` = saved, with the new number in `o_message`. Then (needs a reservation number) the Email CC values via `RES.*RESERVATION_COLUMN_VALUE` and `RES.U.FORMAT_EMAIL_MESSAGE`, both best effort. |
+| Details | `RES.S.LOAD_RESERVATION`, `PROF.S.CAR_INFO`, `RES.S.COMMUNICATION_LOG`, `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE`, `RES.S.VEHICLE_TYPE` | Read by `RESERVATION_HEADINGS` (`toReservationRecord`); an empty field shows "Not available". The car type is shown by its `VEHICLE_TYPE` name. The messages card lists the questions asked about the ride (`COMMUNICATION_LOG`). Edit / return trip / repeat reload the record and open the wizard. |
 | Cancel (rides, details) | `RES.U.CANCEL_RESERVATION` | Reason required, ≤ 50 characters, `retry: false`. |
-| Track your route | `RES.S.VEHICLE_LOG`, `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | Position refreshes on demand only, as on the old site. |
+| Track your route | `RES.S.VEHICLE_LOG`, `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | Timeline from `oetrackingdate` / `oetrackingtime` / `oestatusdesc`, trail from `oelatitude` / `oelongitude`. The car's position is `o_latitude` / `o_longitude` on `"0"`; `"5"` (No Data Found) shows "position unknown". Position refreshes on demand only, as on the old site. |
 | Voucher | `RES.S.LOAD_RESERVATION` | Drawn from the record — never the old internal image server. Shown once the record has a voucher #. |
-| Receipts list / receipt | `RES.S.ALL_ORDERS`, `RES.S.LOAD_RESERVATION` | Completed rides; card shown as brand + last 4. Printed with `expo-print` (native) or a hidden frame (web). No invoice code exists yet. |
-| Ask about this ride | `RES.S.ALL_PREDEFINED_QUESTIONS`, `RES.I.ASKED_QUESTIONS` | Message ≤ 200 characters. |
+| Receipts list / receipt | `RES.S.ALL_ORDERS`, `RES.S.LOAD_RESERVATION` | Rides whose invoice is posted (`oeinvoiceposted` `Y`); the charges are then the `idd*` set with its total and `iddinvoicenum`, otherwise the `cc*` set. Card shown as brand + last 4. Printed with `expo-print` (native) or a hidden frame (web). |
+| Ask about this ride | `RES.S.ALL_PREDEFINED_QUESTIONS`, `RES.I.ASKED_QUESTIONS` | Questions from `question_id` / `question`; none → the empty state (no local list). Message ≤ 200 characters. |
 
 **Mapping notes**
 
-- **Outputs are mostly undocumented.** Services not yet migrated still name, per field, every column the value may arrive under and take the first present; `recordSet` drops rows that carry only `o_code` / `o_message` or the stub's `placeholder_col*`. A refusal (`o_code` ≠ `"0"`) throws the service's own error; a write with no `o_code` fails closed. Migrated to one heading per field: `ALL_ORDERS`, `UPDATABLE_ORDERS` (`src/services/rides.ts`) and both zone codes (`toZoneState`: `o_code` `"0"` = match with the zone in `o_message`; anything else, including `ZONE_THE_LOCATION`'s empty answer and `GOOGLE_ZONE_NUM`'s `"1"`, goes to the acknowledgement).
-- **No reservation number is ever made up.** `RES.I.RESERVATION` returns only `o_code` / `o_message` today, so the receipt says the ride is booked and links to Upcoming rides. The e-mail and Email CC writes need a number, so they run only once one is returned (and always on an edit).
-- **Unconfirmed codes**, each set once in `src/services/reservation.ts`: `P_PU_TYPE` / `P_DO_TYPE` `S` / `A` / `L` (only `A` is in the samples); `P_PAYMENT_METHOD` `CA` / `AC` / `CC` (only `CC`); `P_RESERVATION_MAKE_FOR` `SELF` / `OTHER`; `P_CONFIRMATION_METHOD` `EMAIL` / `PHONE`; `P_CALL_SOURCE` `WEB`; `P_PU_DO_TYPE` `P` / `D`; Email CC column id `8` (the contact-type id).
+- **One heading per field.** Every RES code is read by the headings §10 records, with `readRecords` / `readResult` (`mapRowsByHeadings` underneath: a heading that stops coming fails closed). No fallback names, no case folding. A refusal throws the service's own error; `"9"` shows the screen's copy, never the Oracle text.
+- **No reservation number is ever made up.** `RES.I.RESERVATION` answers it in `o_message`; when that is empty the receipt links to Upcoming rides. The e-mail and Email CC writes need a number, so they run only once one is returned (and always on an edit).
+- **Value codes**, each set once in `src/services/reservation.ts` (decoded from stored rides and the backend test client, §10): `P_PU_TYPE` / `P_DO_TYPE` `1` street, `2` airport, `3` landmark; `P_PAYMENT_METHOD` `1` corporate, `2` corporate + card, `3` card (`2` / `3` unconfirmed); `P_CONFIRMATION_METHOD` `ML` e-mail, `SND` phone (unconfirmed); `P_CALL_SOURCE` `W`; `P_RESERVATION_MAKE_FOR` `1` self, `2` someone else (unconfirmed); `P_PU_ADDRESS_ADD` / `P_DO_ADDRESS_ADD` `N`; `P_PU_COUNTRY` / `P_DO_COUNTRY` `US` (a saved address's stored `01` is sent as `US`, as the test client does); `P_RESERVATION_TIME` `hh:mm AM|PM`; `P_EXPIRATION_DATE` `MM-YYYY` (unconfirmed). Email CC column id `8`, which the gateway **rejects** (ORA-02291, §10).
 - **Card data** stays in `ReservationContext` memory only — never stored, logged or shown unmasked — and is cleared after booking and on sign-out. An edit that keeps the card on file resends the masked number the record came with (the old site's "unchanged" convention); `RES.U.FORMAT_EMAIL_MESSAGE` gets a masked `P_CC_NUMBER1`. **The contract still posts full card numbers to the gateway**: tokenising them (00-README §5 #2) is a backend change.
-- **Gateway gaps today:** `ZONE_THE_LOCATION` never zones a street (§10). `CAR_INFO` answers by car number (`driver_1st, color, make, model, model_year`); it is keyed by the record's `oecarnum`, which the test rides leave empty. `LOAD_RESERVATION` returns the same record for every number.
+- **Gateway gaps today:**
+  - **Database issue:** `RES.I.RESERVATION` answers `"0"` (created) with a number, but the ride isn't listed, loaded, updated or cancelled afterwards (§10). The app takes `"0"` as booked and shows the number.
+  - `RES.I.RESERVATION` answers `"5"` when a matching booking already exists, with that booking's number in `o_message`; nothing new is created. The app shows "Already booked" with that number and a "View your reservation" button (`DuplicateReservationError`, `assertReservationSaved`). The contract has no "book it anyway" parameter, so the old site's override isn't offered.
+  - A booking without a ride purpose fails with ORA-01400, so Trip purpose is required on the Preferences step (`checkPreferences`).
+  - `ZONE_THE_LOCATION` never zones a street.
+  - `LOAD_RESERVATION` sends no cancel reason, no originate time and no seat count; it returns other customers' records by number.
+  - `CAR_INFO` answers by car number (`driver_1st, color, make, model, model_year`), keyed by the record's `oecarnum`.
 - **No action code** exists for airports, airlines, streets or landmarks (guide 05) or the fare estimate: stops come from Google Places, airline and flight are typed.
 - **Google Places (legacy)** backs address search: `place/autocomplete/json` and `place/details/json` on iOS / Android (`src/services/googlePlaces.ts`), and the Maps JavaScript API's `AutocompleteService` / `PlacesService` on web (`googlePlaces.web.ts`), because the web service sends no CORS headers. The route preview uses **Directions** the same way (`directions/json` with `mode=driving&departure_time=now`, and `waypoints` for stops, on iOS / Android; `DirectionsService` on web — `src/services/googleDirections(.web).ts`). The booking form and Track your route show the route on an interactive map the customer can pinch, drag and zoom with + / − / fit buttons (`src/components/reservation/RouteMapView(.web).tsx`: react-native-maps on iOS / Android, a Maps JavaScript API map on web). Track your route turns the car's position into a street address with **Geocoding** (`geocode/json?latlng=…`, which allows browser calls, so one implementation — `src/services/geocoding.ts`). The key needs **Places API**, **Directions API**, **Geocoding API**, **Maps JavaScript API**, and **Maps SDK for Android / iOS** for native builds (`app.config.ts` passes it to react-native-maps); refusals show short copy to the customer and Google's reason in the dev console.
 
-**Tests:** `e2e/reservation-2.spec.ts` drives every flow against the gateway and compares each request's JData keys with this contract. The card-authorisation case runs only with `E2E_CARD_TESTS=1`.
+**Tests:** `e2e/reservation-2.spec.ts` drives every flow against the gateway and compares each request's JData keys with this contract. Writes (book, update, cancel, e-mail, card) are built and checked but aborted in the browser unless `E2E_ALLOW_WRITES=1` (`blockGatewayWrites`, `e2e/support/gateway.ts`). The card-authorisation case runs only with `E2E_CARD_TESTS=1`.
 
 ---
 
@@ -409,15 +417,18 @@ App: `sessionFromLoginResponse` in `src/services/auth.ts` — `"0"` → session 
 | `PROF.S.ACCOUNT_REQUIREMENTS` — ✅ migrated | `[["0", "Account ok. No requirements"]]` / `[["1", "Invalid account"]]` | `"0"` = usable (no requirements for the test account), `"1"` = unknown account; a requirement-bearing account not yet seen |
 | `PROF.S.PASSWORD` — ✅ migrated | `[["0", "Sendmail"]]` for `j.lee@xyzcar.com` (one real e-mail sent, 2026-10-30) | `"0"` = password mailed; a refusal not yet seen |
 | `PROF.S.ACCOUNT_VIP_NUM` | `[["<account>", "<VIP number>"]]` | No `o_code`: headings `["paccountnum", "pvipnum"]` (were `pAccountNum`, `pVIPNum` until 2026-11-03) |
-| `RES.S.BILLING_METHOD` | `[["1", "Corporate Account"]]` | `o_code` is the **method**, not an error: `"1"` = Corporate Account |
-| `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` | `[["0", "Corporate Account"]]` | `"0"` + account kind |
-| `RES.S.GOOGLE_ZONE_NUM` | `[["1", "10001331"]]` (40.7484, -73.9857, 10001) / `[["1", "90000999"]]` (0, 0, 00000) | `"1"` with a zone number in `o_message` for both. Whether `90000999` means "outside the service area" is unconfirmed, so `"1"` alone doesn't prove a match. The app still treats only `"0"` as a match, which fails closed into the acknowledgement. |
-| `RES.S.ZONE_THE_LOCATION` | `[["", ""]]` | Empty for **every** input tried on 2026-10-30: two of the test login's saved addresses (`275 20 ST, BROOKLYN, NY` and `180 EAST END AVE, MANHATTAN, NY`), the backend test client's own sample (`1 WADSWORTH AVE, MANHATTAN`, state `LC`), an airport (`JFK`) and a made-up street. No answer has been seen for a zoned street, so every saved-address stop (Express included) goes to the acknowledgement. |
-| `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | `[["5", "No Data Found", "", ""]]` | Headings `o_code, o_message, o_latitude, o_longitude` (were `o_Latitude`, `o_Longitude` until 2026-11-03); `"5"` = no position |
+| `RES.S.BILLING_METHOD` — ✅ migrated | `[["1", "Corporate Account"]]` (`99005`, `29311`) / `[["2", "Credit Card With Corporate Account"]]` (`24600`) / `[["5", "Invalid Account Number."]]` | `o_code` is the old site's **`acctype`** (guide 16), not a verdict: `"1"` account (no account + card), `"2"` account + card (no plain account), `"3"` card only (not seen). `"5"` (and any other code) is a refusal. Re-probed 2026-11-03. |
+| `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` — ✅ migrated | `[["0", "Corporate Account"]]` (`99005`, `29311`) / `[["1", "Credit Card Specific"]]` (`24600`) / `[["5", "Invalid Account Number."]]` | `"0"` = not card-specific, `"1"` = card-specific (only the card methods), anything else a refusal. |
+| `RES.S.VERIFY_ACCOUNT_REQUIREMENTS` — ✅ migrated | `[["0", "Account ok. No requirements"]]` (test account, any VIP) / `[["1", "Invalid account"]]` (`29311`, `00000`) / `[["1", "Failed"]]` (`24600`, no VIP) | `"0"` = accepted. Not in the backend test client. The VIP number isn't checked (a wrong one still answers `"0"`), and `29311`, which **has** a requirement list, answers "Invalid account" with or without its answer (backend issue). |
+| `RES.S.GOOGLE_ZONE_NUM` | `[["1", "10001331"]]` (40.7484, -73.9857, 10001), `[["1", "11215000"]]`, `[["1", "10001850"]]` / `[["1", "90000999"]]` (0, 0, 00000) | `"1"` with a zone number in `o_message` for every input; the 8-digit form matches the stored rides' `oefromzonenum` (`10305000`). Whether `90000999` means "outside the service area" is unconfirmed, so the app still treats only `"0"` as a match (fails closed into the acknowledgement). |
+| `RES.S.ZONE_THE_LOCATION` | `[["", ""]]` | Empty for **every** input tried (2026-10-30 and again 2026-11-03): saved addresses, the backend test client's own sample (`1 WADSWORTH AVE, MANHATTAN`, state `LC`), `36 ADELE ST, STATEN ISLAND, NY`, an airport and a made-up street. Every saved-address stop (Express included) goes to the acknowledgement. |
+| `RES.S.LATITUDE_LONGITUDE_FOR_CAR` — ✅ migrated | `[["0", "Success", "40.5913", "-74.0887"]]` (car `888`) / `[["0", "Success", "", ""]]` (car `412`) / `[["5", "No Data Found", "", ""]]` | Headings `o_code, o_message, o_latitude, o_longitude`. `"0"` = position (blank = none), `"5"` = no position; any other code a refusal. |
+| `RES.S.CREDIT_CARD_APPROVAL` — ✅ migrated | `[["0", "186254"]]` (request `753371`) / `[["1", "Invalid request number."]]` | `"0"` with the **approval number** in `o_message`. A request made minutes earlier (`753390`) still answered `"1"` after 10 minutes, so whether a decline has its own code is unknown; the app keeps polling until its 90 s limit. |
+| `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` — ✅ migrated | `[["0", "Success", "1"]]` (`W5121607812`, column `1`) | Headings `o_code, o_message, o_columnvalue`. A column with no value still fails: `"9"` `ORA-01400: cannot insert NULL into WS_RESERVATION_COLUMN_VALUES.COLUMN_VALUE` (invalid JSON, so the app reads it as a failed call and shows nothing). |
 
 ### Record sets (re-probed 2026-11-03)
 
-The backend fixed the record sets on 2026-11-03: every row now carries exactly one value per heading, and each value sits under its own heading. At the same time it **renamed every heading** to lower case without underscores (`first_name` → `ofirstname`, `oCountry` → `ocountry`). The app reads each code by these names (§7, §7a, §7b); `LOAD_RESERVATION`, `VEHICLE_TYPE` and `ALL_PREDEFINED_QUESTIONS` are not remapped yet. Earlier shapes are in git history.
+The backend fixed the record sets on 2026-11-03: every row now carries exactly one value per heading, and each value sits under its own heading. At the same time it **renamed every heading** to lower case without underscores (`first_name` → `ofirstname`, `oCountry` → `ocountry`). The app reads each code by these names (§7, §7a, §7b); the RES codes were remapped the same day. Earlier shapes are in git history.
 
 | Code | Headings sent | Rows (test login) | Notes |
 |---|---|---|---|
@@ -427,16 +438,63 @@ The backend fixed the record sets on 2026-11-03: every row now carries exactly o
 | `PROF.S.CORPORATE_ADDRESSES` — ✅ migrated | 17 = 17: same as `USER_ADDRESSES` | 2 (test account) | Was the camel-case spelling. |
 | `RES.S.ALL_ORDERS` — ✅ migrated | 112 = 112, listed below | 15 | Was 10 headings / 112 values, shifted so no row could be listed. Dates: `oresdate` `DD-MON-YY`, `oreservationdate` `MM/DD/YYYY`, `oreservationtime` `hh:mm am\|pm`. Status in `oecallstatus` / `oecallstatusdesc` and `oecurrentstatus` / `oecurrentstatusdesc`; actions in `oecanupdate`, `oecancancel`, `oecanprintvoucher`, `oecanviewstatus`. No voucher-number or feedback heading. Invalid JSON (receipt-image path), repaired by `parseBody`. |
 | `RES.S.UPDATABLE_ORDERS` — ✅ migrated | 112 = 112, the same list as `ALL_ORDERS` | 4 | Was 10 headings / 112 values. |
-| `RES.S.LOAD_RESERVATION` | 160 = 160: the order headings without `oresdate`, plus the ones listed below | 1 (`W6102831267`) | **`oecarnum` is sent twice** (positions 75 and 118); `mapRows` keeps the later value (backend issue). Invalid JSON, repaired. |
-| `RES.S.VEHICLE_TYPE` | 2 = 2: `oevehiclecode, oevehicledesc` | 5 | Was 5 headings / 2 values. No passenger, luggage or description heading. First row `0` / `No Preference`. |
-| `RES.S.ALL_PREDEFINED_QUESTIONS` | 2 = 2: `question_id, question` | 2 | Was `o_code, o_message, placeholder_col1, placeholder_col2`. |
-| `PROF.S.ACCOUNT_REQUIREMENTS_RS`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` | 1 = 1: `dummy` | 1 (`"X"`) for the test account | Was 4 headings / 1 value. `dummy` alone means the account has **no requirements** (the backend test client answers the same for `99005`); no account with requirements known yet. |
-| `RES.S.VEHICLE_LOG` | 6: `oetrackingdate, oetrackingtime, oestatuscode, oestatusdesc, oelongitude, oelatitude` | 0 | |
-| `RES.S.COMMUNICATION_LOG` | 0 | 0 | No headings at all for the reservation tried. |
+| `RES.S.LOAD_RESERVATION` — ✅ migrated | 160 = 160: the order headings without `oresdate`, plus the ones listed below | 1 per number (`W6091020269`, `6081912876`, `NDBG454`, …) | Now a different record per number. **`oecarnum` is sent twice** (positions 75 and 118); `mapRows` keeps the later value. An unknown number answers `dummy` alone. It also returns **another customer's** reservation when given its number (`W5121607812`, the test client's sample, belongs to a different login): no ownership check (backend issue). Invalid JSON, repaired. Value notes below. |
+| `RES.S.VEHICLE_TYPE` — ✅ migrated | 2 = 2: `oevehiclecode, oevehicledesc` | 5 | `0` No Preference, `3` Sedan, `4` SUV, `H` Standard Wheelchair Vehicle, `K` Premium Wheelchair Vehicle (guide 17's codes). No seat-count or description heading. |
+| `RES.S.ALL_PREDEFINED_QUESTIONS` — ✅ migrated | 2 = 2: `question_id, question` | 2 | `1` "How I can contact the driver?", `2` "Why vehicle is late?". |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS` | 1 = 1: `dummy` | 1 (`"X"`) | `dummy` alone means **no rows**. Also `dummy` for `29311`, whose `ACCOUNT_REQUIREMENTS_LIST` has a requirement. |
+| `RES.S.ACCOUNT_REQUIREMENTS_LIST` — ✅ migrated | 5 = 5: `account_num, requirement_num, value, description, company_num` | 2 for `29311` requirement 1 (`BUS` / `BUSINESS`, `PERS` / `PERSONAL`); `dummy` for requirement 2–4 and for `99005` / `24600` | One row per allowed answer: `value` goes in `P_ACCOUNT_REQUIREMENTn`, `description` is shown. No heading carries the field's label. |
+| `RES.S.VEHICLE_LOG` — ✅ migrated | 6 = 6: `oetrackingdate, oetrackingtime, oestatuscode, oestatusdesc, oelongitude, oelatitude` | 31 (`W5121607812`), 10, 50 | Date `MM/DD/YYYY`, time `hh:mm:ss AM\|PM`. Statuses seen: `4` Accept, `30` Tracking, `9` On Scene, Circling, Load, Unload, Start Unit, Repeat Cpy, Stop. |
+| `RES.S.COMMUNICATION_LOG` — ✅ migrated | 10: `question_id, question, asked_question_id, login_id, reservation_num, account_num, vip_num, additional_message, asked_question_datetime, answer` | 0 for every ride tried | The questions asked about a ride (`RES.I.ASKED_QUESTIONS`) and their answers. No rows yet, so the date format of `asked_question_datetime` is unknown. |
+| `RES.S.LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE` — ✅ migrated | 2 = 2: `ocolumnid, ocolumnvalue` | 1 (`W5121607812`, column `1`: `1`), 0 for column `8` | |
 
 `ALL_ORDERS` / `UPDATABLE_ORDERS` headings: `ologinid, oreservationnumber, ofirstname, olastname, oresdate, oreservationdate, oreservationtime, oputype, opucountry, opustate, opucity, opuzipcode, opustreetnumber, opustreetname, opucrossstreet, opucrossstreet2, opupoint, opudirections, opuaddressadd, opuairportname, opuairlinename, opuflightnumber, opuflightarrivingfrom, opuairportoption, opulandmarkname, odotype, odocountry, odostate, odocity, odozipcode, odostreetnumber, odostreetname, odocrossstreet, odocrossstreet2, ododirections, odoaddressadd, odoairportname, odoairlinename, odoflightnumber, odoterminalnumber, odoflightdestinationcity, odolandmarkname, opaymentmethod, oaccountnumber, oaccountrequirement1, oaccountrequirement2, oaccountrequirement3, oaccountrequirement4, ocardtype, ocardholdername, ocardnumber, overifycode, obillingzipcode, oexpirationdate, ofleetname, oconfirmationmethod, ophonenumber, ophoneext, ophonenumberus, ophoneextus, oemail, oneedphone, ocartype, ocaryear, onumberofpassengers, onumberofstops, osmokingallowed, oapprovalnum, oevipnumber, oeoriginatedatetime, oescheduleddispatchtime, oedispatchtime, oecallstatus, oecallstatusdesc, oecurrentstatus, oecurrentstatusdesc, oecarnum, oedriverid, oeeta, oefare, oeservicecharge, oefromzonenum, oeapzonenum, oetozonenum, oedoapzonenum, oejobnum, oecanupdate, oecancancel, oecanprintvoucher, oecanviewstatus, oeimageid, oeimageidpng, oeimagefullpath, oeinvoiceposted, oeconfirmationtime, oeonscene, oeload, oecircle, oeetaupdatetime, oeetaupdate, oecircleeta, oeetanow, oecompanyname, oeapprovalflag, oepaymentpolicy, oeisopenorder, oegetbillingoption, oepickuplat, oepickuplon, oedropofflat, oedropofflon, oeusercompanyname`.
 
 `LOAD_RESERVATION` adds: `oereservationmakefor, oeridepurpose, oeccemail, oeloginidreservationmakefor, oeapprovaldate, oeoperatorname, oevouchernum, oecarcolor, oecarmodel, oedrivernum, oedrivername, oeactualnumofstops, oetransactiondate, oetransactionamount, ccfare, ccservicecharge, cctips, cctolls, ccwaitingamount, ccstopwaitingamount, ccwaitingminutes, ccstopwaitingminutes, ccstops, ccpackage, ccadditonalpassenger, ccphone, ccmisc, ccnyssurcharge, cctotaldiscount, ccstatesalestax, iddfare, iddservicecharge, iddtips, iddtolls, iddwaitingamount, iddstopwaitingamount, iddwaitingminutes, iddstopwaitingminutes, iddstops, iddpackage, iddadditonalpassenger, iddphone, iddmisc, iddtotal, iddnyssurcharge, iddtotaldiscount, iddinvoicenum, iddstatesalestax`.
+
+**Order and reservation values** (decoded 2026-11-03 from the test login's 15 stored rides, the old site's and the backend test client's; `npm run gateway:probe -- … --summary --show=<headings>`):
+
+| Heading | Values seen | Read as |
+|---|---|---|
+| `oputype` / `odotype` | `1` with a street, `2` with `odoairportname` `LGA`, `3` with a landmark name | Place kind; also `P_PU_TYPE` / `P_DO_TYPE` |
+| `opaymentmethod` | `1` (test client's rides), `3` (old site's, on the same account, no card) | `1` corporate account; `2` / `3` unconfirmed |
+| `oconfirmationmethod` | `ML` (with `oneedphone` `N`), `SND` (with `oneedphone` `Y`) | `ML` e-mail; `SND` assumed "phone" (to confirm) |
+| `oreservationtime` | `10:30 am`, `02:20 pm` | `hh:mm am\|pm` |
+| `oeoriginatedatetime` | `10-SEP-26` | `DD-MON-YY`, a date only |
+| `opuaddressadd` / `odoaddressadd` | `N` | A flag, not the contract's "Suite 200" |
+| `oereservationmakefor` | `1` (booked for themself) | `P_RESERVATION_MAKE_FOR` |
+| `oeridepurpose` | `1`, `4` | Codes, though the app's field is free text (to confirm) |
+| `ocartype` | `0`, `3`, `4` | `RES.S.VEHICLE_TYPE` codes |
+| `onumberofstops` | `0`, `1`, and `u`, `W`, `s` on old rides | Not a number on some rides (backend issue); shown as "not available" |
+| `oecallstatus(desc)` / `oecurrentstatus(desc)` | `0` Open, `2` Canceled, `6` Confirmed / `E` UnLoaded | As `ALL_ORDERS` |
+| `cc*` / `idd*` | `cc*` filled on every finished ride; `idd*` (with `iddtotal`, `iddinvoicenum`) only once `oeinvoiceposted` is `Y` | `cc*` the call's charges, `idd*` the posted invoice (to confirm) |
+| `odoairlinename`, `odoflightnumber`, `odoterminalnumber`, `odoflightdestinationcity` | Address text (`NEW YORK`, `1650 HYLAN BLVD`, `RIVERSIDE DR`) on street drop-offs | Shifted values (backend issue); read only for an airport drop-off |
+| `oeimageidpng` | `\\192.168.168.19\Receipt_Images\<number>.PNG` | Internal path, never read |
+
+### RES. write codes (probed 2026-11-03)
+
+Approved by the user, on one test ride (test login, account `99005`, payment `1`, Brooklyn → Manhattan, 11/17/2026). Card values only from the backend test client's samples.
+
+| Code | Sent | `o_code` | `o_message` | Read back |
+|---|---|---|---|---|
+| `RES.I.RESERVATION` | Time `14:30` | `"9"` | `ORA-01849: hour must be between 1 and 12` | Nothing stored |
+| `RES.I.RESERVATION` | Time `02:30 PM`, `P_RIDE_PURPOSE` and `P_CC_EMAIL` blank | `"9"` | `ORA-01400: cannot insert NULL into WS_RESERVATION_COLUMN_VALUES.COLUMN_VALUE` (invalid JSON) | Nothing stored (sent twice; the first answer couldn't be read) |
+| `RES.I.RESERVATION` | As above, `P_RIDE_PURPOSE` `Test record`, `P_CC_EMAIL` = the login | `"0"` | `W6110231278` — **the new reservation number** | **Not readable:** `LOAD_RESERVATION` answers `dummy`, neither order list shows it, and update / cancel answer "Invalid reservation number." Its column values (`1`, `2`) are stored. |
+| `RES.I.RESERVATION` | `P_RIDE_PURPOSE` `Test record`, `P_CC_EMAIL` **blank**, 11/18/2026 | `"0"` | `W6110331282` | So the **ride purpose is the required one**; the CC e-mail can stay blank. Not readable either. |
+| `RES.U.RESERVATION` | No-op, every parameter as created, `_OLD` = new | `"1"` | `Invalid reservation number.` | — |
+| `RES.U.CANCEL_RESERVATION` | Reason `Test record` | `"1"` | `Invalid reservation number.` | — |
+| `RES.I.RESERVATION_COLUMN_VALUE` | Column `8` (the app's Email CC id) | `"9"` | `ORA-02291: integrity constraint (OPTIMA.R_FROM_WS_RESERVATION_COLUMN) violated - parent key not found` | Column `8` doesn't exist for reservations |
+| `RES.I.RESERVATION_COLUMN_VALUE` | Column `1` | `"0"` | `Success` | **Not stored:** neither column read shows it |
+| `RES.U.RESERVATION_COLUMN_VALUE` / `RES.D.…` | The value just added | `"2"` | `Record does not Exist. Cannot update value.` / `… delete value.` | — |
+| `RES.I.ASKED_QUESTIONS` | Question `1`, `Test question.` | `"0"` | `Success` | `COMMUNICATION_LOG` shows no row |
+| `RES.U.FORMAT_EMAIL_MESSAGE` | The test ride, to the test login's own e-mail, no card | `"0"` | `success` | One e-mail sent |
+| `RES.I.CREDIT_CARD_APPROVAL` | The test client's sample card (type `0`, number `1`, `11-2027`) | `"0"` | `753390` — **the request number** | `CREDIT_CARD_APPROVAL` answered `"1"` "Invalid request number." for it for 10+ minutes |
+
+So:
+- **`P_RESERVATION_TIME` is 12-hour** (`hh:mm AM|PM`); the contract's "14:30" is refused.
+- **A booking needs a ride purpose:** with it blank the insert of a reservation column fails (`ORA-01400`); the CC e-mail may stay blank. The form now requires Trip purpose (≤ 50 characters).
+- **`"0"` means created.** That a `"0"` booking doesn't then show up anywhere the app reads is a **database issue** for the backend. The backend test client's own bookings of 2026-10-28 (`W61028312…`) do show.
+- **`"5"` means a duplicate:** re-sending the test client's sample (11/15/2026 10:30) answered `"5"` / `W6102831262`, the existing ride with those details; the ride list stayed at 15.
+- If `W6110231278` or `W6110331282` ever appears as an open ride, cancel it.
 
 ### Profile codes renamed to the backend's names
 
@@ -519,4 +577,5 @@ Headings `paccountnum, pvipnum`, one row, no `o_code`, whatever `P_ACCOUNT_NUM` 
 
 | Code | Answer |
 |---|---|
-| `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | `"9"` `ORA-01400: cannot insert NULL into …RESERVATION_COLUMN_VALUES…` — a select code that tries an INSERT; invalid JSON (unescaped quotes) |
+| `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` (for a column with no value) | `"9"` `ORA-01400: cannot insert NULL into …RESERVATION_COLUMN_VALUES…` — a select code that tries an INSERT; invalid JSON (unescaped quotes). A column that has a value answers normally (above). |
+| `RES.I.RESERVATION` with neither ride purpose nor CC e-mail | `"9"` `ORA-01400` on `WS_RESERVATION_COLUMN_VALUES.COLUMN_VALUE` (write probes above) |

@@ -30,7 +30,8 @@ import {
   cardFingerprint,
   checkApprovalJData,
   startApprovalJData,
-  toApprovalState,
+  toApprovalCheck,
+  toApprovalRequest,
   verifyRequirementsJData,
 } from '@/services/billing';
 import { assertResultCode } from '@/services/gatewayRows';
@@ -459,7 +460,7 @@ function SignedInReservationProvider({ loginId, children }: { loginId: string; c
       // Never resent: a lost answer must not authorise the card twice.
       { retry: false },
     );
-    let outcome: ApprovalState = toApprovalState(first);
+    let outcome: ApprovalState = toApprovalRequest(first);
 
     while (outcome.status === 'pending') {
       if (Date.now() - started + APPROVAL_POLL_MS > APPROVAL_TIMEOUT_MS) {
@@ -472,7 +473,7 @@ function SignedInReservationProvider({ loginId, children }: { loginId: string; c
         GATEWAY_VIEW_NAME,
         checkApprovalJData(loginId, requestNumber),
       );
-      outcome = toApprovalState(answer, requestNumber);
+      outcome = toApprovalCheck(answer, requestNumber);
     }
 
     if (outcome.status === 'declined') throw new BillingError(outcome.message);

@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §8 Gateway (real data).
 
 # Module 17 — Booking Step 4: Preferences, Contact & Ride Options
 
@@ -46,3 +48,16 @@ Guest-only post-booking: dialog to create a login (`UserEmail`, `Password`, `Con
 
 ## 7. Revamp notes
 `{vehicleType, confirmByPhone, callback:{us,usExt,intlCode,intl,intlExt}, email, ccEmails[], passengers, stops}`. Block `K` server-side with a "call to book" response. Send confirmation e-mail to `email` + `ccEmails`.
+
+## 8. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.S.VEHICLE_TYPE` | Step 4 | `oevehiclecode, oevehicledesc`. `K` (Premium Wheelchair) is book-by-phone. No seat-count heading, so the seat caption and the capacity check are gone. |
+| `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` | E-mail / cell fills | `ocolumnid, ocolumnvalue`. |
+| `RES.I.RESERVATION_COLUMN_VALUE` | Email CC after a save | Column `8` (the Email CC id) is rejected: `"9"` ORA-02291, no such reservation column. Column `1` answers `"0"` but stores nothing readable. |
+
+- **Trip purpose is required** (≤ 50 characters): `RES.I.RESERVATION` fails with `ORA-01400` when `P_RIDE_PURPOSE` is blank (probed 2026-11-03; a blank CC e-mail is fine).
+- `P_CONFIRMATION_METHOD` `ML` (e-mail) / `SND` (phone, unconfirmed); `P_NEED_PHONE` `Y` with a phone confirmation, as on stored rides.

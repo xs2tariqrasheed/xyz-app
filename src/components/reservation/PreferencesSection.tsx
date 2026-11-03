@@ -27,7 +27,10 @@ export type PreferencesValue = {
   ccEmails: string;
   passengers: number;
   stops: number;
-  /** `P_RIDE_PURPOSE`. Optional. */
+  /**
+   * `P_RIDE_PURPOSE`. Required: the gateway refuses a booking without it
+   * (`ORA-01400`, docs/XYZ_INTEGRATION_GUIDE.md §10).
+   */
   ridePurpose: string;
 };
 
@@ -36,6 +39,8 @@ export const MIN_PASSENGERS = 1;
 export const MAX_PASSENGERS = 4;
 export const MAX_STOPS = 4;
 export const CC_EMAILS_MAX_LENGTH = 500;
+/** Longest trip purpose the form takes (`P_RIDE_PURPOSE`). */
+export const RIDE_PURPOSE_MAX = 50;
 
 export function emptyPreferences(carType = ""): PreferencesValue {
   return {
@@ -57,7 +62,8 @@ export type PreferencesField =
   | "callbackUs"
   | "callbackIntl"
   | "email"
-  | "ccEmails";
+  | "ccEmails"
+  | "ridePurpose";
 export type PreferencesErrors = Partial<Record<PreferencesField, string>>;
 
 /** A gateway lookup as the section needs it: the rows plus whether they arrived. */
@@ -209,10 +215,12 @@ export function PreferencesSection({
 
       <TextField
         label={RESERVATION_MESSAGES.RIDE_PURPOSE_LABEL}
+        required
         value={value.ridePurpose}
         onChangeText={(ridePurpose) => patch({ ridePurpose })}
         placeholder={RESERVATION_MESSAGES.RIDE_PURPOSE_PLACEHOLDER}
-        maxLength={50}
+        maxLength={RIDE_PURPOSE_MAX}
+        error={errors.ridePurpose}
       />
 
       <Summary value={value} car={car} />
@@ -262,9 +270,6 @@ function CarTypePicker({
       options={lookup.items.map((type) => ({
         value: type.code,
         label: type.label,
-        caption: type.seats
-          ? `${RESERVATION_MESSAGES.CAR_SEATS_PREFIX} ${type.seats} ${RESERVATION_MESSAGES.CAR_SEATS_SUFFIX}`
-          : type.description,
         renderIcon: (selected: boolean) => (
           <CarGlyph
             variant={carGlyphFor(type)}

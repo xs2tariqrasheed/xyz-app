@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, Vi
 
 import { Screen } from '@/components/layout/Screen';
 import { InfoCard, SplitInfoCard } from '@/components/reservation/info/InfoCard';
-import { InfoColumns, InfoList, InfoRow } from '@/components/reservation/info/InfoRow';
+import { InfoColumns, InfoList, InfoRow, type InfoRowProps } from '@/components/reservation/info/InfoRow';
 import { CancelReservationSheet } from '@/components/rides/CancelReservationSheet';
 import { RideQuestionSheet } from '@/components/rides/RideQuestionSheet';
 import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
@@ -13,10 +13,11 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { hasRateRideUrl } from '@/config/rateRide';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { RECEIPTS_MESSAGES, RESERVATION_INFO_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
+import { COMMON_MESSAGES, RECEIPTS_MESSAGES, RESERVATION_INFO_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { useOpenReservation } from '@/hooks/useReservationActions';
+import { useVehicleTypes } from '@/hooks/useReservationLookups';
 import { useReservationRecord } from '@/hooks/useReservationRecord';
 import { placeLocalityLine } from '@/services/places';
 import {
@@ -31,8 +32,8 @@ import {
 } from '@/services/reservation';
 import { hasRideReceipt, hasVoucherNumber } from '@/services/rideDocument';
 import { openRateRide } from '@/services/rateRide';
-import { PAYMENT_METHOD_LABELS } from '@/services/rides';
 import { carJData, toCarInfo } from '@/services/tracking';
+import { findVehicleType } from '@/services/vehicleTypes';
 import { breakpoints, colors, radii, space } from '@/theme';
 import { formatClockTime, formatSlashDate } from '@/utils/datetime';
 import { formatIntlPhone, formatUsPhone } from '@/utils/phone';
@@ -45,6 +46,11 @@ type Notice = { tone: 'success' | 'danger'; message: string } | null;
  * `RES.S.COMMUNICATION_LOG` for the messages sent, and the extra contact
  * stored on it (`RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE`).
  */
+/** A record field: a blank value shows "not available" (gateway data, CLAUDE.md). */
+function RecordRow(props: InfoRowProps) {
+  return <InfoRow emptyLabel={COMMON_MESSAGES.NOT_AVAILABLE} {...props} />;
+}
+
 export default function ReservationInfoScreen() {
   const { rideno } = useLocalSearchParams<{ rideno?: string }>();
   const reservationNumber = typeof rideno === 'string' ? rideno.trim() : '';
@@ -84,6 +90,7 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
   const opener = useOpenReservation();
 
   const { record, failureMessage, isLoading, refetch } = useReservationRecord(reservationNumber);
+  const vehicleTypes = useVehicleTypes();
 
   if (isLoading) {
     return (
@@ -114,6 +121,7 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
   const hasReceipt = hasRideReceipt(record);
   const editSection = upcoming ? () => void opener.open(record.reservationNumber, 'edit') : undefined;
   const { preferences, billing } = record;
+  const carTypeLabel = findVehicleType(vehicleTypes.items, preferences.carType)?.label ?? '';
 
   return (
     <>
@@ -130,18 +138,19 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
         <InfoColumns
           left={
             <InfoList>
-              <InfoRow label="First Name" value={record.firstName} />
-              <InfoRow label="Last Name" value={record.lastName} />
-              <InfoRow label="Ride Date" value={record.rideAt ? formatSlashDate(record.rideAt) : ''} />
-              <InfoRow label="Ride Time" value={record.rideAt ? formatClockTime(record.rideAt) : ''} />
+              <RecordRow label="First Name" value={record.firstName} />
+              <RecordRow label="Last Name" value={record.lastName} />
+              <RecordRow label="Ride Date" value={record.rideAt ? formatSlashDate(record.rideAt) : ''} />
+              <RecordRow label="Ride Time" value={record.rideAt ? formatClockTime(record.rideAt) : ''} />
             </InfoList>
           }
           right={
             <InfoList>
-              <InfoRow label="Originate Date" value={record.originateAt ? formatSlashDate(record.originateAt) : ''} />
-              <InfoRow label="Originate Time" value={record.originateAt ? formatClockTime(record.originateAt) : ''} />
-              <InfoRow label="Operator Name" value={record.operatorName} />
-              <InfoRow label="Status" value={record.statusLabel} />
+              <RecordRow label="Originate Date" value={record.originateOn ? formatSlashDate(record.originateOn) : ''} />
+              {/* The record stores the day only (`oeoriginatedatetime`, DD-MON-YY). */}
+              <RecordRow label="Originate Time" value="" />
+              <RecordRow label="Operator Name" value={record.operatorName} />
+              <RecordRow label="Status" value={record.statusLabel} />
             </InfoList>
           }
         />
@@ -161,63 +170,60 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
           divider
           left={
             <InfoList>
-              <InfoRow label="Voucher Number" value={billing.voucherNumber} />
-              <InfoRow label="Invoice Number" value={billing.invoiceNumber} />
-              <InfoRow label="Approval Date" value={billing.approvalDate} />
-              <InfoRow label="Transaction Date" value={billing.transactionDate} />
-              <InfoRow label="Transaction Amt" value={billing.transactionAmount} />
+              <RecordRow label="Voucher Number" value={billing.voucherNumber} />
+              <RecordRow label="Invoice Number" value={billing.invoiceNumber} />
+              <RecordRow label="Approval Date" value={billing.approvalDate} />
+              <RecordRow label="Transaction Date" value={billing.transactionDate} />
+              <RecordRow label="Transaction Amt" value={billing.transactionAmount} />
             </InfoList>
           }
           right={
             <InfoList>
-              <InfoRow
-                label="Payment Method"
-                value={billing.paymentLabel || PAYMENT_METHOD_LABELS[billing.paymentMethod]}
-              />
+              <RecordRow label="Payment Method" value={billing.paymentLabel} />
               {billing.accountNumber ? (
-                <InfoRow label="Account #">
+                <RecordRow label="Account #">
                   <View style={styles.account}>
                     <Text style={styles.accountValue}>{billing.accountNumber}</Text>
                     {billing.vipNumber ? <Text style={styles.accountVip}>VIP # : {billing.vipNumber}</Text> : null}
                   </View>
-                </InfoRow>
+                </RecordRow>
               ) : null}
               {billing.cardMasked ? (
-                <InfoRow label="Card" value={[billing.cardType, `•••• ${billing.cardMasked.slice(-4)}`].filter(Boolean).join(' ')} />
+                <RecordRow label="Card" value={[billing.cardType, `•••• ${billing.cardMasked.slice(-4)}`].filter(Boolean).join(' ')} />
               ) : null}
             </InfoList>
           }
         />
       </InfoCard>
 
-      <DriverCard record={record} />
+      <DriverCard record={record} carTypeLabel={carTypeLabel} />
 
       <InfoCard title="Preferences" onEdit={editSection}>
         <InfoColumns
           left={
             <InfoList>
-              <InfoRow label="Car Type" value={preferences.carType} />
-              <InfoRow
+              <RecordRow label="Car Type" value={carTypeLabel} />
+              <RecordRow
                 label="Callback Phone (US)"
                 value={preferences.phoneUs ? withExt(formatUsPhone(preferences.phoneUs), preferences.phoneUsExt) : ''}
               />
-              <InfoRow
+              <RecordRow
                 label="International Phone"
                 value={preferences.phoneIntl ? withExt(formatIntlPhone(preferences.phoneIntl), preferences.phoneIntlExt) : ''}
               />
-              <InfoRow label="Email">
+              <RecordRow label="Email">
                 <EmailLink address={preferences.email} />
-              </InfoRow>
+              </RecordRow>
               <ExtraContact reservationNumber={record.reservationNumber} />
             </InfoList>
           }
           right={
             <InfoList>
-              <InfoRow label="Confirmation By" value={preferences.confirmByPhone ? 'Phone' : 'Email'} />
-              <InfoRow label="No. of Passengers" value={preferences.passengers} />
-              <InfoRow label="No. of Stops" value={preferences.stops} />
+              <RecordRow label="Confirmation By" value={preferences.confirmByPhone ? 'Phone' : 'Email'} />
+              <RecordRow label="No. of Passengers" value={preferences.passengers} />
+              <RecordRow label="No. of Stops" value={preferences.stops} />
               {preferences.ridePurpose ? (
-                <InfoRow label={RESERVATION_MESSAGES.RIDE_PURPOSE_LABEL} value={preferences.ridePurpose} />
+                <RecordRow label={RESERVATION_MESSAGES.RIDE_PURPOSE_LABEL} value={preferences.ridePurpose} />
               ) : null}
             </InfoList>
           }
@@ -228,15 +234,16 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
         <InfoCard title={RESERVATION_INFO_MESSAGES.CHARGES_TITLE}>
           <InfoList>
             {record.charges.map((charge) => (
-              <InfoRow key={charge.label} label={charge.label} value={charge.amount} />
+              <RecordRow key={charge.label} label={charge.label} value={charge.amount} />
             ))}
           </InfoList>
         </InfoCard>
       ) : null}
 
-      {cancelled && record.cancelReason ? (
+      {cancelled ? (
         <InfoCard title={RESERVATION_INFO_MESSAGES.CANCEL_REASON}>
-          <Text style={styles.body}>{record.cancelReason}</Text>
+          {/* `LOAD_RESERVATION` sends no cancel-reason heading (guide §10). */}
+          <Text style={styles.body}>{COMMON_MESSAGES.NOT_AVAILABLE}</Text>
         </InfoCard>
       ) : null}
 
@@ -335,11 +342,11 @@ function withExt(number: string, ext: string): string {
 }
 
 /** The car and driver: the record's own fields, completed by `PROF.S.CAR_INFO` when a car is assigned. */
-function DriverCard({ record }: { record: ReservationRecord }) {
+function DriverCard({ record, carTypeLabel }: { record: ReservationRecord; carTypeLabel: string }) {
   return (
     <InfoCard title={RESERVATION_INFO_MESSAGES.DRIVER_TITLE}>
       {record.driver.carNumber ? (
-        <CarInfo record={record} carNumber={record.driver.carNumber} />
+        <CarInfo record={record} carNumber={record.driver.carNumber} carTypeLabel={carTypeLabel} />
       ) : (
         <Text style={styles.muted}>{RESERVATION_INFO_MESSAGES.DRIVER_PENDING}</Text>
       )}
@@ -347,7 +354,7 @@ function DriverCard({ record }: { record: ReservationRecord }) {
   );
 }
 
-function CarInfo({ record, carNumber }: { record: ReservationRecord; carNumber: string }) {
+function CarInfo({ record, carNumber, carTypeLabel }: { record: ReservationRecord; carNumber: string; carTypeLabel: string }) {
   const { data } = useFetchData(ACTION_CODES.CAR_INFO, GATEWAY_VIEW_NAME, carJData(carNumber));
   const info = useMemo(() => {
     if (!data) return null;
@@ -363,16 +370,16 @@ function CarInfo({ record, carNumber }: { record: ReservationRecord; carNumber: 
     <InfoColumns
       left={
         <InfoList>
-          <InfoRow label="Car Number" value={carNumber} />
-          <InfoRow label="Car Color" value={info?.carColor || driver.carColor} />
-          <InfoRow label="Car Model" value={info?.carModel || driver.carModel} />
+          <RecordRow label="Car Number" value={carNumber} />
+          <RecordRow label="Car Color" value={info?.carColor || driver.carColor} />
+          <RecordRow label="Car Model" value={info?.carModel || driver.carModel} />
         </InfoList>
       }
       right={
         <InfoList>
-          <InfoRow label="Driver Name" value={info?.driverName || driver.driverName} />
-          <InfoRow label="Driver Number" value={info?.driverNumber || driver.driverNumber} />
-          <InfoRow label="Car Type" value={info?.carType || record.preferences.carType} />
+          <RecordRow label="Driver Name" value={info?.driverName || driver.driverName} />
+          <RecordRow label="Driver Number" value={info?.driverNumber || driver.driverNumber} />
+          <RecordRow label="Car Type" value={info?.carType || carTypeLabel} />
         </InfoList>
       }
     />
@@ -387,7 +394,7 @@ function ExtraContact({ reservationNumber }: { reservationNumber: string }) {
     columnReadJData(reservationNumber, RESERVATION_COLUMN_IDS.emailCc),
   );
   const value = data ? toSingleColumnValue(data) : '';
-  return value ? <InfoRow label={RESERVATION_INFO_MESSAGES.EXTRA_CONTACT} value={value} /> : null;
+  return value ? <RecordRow label={RESERVATION_INFO_MESSAGES.EXTRA_CONTACT} value={value} /> : null;
 }
 
 function MessagesCard({ loginId, reservationNumber }: { loginId: string; reservationNumber: string }) {
@@ -435,23 +442,23 @@ function StopPane({ stop, pickup }: { stop: RecordStop; pickup?: boolean }) {
   const option = AIRPORT_PICKUP_OPTIONS.find((item) => item.value === airport.pickupOption)?.label;
   return (
     <InfoList>
-      <InfoRow label="City, State" value={placeLocalityLine(place)} />
+      <RecordRow label="City, State" value={placeLocalityLine(place)} />
       {place.kind === 'airport' ? (
         <>
-          <InfoRow label="Airport" value={place.airportName} />
-          <InfoRow label={RESERVATION_MESSAGES.AIRLINE_LABEL} value={airport.airline} />
-          <InfoRow label={RESERVATION_MESSAGES.FLIGHT_LABEL} value={airport.flightNumber} />
-          {pickup ? <InfoRow label={RESERVATION_MESSAGES.PICKUP_OPTION_LABEL} value={option ?? ''} /> : null}
+          <RecordRow label="Airport" value={place.airportName} />
+          <RecordRow label={RESERVATION_MESSAGES.AIRLINE_LABEL} value={airport.airline} />
+          <RecordRow label={RESERVATION_MESSAGES.FLIGHT_LABEL} value={airport.flightNumber} />
+          {pickup ? <RecordRow label={RESERVATION_MESSAGES.PICKUP_OPTION_LABEL} value={option ?? ''} /> : null}
         </>
       ) : place.kind === 'landmark' ? (
-        <InfoRow label="Landmark" value={place.landmarkName} />
+        <RecordRow label="Landmark" value={place.landmarkName} />
       ) : (
-        <InfoRow label="St.# and Name" value={[place.streetNumber, place.streetName].filter(Boolean).join(' ')} />
+        <RecordRow label="St.# and Name" value={[place.streetNumber, place.streetName].filter(Boolean).join(' ')} />
       )}
-      <InfoRow label="Cross Street1" value={place.crossStreet} />
-      <InfoRow label="Cross Street2" value={stop.crossStreet2} />
-      <InfoRow label="Pickup Point" value={place.pickupPoint || (pickup ? RESERVATION_INFO_MESSAGES.AS_DIRECTED : '')} />
-      {stop.directions ? <InfoRow label="Directions" value={stop.directions} /> : null}
+      <RecordRow label="Cross Street1" value={place.crossStreet} />
+      <RecordRow label="Cross Street2" value={stop.crossStreet2} />
+      <RecordRow label="Pickup Point" value={place.pickupPoint || (pickup ? RESERVATION_INFO_MESSAGES.AS_DIRECTED : '')} />
+      {stop.directions ? <RecordRow label="Directions" value={stop.directions} /> : null}
     </InfoList>
   );
 }

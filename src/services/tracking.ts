@@ -1,8 +1,8 @@
-import { TRACKING_MESSAGES } from '@/constants/messages';
-import type { GatewayJData, GatewayResponse } from '@/services/gateway';
-import { mapRows, mapRowsByHeadings } from '@/services/gateway';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
-import { hasColumn, parseGatewayDate, pick, recordSet } from '@/services/gatewayRows';
+import { COMMON_MESSAGES, TRACKING_MESSAGES } from '@/constants/messages';
+import type { GatewayJData, GatewayResponse } from '@/services/gateway';
+import { mapRowsByHeadings } from '@/services/gateway';
+import { parseGatewayDate, readRecords, readResult, refusalMessage } from '@/services/gatewayRows';
 
 /**
  * Where a car has been and where it is now (reverse-engineer-implemented/guide/21):
@@ -20,10 +20,10 @@ export class TrackingError extends Error {
 }
 
 export type VehicleLogEntry = {
-  /** Stable key: the log's own reference, else its position. */
+  /** Stable key: the entry's time and position in the log. */
   id: string;
   at: Date | null;
-  /** "Driver accepted the call.", "Passenger is in the car.", … */
+  /** `oestatusdesc`: "Accept", "Tracking", "On Scene", "Load", "Unload", … */
   status: string;
   latitude: number | null;
   longitude: number | null;
@@ -41,52 +41,44 @@ export function carJData(carNumber: string): GatewayJData {
   return { P_CAR_NUM: carNumber };
 }
 
-/** Columns: the old Route Detail table's (guide 21), then likely snake-case names. */
-const LOG_COLUMNS = {
-  id: ['ref_no', 'ref', 'refno', 'log_id', 'id'],
-  date: ['log_date', 'date', 'event_date'],
-  time: ['log_time', 'time', 'event_time'],
-  status: ['status', 'event', 'status_text', 'message'],
-  latitude: ['latitude', 'lat', 'o_latitude'],
-  longitude: ['longitude', 'lon', 'lng', 'o_longitude'],
-} as const;
+/** `RES.S.VEHICLE_LOG` headings (guide §10); dates `MM/DD/YYYY`, times `hh:mm:ss AM|PM`. */
+const LOG_HEADINGS = ['oetrackingdate', 'oetrackingtime', 'oestatusdesc', 'oelatitude', 'oelongitude'] as const;
+
+/** `RES.S.LATITUDE_LONGITUDE_FOR_CAR` headings besides `o_code` / `o_message` (guide §10). */
+const POSITION_HEADINGS = ['o_latitude', 'o_longitude'] as const;
+
+/** `RES.S.LATITUDE_LONGITUDE_FOR_CAR`'s `"5"` / "No Data Found": the car has no position. */
+const NO_POSITION_CODE = '5';
 
 function coordinate(value: string): number | null {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) && parsed !== 0 ? parsed : null;
 }
 
-/** The route's timeline in the order the server logged it; stub filler dropped. */
+/** The route's timeline in the order the server logged it. */
 export function toVehicleLog(response: GatewayResponse): VehicleLogEntry[] {
-  const rows = recordSet(response, (message) => new TrackingError(message), TRACKING_MESSAGES.LOG_FAILED);
-  return rows.flatMap((row, index) => {
-    const status = pick(row, LOG_COLUMNS.status);
-    const latitude = coordinate(pick(row, LOG_COLUMNS.latitude));
-    const longitude = coordinate(pick(row, LOG_COLUMNS.longitude));
-    if (!status && latitude === null) return [];
-    return [
-      {
-        id: pick(row, LOG_COLUMNS.id) || String(index + 1),
-        at: parseGatewayDate(pick(row, LOG_COLUMNS.date), pick(row, LOG_COLUMNS.time)),
-        status,
-        latitude,
-        longitude,
-      },
-    ];
-  });
+  return readRecords(response, LOG_HEADINGS).map((row, index) => ({
+    // The log has no reference of its own; its time and position in the list identify it.
+    id: `${row.oetrackingdate} ${row.oetrackingtime} ${index}`,
+    at: parseGatewayDate(row.oetrackingdate, row.oetrackingtime),
+    status: row.oestatusdesc.trim() || COMMON_MESSAGES.NOT_AVAILABLE,
+    latitude: coordinate(row.oelatitude),
+    longitude: coordinate(row.oelongitude),
+  }));
 }
 
 /**
- * The car's current position, or `null` when the server has none (the stub
- * answers with blank coordinates). A refusal throws.
+ * The car's current position: `"0"` with `o_latitude` / `o_longitude`, which
+ * may be blank (`null`), or `"5"` "No Data Found" (`null`). Any other code
+ * is a refusal and throws.
  */
 export function toCarPosition(response: GatewayResponse): CarPosition | null {
-  const row = mapRows(response)[0];
-  if (row && hasColumn(row, ['o_code']) && pick(row, ['o_code']) !== DB_SUCCESS_CODE) {
-    throw new TrackingError(pick(row, ['o_message']) || TRACKING_MESSAGES.CAR_FAILED);
-  }
-  const latitude = coordinate(pick(row, LOG_COLUMNS.latitude));
-  const longitude = coordinate(pick(row, LOG_COLUMNS.longitude));
+  const result = readResult(response);
+  if (result.code === NO_POSITION_CODE) return null;
+  if (result.code !== DB_SUCCESS_CODE) throw new TrackingError(refusalMessage(result, TRACKING_MESSAGES.CAR_FAILED));
+  const row = mapRowsByHeadings(response, POSITION_HEADINGS)[0];
+  const latitude = row ? coordinate(row.o_latitude) : null;
+  const longitude = row ? coordinate(row.o_longitude) : null;
   return latitude !== null && longitude !== null ? { latitude, longitude } : null;
 }
 

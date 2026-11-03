@@ -1,18 +1,28 @@
-import { expect, type Page, type Response, test } from '@playwright/test';
+import { expect, type Page, type Request, type Response, test } from '@playwright/test';
 
 import { ACTION_CODES } from '../src/constants/actionCodes';
 import { sandboxClientIpLookup } from './support/clientIp';
 import { contractParams } from './support/contract';
-import { gatewayRows, waitForGatewayAction } from './support/gateway';
+import {
+  blockGatewayWrites,
+  GATEWAY_WRITES_ALLOWED,
+  gatewayRows,
+  waitForGatewayAction,
+  waitForGatewayRequest,
+} from './support/gateway';
 import { DESTINATION, GEOCODED, PICKUP, sandboxGoogleMaps } from './support/googleMaps';
 import { fillLoginForm } from './support/login';
 
 /**
  * The reservation module on Reservation 2 (`/reserver-2`) and the ride
- * screens, end to end against the real API gateway — today a stub that
- * answers with dummy rows. Every assertion reads its expected values from the
- * gateway's own responses or from docs/XYZ Action Codes.md, never from the
- * stub's sample data. Google Maps is sandboxed with fixtures.
+ * screens, end to end against the real API gateway. Every assertion reads its
+ * expected values from the gateway's own responses (by the headings in
+ * docs/XYZ_INTEGRATION_GUIDE.md §10) or from docs/XYZ Action Codes.md, never
+ * from sample data. Google Maps is sandboxed with fixtures.
+ *
+ * Writes (booking, update, cancel, e-mail) are built and checked but aborted
+ * before they leave the browser, unless E2E_ALLOW_WRITES=1: they change real
+ * records on the shared test login.
  *
  * Nothing here enters a card: billing stays on the account on file. The
  * card-authorisation case runs only with E2E_CARD_TESTS=1, because it sends
@@ -25,17 +35,19 @@ test.use({ geolocation: DEVICE_POSITION, permissions: ['geolocation'] });
 test.beforeEach(async ({ page }) => {
   await sandboxGoogleMaps(page);
   await sandboxClientIpLookup(page);
+  await blockGatewayWrites(page);
 });
 
 type Envelope = { ActionCode: string; JsonReq: { JData: Record<string, string | number> } };
 
-function jDataOf(response: Response): Record<string, string | number> {
-  return (response.request().postDataJSON() as Envelope).JsonReq.JData;
+function jDataOf(sent: Response | Request): Record<string, string | number> {
+  const request = 'request' in sent ? sent.request() : sent;
+  return (request.postDataJSON() as Envelope).JsonReq.JData;
 }
 
 /** The request carried exactly the contract's parameters — none missing, none extra. */
-function expectContract(response: Response, actionCode: string) {
-  expect(Object.keys(jDataOf(response)).sort()).toEqual([...contractParams(actionCode)].sort());
+function expectContract(sent: Response | Request, actionCode: string) {
+  expect(Object.keys(jDataOf(sent)).sort()).toEqual([...contractParams(actionCode)].sort());
 }
 
 /** Collects every gateway call the page makes, by action code. */
@@ -83,7 +95,10 @@ function savedLabel(row: Record<string, string>): string {
 }
 
 test('books a reservation on Reservation 2 through the gateway', async ({ page }) => {
+  // Home lists the login's rides as it opens; one of them stands in for an existing booking below.
+  const homeOrders = waitForGatewayAction(page, ACTION_CODES.ALL_ORDERS);
   const { profile, saved } = await logIn(page);
+  const [existingRide] = await gatewayRows(await homeOrders);
   const calls = recordGatewayCalls(page);
 
   const vehicleTypesCall = waitForGatewayAction(page, ACTION_CODES.VEHICLE_TYPE);
@@ -103,7 +118,8 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
   await pickupField.click();
   await expect(visibleText(page, 'Your places')).toBeVisible();
   const streetZone = waitForGatewayAction(page, ACTION_CODES.ZONE_THE_LOCATION);
-  await page.getByRole('button', { name: savedLabel(saved[0]) }).click();
+  // The live list can repeat an address; any copy of it will do.
+  await page.getByRole('button', { name: savedLabel(saved[0]) }).first().click();
   const streetZoneCall = await streetZone;
   expectContract(streetZoneCall, ACTION_CODES.ZONE_THE_LOCATION);
   expect(jDataOf(streetZoneCall)).toMatchObject({ P_STREET_NAME: saved[0].ostreetname, P_PU_DO_TYPE: 'P' });
@@ -127,6 +143,10 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
   // An airport drop-off offers the flight fields.
   await expect(page.getByLabel('Airline').filter({ visible: true }).first()).toBeVisible();
 
+  // Neither zone code matches on the real gateway today (guide §10), so each stop is acknowledged.
+  const acknowledgements = page.getByRole('checkbox', { name: /^Book it anyway/ }).filter({ visible: true });
+  for (const box of await acknowledgements.all()) await box.check();
+
   // 3. Billing — the account on file, checked with the server.
   const billingMethod = waitForGatewayAction(page, ACTION_CODES.BILLING_METHOD);
   await continueTo(page, 'Billing Method');
@@ -143,12 +163,22 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
 
   // 4. Preferences — the gateway's car types, the first one chosen.
   expect(vehicleTypes.length).toBeGreaterThan(0);
-  await expect(page.getByRole('radio', { name: new RegExp(`^${vehicleTypes[0].car_type_name}\\b`) })).toBeChecked();
+  await expect(page.getByRole('radio', { name: new RegExp(`^${vehicleTypes[0].oevehicledesc}\\b`) })).toBeChecked();
+  // The test profile stores an incomplete US phone (only the area code, guide §10); clear it as a customer would.
+  const usPhone = page.getByRole('textbox', { name: 'Callback phone (US)', exact: true });
+  if ((await usPhone.inputValue()).replace(/\D/g, '').length !== 10) await usPhone.fill('');
+  // Required: the gateway refuses a booking without a ride purpose (guide §10).
+  const purpose = page.getByRole('textbox', { name: 'Trip purpose', exact: true });
+  await purpose.fill('');
+  await page.getByRole('button', { name: /^(Continue|Checking)/ }).click();
+  await expect(visibleText(page, 'Enter the trip purpose.')).toBeVisible();
+  await purpose.fill('E2E check');
   await continueTo(page, 'Preview');
 
   // 5. Preview → book.
-  await expect(visibleText(page, profile.olastname)).toBeVisible();
-  const booking = waitForGatewayAction(page, ACTION_CODES.CREATE_RESERVATION);
+  // The passenger shows as one "first last" line.
+  await expect(visibleText(page, profile.olastname, false)).toBeVisible();
+  const booking = waitForGatewayRequest(page, ACTION_CODES.CREATE_RESERVATION);
   await page.getByRole('button', { name: 'Book reservation' }).click();
   const bookingCall = await booking;
   expectContract(bookingCall, ACTION_CODES.CREATE_RESERVATION);
@@ -156,12 +186,15 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
   expect(sent).toMatchObject({
     P_FIRST_NAME: profile.ofirstname,
     P_LAST_NAME: profile.olastname,
-    P_CALL_SOURCE: 'WEB',
+    P_CALL_SOURCE: 'W',
+    P_PU_TYPE: '1',
+    P_DO_TYPE: '2',
     P_ACCOUNT_NUMBER: account,
     P_PU_STREET_NAME: saved[0].ostreetname,
     P_DO_AIRPORT_NAME: DESTINATION.primary,
     P_DO_ZIP_CODE: '11430',
-    P_CAR_TYPE: vehicleTypes[0].car_type,
+    P_CAR_TYPE: vehicleTypes[0].oevehiclecode,
+    P_RIDE_PURPOSE: 'E2E check',
     P_CARD_NUMBER: '',
   });
   // A saved address arrives without coordinates; they are geocoded so dispatch gets them.
@@ -173,16 +206,46 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
   });
   expect(String(sent.P_DROPOFF_LAT)).not.toBe('');
   expect(String(sent.P_RESERVATION_DATE)).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
-  expect(String(sent.P_RESERVATION_TIME)).toMatch(/^\d{2}:\d{2}$/);
+  // Twelve-hour: a 24-hour time is refused with ORA-01849 (guide §10).
+  expect(String(sent.P_RESERVATION_TIME)).toMatch(/^\d{2}:\d{2} (AM|PM)$/);
   // A booking is sent once, never retried.
   expect(calls.filter((code) => code === ACTION_CODES.CREATE_RESERVATION)).toHaveLength(1);
 
-  // 6. Receipt — the number the server issued, or none at all; never a made-up one.
+  // 6. Receipt — the number the server issued in `o_message`, never a made-up one.
+  if (!GATEWAY_WRITES_ALLOWED) {
+    await expect(visibleText(page, 'Ride Receipt')).toHaveCount(0);
+
+    // A duplicate (`o_code` "5", guide §10) is shown with a link to the booking that exists.
+    // The write never leaves the browser: its answer is the gateway's duplicate shape.
+    expect(existingRide?.oreservationnumber).toBeTruthy();
+    await page.route('**/*', async (route) => {
+      let code: string | undefined;
+      try {
+        code = (route.request().postDataJSON() as { ActionCode?: string } | null)?.ActionCode;
+      } catch {
+        /* not a gateway call */
+      }
+      if (code !== ACTION_CODES.CREATE_RESERVATION) return route.fallback();
+      const body = {
+        JHeader: { ActionCode: 0, Message: 'Request is parsed and response is generated successfully' },
+        JMetaData: { Headings: ['o_code', 'o_message'] },
+        JData: [['5', existingRide.oreservationnumber]],
+      };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(JSON.stringify(body)) });
+    });
+    await page.getByRole('button', { name: 'Book reservation' }).click();
+    await expect(visibleText(page, 'Already booked')).toBeVisible();
+    await expect(visibleText(page, existingRide.oreservationnumber, false)).toBeVisible();
+    await page.getByRole('button', { name: 'View your reservation' }).click();
+    await expect(page).toHaveURL(new RegExp(`/reservation-info\\?rideno=${existingRide.oreservationnumber}`));
+    return;
+  }
   await expect(visibleText(page, 'Ride Receipt')).toBeVisible();
-  const [result] = await gatewayRows(bookingCall);
+  const answer = await bookingCall.response();
+  expect(answer).not.toBeNull();
+  const [result] = await gatewayRows(answer!);
   expect(result.o_code).toBe('0');
-  const issued = result.o_reservation_num || result.reservation_num || '';
-  if (issued) await expect(page.getByText(issued)).toBeVisible();
+  if (result.o_message) await expect(page.getByText(result.o_message)).toBeVisible();
   else await expect(page.getByRole('link', { name: 'View upcoming rides' })).toBeVisible();
 });
 
@@ -227,13 +290,14 @@ test('lists open reservations and cancels one with a reason', async ({ page }) =
   await expect(visibleText(page, 'Tell us why the ride is being cancelled.')).toBeVisible();
 
   await page.getByPlaceholder('e.g. Change of plans').fill('Plans changed');
-  const cancel = waitForGatewayAction(page, ACTION_CODES.CANCEL_RESERVATION);
+  const cancel = waitForGatewayRequest(page, ACTION_CODES.CANCEL_RESERVATION);
   await page.getByRole('button', { name: 'Yes, cancel it' }).click();
   const cancelCall = await cancel;
   expectContract(cancelCall, ACTION_CODES.CANCEL_RESERVATION);
   expect(jDataOf(cancelCall)).toMatchObject({ P_CANCEL_REASON: 'Plans changed' });
   expect(rows.map((row) => row.oreservationnumber)).toContain(jDataOf(cancelCall).P_RESERVATION_NUM);
-  await expect(visibleText(page, 'The reservation has been cancelled.')).toBeVisible();
+  if (GATEWAY_WRITES_ALLOWED) await expect(visibleText(page, 'The reservation has been cancelled.')).toBeVisible();
+  else await expect(visibleText(page, 'The reservation has been cancelled.')).toHaveCount(0);
 });
 
 test('changes an open reservation and saves it with RES.U.RESERVATION', async ({ page }) => {
@@ -249,7 +313,7 @@ test('changes an open reservation and saves it with RES.U.RESERVATION', async ({
   const [record] = await gatewayRows(loadCall);
   await expect(page).toHaveURL(/\/reserver-2$/);
   await expect(visibleText(page, 'Change reservation')).toBeVisible();
-  await expect(page.getByPlaceholder('e.g. Okafor')).toHaveValue(record.last_name);
+  await expect(page.getByPlaceholder('e.g. Okafor')).toHaveValue(record.olastname);
 
   // Walk the steps; answer whatever the record leaves required and blank.
   await continueTo(page, 'Ride Address Info');
@@ -261,23 +325,28 @@ test('changes an open reservation and saves it with RES.U.RESERVATION', async ({
   }
   await continueTo(page, 'Billing Method');
   await continueTo(page, 'Preferences');
+  const purpose = page.getByRole('textbox', { name: 'Trip purpose', exact: true });
+  if (!(await purpose.inputValue()).trim()) await purpose.fill('E2E check');
   await continueTo(page, 'Preview');
 
-  const update = waitForGatewayAction(page, ACTION_CODES.UPDATE_RESERVATION);
-  const email = waitForGatewayAction(page, ACTION_CODES.FORMAT_EMAIL_MESSAGE);
+  const update = waitForGatewayRequest(page, ACTION_CODES.UPDATE_RESERVATION);
   await page.getByRole('button', { name: 'Save changes' }).click();
   const updateCall = await update;
   expectContract(updateCall, ACTION_CODES.UPDATE_RESERVATION);
   expect(jDataOf(updateCall)).toMatchObject({
-    P_RESERVATION_NUM: record.reservation_num,
-    P_LAST_NAME: record.last_name,
+    P_RESERVATION_NUM: record.oreservationnumber,
+    P_LAST_NAME: record.olastname,
+    P_RIDE_PURPOSE_OLD: record.oeridepurpose,
+    P_RESERVATION_MAKE_FOR_OLD: record.oereservationmakefor,
   });
   // A card kept on file goes back masked — never a full number.
   expect(String(jDataOf(updateCall).P_CARD_NUMBER)).not.toMatch(/^\d{13,19}$/);
+  // The e-mail follows only an accepted update.
+  if (!GATEWAY_WRITES_ALLOWED) return;
 
-  const emailCall = await email;
+  const emailCall = await waitForGatewayRequest(page, ACTION_CODES.FORMAT_EMAIL_MESSAGE);
   expectContract(emailCall, ACTION_CODES.FORMAT_EMAIL_MESSAGE);
-  expect(jDataOf(emailCall).P_RES1).toBe(record.reservation_num);
+  expect(jDataOf(emailCall).P_RES1).toBe(record.oreservationnumber);
   expect(String(jDataOf(emailCall).P_CC_NUMBER1)).toMatch(/^(\*{12}\d{4})?$/);
 
   await expect(visibleText(page, 'Your reservation has been updated.', false)).toBeVisible();
@@ -308,13 +377,15 @@ test('opens a ride from history: details, messages, tracking, voucher, return tr
   expectContract(await messages, ACTION_CODES.COMMUNICATION_LOG);
   expectContract(await extra, ACTION_CODES.LOAD_RESERVATION_COLUMN_SINGLE_VALUE);
   const [record] = await gatewayRows(await details);
-  await expect(visibleText(page, record.reservation_num)).toBeVisible();
+  await expect(visibleText(page, record.oreservationnumber)).toBeVisible();
 
-  // Ask about this ride: the predefined questions load with the sheet.
-  const questions = waitForGatewayAction(page, ACTION_CODES.ALL_PREDEFINED_QUESTIONS);
-  await page.getByRole('button', { name: 'Ask about this ride' }).click();
-  expectContract(await questions, ACTION_CODES.ALL_PREDEFINED_QUESTIONS);
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  // Ask about this ride (offered only on an open ride): the predefined questions load with the sheet.
+  if (await page.getByRole('button', { name: 'Ask about this ride' }).isVisible()) {
+    const questions = waitForGatewayAction(page, ACTION_CODES.ALL_PREDEFINED_QUESTIONS);
+    await page.getByRole('button', { name: 'Ask about this ride' }).click();
+    expectContract(await questions, ACTION_CODES.ALL_PREDEFINED_QUESTIONS);
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  }
 
   // Return trip: a new booking with the two ends swapped.
   if (await page.getByRole('button', { name: 'Book return trip' }).isVisible()) {
@@ -326,18 +397,18 @@ test('opens a ride from history: details, messages, tracking, voucher, return tr
 
   // Tracking and the voucher, opened directly for the same ride.
   const log = waitForGatewayAction(page, ACTION_CODES.VEHICLE_LOG);
-  await page.goto(`/track-ride?rideno=${encodeURIComponent(record.reservation_num)}`);
+  await page.goto(`/track-ride?rideno=${encodeURIComponent(record.oreservationnumber)}`);
   expectContract(await log, ACTION_CODES.VEHICLE_LOG);
   await expect(visibleText(page, 'Route detail')).toBeVisible();
 
   const voucher = waitForGatewayAction(page, ACTION_CODES.LOAD_RESERVATION);
-  await page.goto(`/voucher?rideno=${encodeURIComponent(record.reservation_num)}`);
+  await page.goto(`/voucher?rideno=${encodeURIComponent(record.oreservationnumber)}`);
   await voucher;
   await expect(visibleText(page, 'Voucher')).toBeVisible();
 
   // The receipt of the same ride, then the receipts list (history narrowed to completed rides).
   const receipt = waitForGatewayAction(page, ACTION_CODES.LOAD_RESERVATION);
-  await page.goto(`/receipt?rideno=${encodeURIComponent(record.reservation_num)}`);
+  await page.goto(`/receipt?rideno=${encodeURIComponent(record.oreservationnumber)}`);
   expectContract(await receipt, ACTION_CODES.LOAD_RESERVATION);
   await expect(visibleText(page, 'Receipt')).toBeVisible();
 
@@ -371,9 +442,9 @@ test('authorises a card before booking with it', async ({ page }) => {
   await page.getByLabel('Security code').fill('123');
   await page.getByLabel('Billing ZIP / postal code').fill('10001');
 
-  const approval = waitForGatewayAction(page, ACTION_CODES.START_CREDIT_CARD_APPROVAL);
-  await continueTo(page, 'Preferences');
+  const approval = waitForGatewayRequest(page, ACTION_CODES.START_CREDIT_CARD_APPROVAL);
+  await page.getByRole('button', { name: /^(Continue|Checking)/ }).click();
   const approvalCall = await approval;
   expectContract(approvalCall, ACTION_CODES.START_CREDIT_CARD_APPROVAL);
-  expect(jDataOf(approvalCall)).toMatchObject({ P_CARD_TYPE: '2', P_EXPIRATION_DATE: '12/2030' });
+  expect(jDataOf(approvalCall)).toMatchObject({ P_CARD_TYPE: '2', P_EXPIRATION_DATE: '12-2030' });
 });

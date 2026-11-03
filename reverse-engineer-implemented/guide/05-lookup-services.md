@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §7 Gateway (real data).
 
 # Module 05 — Lookup & Geo Services
 
@@ -150,3 +152,16 @@ Booking uses Google Maps JS v3.17 + Places Autocomplete on the pickup/drop-off s
 
 ## 6. Revamp notes
 Expose as REST: `GET /geo/countries?q=`, `/geo/states?q=`, `/geo/cities?state=&q=`, `/geo/streets?state=&city=&q=`, `/geo/cross-streets?state=&city=&street=&q=`, `/airports?q=&state=`, `/airlines?q=`, `/landmarks?city=&q=`, `/me/addresses?purpose=pickup|dropoff`, `/me/contacts?type=`, `POST /zones/match`. Normalise state codes. Keep the synthetic entries (airports, As directed) as explicit options rather than fake ids.
+
+## 7. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.S.VEHICLE_TYPE` | Booking step 4 | `oevehiclecode, oevehicledesc`; 5 rows (`0` No Preference, `3` Sedan, `4` SUV, `H` Standard Wheelchair, `K` Premium Wheelchair). |
+| `RES.S.GOOGLE_ZONE_NUM` | A Google stop with coordinates | `o_code, o_message`: always `"1"` + an 8-digit zone (`11215000`), also at 0,0 (`90000999`). Only `"0"` is a match today, so the stop goes to the acknowledgement. |
+| `RES.S.ZONE_THE_LOCATION` | A saved / typed street stop | `["", ""]` for every input, the backend test client's sample included. |
+| `RES.S.ALL_PREDEFINED_QUESTIONS` | Ask about this ride | `question_id, question`; 2 rows. |
+
+- No action code exists for airports, airlines, streets or landmarks: stops come from Google Places.

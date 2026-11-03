@@ -1,4 +1,6 @@
 > ✅ **Implemented** in the XYZ app
+>
+> ✅ **Migrated to real gateway data** (2026-11-03): the module's action codes are mapped by heading from the gateway's real responses. Each code's real answer, and any code not yet answered or confirmed, is in §9 Gateway (real data).
 
 # Module 13 — Booking Wizard Core (Reservation Flow & Step API)
 
@@ -112,3 +114,16 @@ Returned HTML after creation (reservation # etc.). Not observed — booking was 
 - API: `POST /reservations/drafts` → `PATCH /reservations/drafts/{id}/steps/{n}` (returns `{summary, priceEstimate, warnings[], requirements[], nextStep}`) → `POST /reservations/drafts/{id}/submit` (idempotency key) → `{reservationNo, receipt}`.
 - Return structured JSON instead of HTML fragments and magic strings (`CCExpire`, `CCAccount`, `Accworeq`, `RAccount`).
 - **Unknown**: final receipt payload; server-side duplicate rule; price formula.
+
+## 9. Gateway (real data)
+
+Checked against the live gateway on 2026-11-03 (`docs/XYZ_INTEGRATION_GUIDE.md` §7a, §10; status per code in `docs/XYZ Real Action Codes.md`). Every value is read by the one heading its code sends; an empty one shows "Not available", and a `"9"` answer shows the screen's own copy.
+
+| Action code | When | Real answers |
+|---|---|---|
+| `RES.I.RESERVATION` | Preview → Book | `o_code, o_message`: `"0"` with the **new reservation number** in `o_message`. 24-hour time → `"9"` ORA-01849; ride purpose and CC e-mail both blank → `"9"` ORA-01400. |
+| `RES.U.RESERVATION` | Preview → Save changes | `"1"` / `Invalid reservation number.` for the test ride; a successful update not seen. |
+| `RES.U.FORMAT_EMAIL_MESSAGE` | After a save with a number | `"0"` / `success` (one e-mail sent to the test login). Not in the backend test client. |
+
+- **`"0"` = booked.** `RES.I.RESERVATION` answered `"0"` with the new number (`W6110231278`, `W6110331282`); the app shows it on the receipt. That those rides then don't appear in `LOAD_RESERVATION` or the order lists is a database issue (backend). `"5"` means a matching booking already exists (its number in `o_message`): Preview shows "Already booked" with that number and a "View your reservation" button, as the old site's duplicate warning did (§5), without its "continue anyway" box, which the contract has no parameter for. A blank trip purpose fails with `ORA-01400`, so the form requires it.
+- **Value codes** sent (from stored rides and the backend test client): `P_PU_TYPE` / `P_DO_TYPE` `1` street, `2` airport, `3` landmark; `P_PAYMENT_METHOD` `1` / `2` / `3`; `P_CONFIRMATION_METHOD` `ML` / `SND`; `P_CALL_SOURCE` `W`; `P_RESERVATION_MAKE_FOR` `1` / `2`; `P_*_ADDRESS_ADD` `N`; `P_RESERVATION_TIME` `hh:mm AM|PM`. The unconfirmed ones are marked `TODO(schema-unverified)` in `src/services/reservation.ts`.

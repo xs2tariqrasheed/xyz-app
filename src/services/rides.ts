@@ -183,7 +183,7 @@ export function updatableOrdersJData(loginId: string): GatewayJData {
  * The headings the app reads; `RES.S.ALL_ORDERS` and `RES.S.UPDATABLE_ORDERS`
  * send the same 112 (guide §10).
  */
-const ORDER_HEADINGS = [
+export const ORDER_HEADINGS = [
   'oreservationnumber',
   'ofirstname',
   'olastname',

@@ -159,6 +159,8 @@ async function withCoordinates(
 
 /** Country names the gateway's rows use, onto the contract's two-letter code ("US"). */
 const COUNTRY_CODES: Record<string, string> = {
+  // The gateway stores the United States as `01` (saved addresses, rides; guide §10).
+  '01': 'US',
   USA: 'US',
   'UNITED STATES': 'US',
   'UNITED STATES OF AMERICA': 'US',
