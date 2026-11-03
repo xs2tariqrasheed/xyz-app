@@ -1,4 +1,4 @@
-import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
+import { DB_INTERNAL_ERROR_CODE, DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { GatewayError, type GatewayResponse, mapRows } from '@/services/gateway';
 
 /**
@@ -58,7 +58,8 @@ const RESULT_COLUMNS = new Set([RESULT_CODE, RESULT_MESSAGE]);
 /**
  * Throws unless row 0 carries `o_code` "0", read by its exact heading. A
  * missing code fails closed (docs/XYZ_INTEGRATION_GUIDE.md §4); a refusal
- * throws `makeError(o_message)`, or `fallbackMessage` when the message is empty.
+ * throws `makeError(o_message)`, or `fallbackMessage` when the message is empty
+ * or the code is "9" (a database error, whose message is raw Oracle text).
  */
 export function assertResultCode(
   response: GatewayResponse,
@@ -70,7 +71,8 @@ export function assertResultCode(
     throw new GatewayError('parsing', 'The response has no result code.');
   }
   if (row[RESULT_CODE].trim() !== DB_SUCCESS_CODE) {
-    const message = RESULT_MESSAGE in row ? row[RESULT_MESSAGE].trim() : '';
+    const message =
+      row[RESULT_CODE].trim() !== DB_INTERNAL_ERROR_CODE && RESULT_MESSAGE in row ? row[RESULT_MESSAGE].trim() : '';
     throw makeError(message || fallbackMessage);
   }
   return row;

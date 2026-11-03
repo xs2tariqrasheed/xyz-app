@@ -1,7 +1,7 @@
 import type { BillingMethodId, BillingMethodValue } from '@/components/reservation/BillingMethodSection';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { RESERVATION_MESSAGES } from '@/constants/messages';
-import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
+import { GatewayError, type GatewayJData, type GatewayResponse, mapRows, mapRowsByHeadings } from '@/services/gateway';
 import { assertResultCode, type GatewayRow, hasColumn, pick, recordSet } from '@/services/gatewayRows';
 import { CARD_TYPE_CODES } from '@/services/registration';
 import { detectBrand, digitsOnly } from '@/utils/payment';
@@ -58,12 +58,17 @@ export function accountVipJData(loginId: string, accountNumber = '', vipNumber =
 
 export type AccountOnFile = { accountNumber: string; vipNumber: string };
 
-export function toAccountOnFile(response: GatewayResponse): AccountOnFile {
-  const row = mapRows(response)[0];
-  return {
-    accountNumber: pick(row, ['pAccountNum', 'o_account_num', 'account_num', 'account_number']),
-    vipNumber: pick(row, ['pVIPNum', 'o_vip_num', 'vip_num', 'vip_number']),
-  };
+/**
+ * The account and VIP number on file, read by the code's headings
+ * `paccountnum` / `pvipnum` (guide §10). It sends no `o_code`; a login with
+ * nothing on file answers both blank, which reads as `null`.
+ */
+export function toAccountOnFile(response: GatewayResponse): AccountOnFile | null {
+  const row = mapRowsByHeadings(response, ['paccountnum', 'pvipnum'])[0];
+  if (!row) return null;
+  const accountNumber = row.paccountnum.trim();
+  const vipNumber = row.pvipnum.trim();
+  return accountNumber || vipNumber ? { accountNumber, vipNumber } : null;
 }
 
 /** Throws a {@link BillingError} on any refusal of a yes / no account check. */

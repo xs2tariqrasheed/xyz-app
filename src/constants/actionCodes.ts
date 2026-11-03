@@ -10,11 +10,11 @@ export const ACTION_CODES = {
   CHECK_LOGIN_CREDENTIALS: 'PROF.S.CHECK_LOGIN_CREDENTIALS',
   /** P_LOGIN_ID → one row of 44 headings (ologinid, ofirstname, …, oelastlogindate; guide §10). */
   LOAD_PROFILE: 'PROF.S.LOAD_PROFILE',
-  /** The whole profile (38 P_* parameters: name, phones, fax, address, card, prefs) → o_code / o_message. */
+  /** The whole profile (38 P_* parameters, all required: name, phones, fax, address, card, prefs) → o_code / o_message ("0" Success, "9" DB error). */
   UPDATE_PROFILE: 'PROF.U.PROFILE',
   /** P_LOGIN_ID → sends the password-recovery email; o_code / o_message when returned. */
   PASSWORD_RECOVERY: 'PROF.S.PASSWORD',
-  /** P_LOGIN_ID, P_OLD_PASSWORD, P_NEW_PASSWORD → changes the password; o_code / o_message when returned. */
+  /** P_LOGIN_ID, P_OLD_PASSWORD, P_NEW_PASSWORD → o_code / o_message ("0" Changed, "1" Invalid info). */
   CHANGE_PASSWORD: 'PROF.U.PASSWORD',
   /** P_LOGIN_ID → o_code / o_message; o_code "0" when no profile uses that login yet. */
   IS_UNIQUE_EMAIL: 'PROF.S.IS_UNIQUE_EMAIL',
@@ -24,7 +24,7 @@ export const ACTION_CODES = {
   IS_VALID_VIP: 'PROF.S.IS_VALID_VIP',
   /** P_ACCOUNT_NUM → o_code / o_message (+ undocumented columns): does the account need requirement fields? */
   ACCOUNT_REQUIREMENTS: 'PROF.S.ACCOUNT_REQUIREMENTS',
-  /** P_ACCOUNT_NUM → one row per requirement field (columns undocumented), o_code / o_message when returned. */
+  /** P_ACCOUNT_NUM → one row per requirement field; a lone `dummy` heading means none (guide §10). */
   ACCOUNT_REQUIREMENTS_RS: 'PROF.S.ACCOUNT_REQUIREMENTS_RS',
   /** The whole new profile (41 P_* parameters) → o_code / o_message. */
   CREATE_PROFILE: 'PROF.I.PROFILE',
@@ -66,7 +66,7 @@ export const ACTION_CODES = {
   PROFILE_WHO_GRANTED_ACCESS: 'PROF.S.PROFILE_WHO_GRANTED_ACCESS',
   /** P_ACCOUNT_NUM → which billing methods the account allows; o_code / o_message. */
   BILLING_METHOD: 'RES.S.BILLING_METHOD',
-  /** P_LOGIN_ID, P_ACCOUNT_NUM, P_VIP_NUM → the account and VIP number on file. */
+  /** P_LOGIN_ID, P_ACCOUNT_NUM, P_VIP_NUM → paccountnum, pvipnum: the account and VIP number on file. */
   ACCOUNT_VIP_NUM: 'PROF.S.ACCOUNT_VIP_NUM',
   /** P_ACCOUNT_NUM → o_code / o_message: is the account tied to a specific credit card? */
   IS_CREDIT_CARD_SPECIFIC_ACCOUNT: 'RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT',
@@ -94,7 +94,7 @@ export const ACTION_CODES = {
   LOAD_RESERVATION: 'RES.S.LOAD_RESERVATION',
   /** P_LOGIN_ID, P_RESERVATION_NUM, P_CANCEL_REASON → o_code / o_message. */
   CANCEL_RESERVATION: 'RES.U.CANCEL_RESERVATION',
-  /** P_CAR_NUM → the car and its driver (columns undocumented). */
+  /** P_CAR_NUM → driver_1st, color, make, model, model_year, …: the car and its driver (guide §10). */
   CAR_INFO: 'PROF.S.CAR_INFO',
   /** P_LOGIN_ID, P_RESERVATION_NUM → messages and confirmations sent for the ride. */
   COMMUNICATION_LOG: 'RES.S.COMMUNICATION_LOG',
@@ -131,6 +131,9 @@ export const GATEWAY_SUCCESS_CODE = 0;
 
 /** `o_code` a DB procedure returns when the operation itself succeeded. */
 export const DB_SUCCESS_CODE = '0';
+
+/** `o_code` a DB procedure returns for an internal database error; its `o_message` is raw Oracle text (guide §10). */
+export const DB_INTERNAL_ERROR_CODE = '9';
 
 /**
  * JData coordinate pairs the JHeader GPS fields are taken from, in priority

@@ -88,7 +88,7 @@ function locationJData(draft: AddressDraft): GatewayJData {
   const phoneUs = draft.phoneUs.trim();
   return {
     P_COUNTRY: toCountryCode(draft.country),
-    P_STATE: draft.state.trim(),
+    P_STATE: draft.state.trim().toUpperCase(),
     P_CITY: draft.city.trim(),
     P_STREET_NUM: draft.building.trim(),
     P_STREET_NAME: draft.street.trim(),

@@ -5,7 +5,7 @@ import {
   FORGOT_PASSWORD_MESSAGES,
   LOGIN_MESSAGES,
 } from '@/constants/messages';
-import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
+import { GatewayError, type GatewayJData, type GatewayResponse, mapRows, mapRowsByHeadings } from '@/services/gateway';
 import { isValidEmail } from '@/utils/validation';
 
 /**
@@ -111,14 +111,15 @@ export function changePasswordJData(
 }
 
 /**
- * Throws when the procedure refused the change (e.g. a wrong old password).
- * The contract lists no outputs for this code, so a response without
- * `o_code` counts as changed — the gateway itself already accepted the call.
+ * Throws unless the procedure answered `o_code` "0" (`Changed`); "1"
+ * (`Invalid info`) is a wrong old password (guide §10). A response without
+ * `o_code` / `o_message` fails closed.
  */
 export function assertPasswordChanged(response: GatewayResponse): void {
-  const result = mapRows(response)[0];
-  if (result && 'o_code' in result && result.o_code !== DB_SUCCESS_CODE) {
-    throw new AuthError(result.o_message || CHANGE_PASSWORD_MESSAGES.REJECTED);
+  const result = mapRowsByHeadings(response, ['o_code', 'o_message'])[0];
+  if (!result) throw new GatewayError('parsing', 'The password change response has no result row.');
+  if (result.o_code !== DB_SUCCESS_CODE) {
+    throw new AuthError(result.o_message.trim() || CHANGE_PASSWORD_MESSAGES.REJECTED);
   }
 }
 

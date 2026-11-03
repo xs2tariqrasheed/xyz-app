@@ -45,13 +45,13 @@ Probed on 2026-10-30 with a test login unless stated. Every migrated read code w
 | `RES.S.UPDATABLE_ORDERS` | R | 2026-11-03 | B | Yes (112 = 112, renamed) | ✅ Migrated | Remapped 2026-11-03: same headings and mapping as `ALL_ORDERS`; 4 rows. |
 | `RES.S.LOAD_RESERVATION` | R | 2026-11-03 | B | Yes (160 = 160) | Remap to new headings | The order headings without `oresdate`, plus 48 more (fare breakdown, driver, car…). `oecarnum` is sent twice. Invalid JSON, repaired. |
 | `RES.S.ALL_PREDEFINED_QUESTIONS` | R | 2026-11-03 | B | Yes (2 = 2, renamed) | Remap to new headings | `question_id, question`; 2 rows. Was under `o_code / o_message` headings. |
-| `PROF.S.ACCOUNT_REQUIREMENTS_RS` | R | 2026-11-03 | B | Yes (1 = 1) | Needs data | One `dummy` heading, `[["X"]]` for the test account. The label is read from `o_message` alone (`TODO(schema-unverified)`). Needs an account with requirements. |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS` | R | 2026-11-03 | B | Yes (1 = 1) | ✅ Migrated | One `dummy` heading (`"X"`) = **no requirements** (same answer in the backend test client for `99005`), read as no fields. A real requirement's label is read from `o_message` (`TODO(schema-unverified)`): no account with requirements known yet. |
 | `RES.S.ACCOUNT_REQUIREMENTS_LIST` | R | 2026-11-03 | B | Yes (1 = 1) | Needs data | As above |
 | `PROF.S.IS_UNIQUE_EMAIL` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / `Success` free, `"1"` / `Duplicate` taken |
 | `PROF.S.IS_VALID_COMPANY_NAME` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / `Success`, `"1"` / `Invalid` |
 | `PROF.S.IS_VALID_VIP` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / customer name, `"1"` / `Invalid user information` |
 | `PROF.S.ACCOUNT_REQUIREMENTS` | R | 2026-10-30 | A | Yes | ✅ Migrated | `"0"` / `Account ok. No requirements`, `"1"` / `Invalid account` |
-| `PROF.S.ACCOUNT_VIP_NUM` | R | 2026-11-03 | A | Yes (renamed: `paccountnum, pvipnum`) | Ready | No `o_code`. Was `pAccountNum, pVIPNum`. |
+| `PROF.S.ACCOUNT_VIP_NUM` | R | 2026-11-03 | A | Yes (`paccountnum, pvipnum`) | ✅ Migrated | No `o_code`. Read by its two headings (`toAccountOnFile`); an unknown login answers both blank = nothing on file. Pre-fills the booking's Billing step. |
 | `RES.S.IS_CREDIT_CARD_SPECIFIC_ACCOUNT` | R | 2026-10-30 | A | Yes | Ready | `"0"` / `Corporate Account` |
 | `RES.S.BILLING_METHOD` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | `"1"` = Corporate Account (a method, not an error) |
 | `RES.S.GOOGLE_ZONE_NUM` | R | 2026-10-30 | A | Yes | Ready — review `o_code` | `"1"` + zone number in `o_message`, also at 0,0 (`90000999`), so `"1"` doesn't prove a match. Read by heading; the app still matches only on `"0"` (fails closed into the acknowledgement) until the backend documents it. |
@@ -62,7 +62,7 @@ Probed on 2026-10-30 with a test login unless stated. Every migrated read code w
 | `PROF.S.PROFILE_WHO_GRANTED_ACCESS` | R | 2026-11-03 | B | Yes (renamed) | ✅ Migrated | Remapped 2026-11-03: reads `ologinid, ofirstname, olastname`. No rows for the test login. |
 | `PROF.S.PROFILE_COLUMN_VALUES` | R | 2026-11-03 | B | Yes (renamed) | ✅ Migrated | Remapped 2026-11-03: reads `ocolumnid, ocolumnvalue`. No rows yet. |
 | `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` | R | 2026-11-03 | B | Yes (renamed) | ✅ Migrated | Remapped 2026-11-03: reads `ocolumnvalue`. One row for `P_COLUMN_ID` 2. |
-| `PROF.S.CAR_INFO` | R | 2026-10-30 | — | — | Blocked | `ORA-01001: invalid cursor` |
+| `PROF.S.CAR_INFO` | R | 2026-11-03 | B | Yes (6 = 6) | ✅ Migrated | No longer fails. Car `100`: `driver_1st, color, make, model, model_year, 'wc_tlc_sticker_num'`; unknown cars: no headings / rows. Read by the first five (`toCarInfo`); keyed by the record's `oecarnum` (empty on the test rides). |
 | `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | R | 2026-10-30 | — | — | Blocked | `ORA-01400`: the select tries an INSERT |
 | `RES.S.LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE` | R | — | — | — | Not probed | Its sibling above writes. Ask the backend first. |
 | `RES.S.VERIFY_ACCOUNT_REQUIREMENTS` | R | — | — | — | Not probed | Needs an account with requirements |
@@ -77,15 +77,15 @@ Probed on 2026-10-30 with a test login unless stated. Every migrated read code w
 | `RES.D.RESERVATION_COLUMN_VALUE` | W | — | — | — | Not probed: writes data | |
 | `RES.U.FORMAT_EMAIL_MESSAGE` | W | — | — | — | Not probed: writes data | Sends an e-mail |
 | `RES.I.ASKED_QUESTIONS` | W | — | — | — | Not probed: writes data | |
-| `PROF.U.PASSWORD` | W | — | — | — | Not probed: writes data | Changes the test login's password |
-| `PROF.I.PROFILE` | W | 2026-10-30 | A | Yes | Blocked | One real corporate create: `"9"` / `ORA-12899 … PREFERRED_KNOCKOFF_CODE (actual: 2, maximum: 1)`. No profile created. The backend must say which parameter fills that column and its codes (likely `P_CONFIRMATION_METHOD`). |
-| `PROF.U.PROFILE` | W | — | — | — | Not probed: writes data | Replaces the whole profile. Value codes follow the test client (`P_COUNTRY 01`, `P_ADDRESS_TYPE HOME`). The answer read is `o_code` / `o_message` by heading; `"0"` = saved is unverified. |
-| `PROF.I.USER_ADDRESS` | W | — | — | — | Not probed: writes data | |
-| `PROF.U.USER_ADDRESS` | W | — | — | — | Not probed: writes data | |
-| `PROF.D.USER_ADDRESS` | W | — | — | — | Not probed: writes data | |
-| `PROF.I.PROFILE_COLUMN_VALUE` | W | — | — | — | Not probed: writes data | Its list code is not supported |
-| `PROF.U.PROFILE_COLUMN_VALUE` | W | — | — | — | Not probed: writes data | |
-| `PROF.D.PROFILE_COLUMN_VALUE` | W | — | — | — | Not probed: writes data | |
+| `PROF.U.PASSWORD` | W | 2026-11-03 | A | Yes | ✅ Migrated | Probed with the same password: `"0"` / `Changed`; wrong old password `"1"` / `Invalid info`. A missing `o_code` now fails closed. |
+| `PROF.I.PROFILE` | W | 2026-11-03 | A | Yes | Blocked | Second create (`P_CONFIRMATION_METHOD` / `P_CAR_YEAR` blank) answered `"0"` / `Saved` but **stored nothing** (login unknown, e-mail still free). First create: `"9"` / `ORA-12899 … PREFERRED_KNOCKOFF_CODE`. `"9"` now shows the app's own copy. |
+| `PROF.U.PROFILE` | W | 2026-11-03 | A | Yes | ✅ Migrated | No-op with all 38 parameters: `"0"` / `Success`, profile unchanged. Only 7 parameters: `"9"` / `ORA-01843`, so the app now sends every parameter with its loaded value (password and card passed through) and only the edited fields replaced. `"9"` shows the screen's own copy. |
+| `PROF.I.USER_ADDRESS` | W | 2026-11-03 | A | Yes | Not probed: writes data | One add sent from the app (`P_STATE` `New york`): `"9"` / `ORA-12899 … T_VIP_PICKUP.STATE (actual: 8, maximum: 2)`, invalid JSON (unescaped quotes), nothing stored. The form now requires the 2-letter state code and sends it uppercased. A successful add has not been seen. `P_COUNTRY` is sent as the ISO code (`US`), while stored rows hold `01`: unconfirmed. |
+| `PROF.U.USER_ADDRESS` | W | — | — | — | Not probed: writes data | No agreed test record yet. Answer read as `o_code` / `o_message` by exact name; `P_PICKUP_COUNT` ← `oepickupcount` (`TODO(schema-unverified)`). |
+| `PROF.D.USER_ADDRESS` | W | — | — | — | Not probed: writes data | No agreed test record yet. Answer read as `o_code` / `o_message` by exact name; `P_PICKUP_COUNT` ← `oepickupcount` (`TODO(schema-unverified)`). |
+| `PROF.I.PROFILE_COLUMN_VALUE` | W | 2026-11-03 | A | Yes | Blocked | `"0"` / `Success`, but the value is **never stored** (no list shows it; update / delete can't find it). `P_COLUMN_ID` as a number is accepted. |
+| `PROF.U.PROFILE_COLUMN_VALUE` | W | 2026-11-03 | A | Yes | ✅ Migrated | `"2"` / `Record does not Exist. Cannot update value.` for an unknown value, shown as sent. A successful update can't be seen until the add stores data. |
+| `PROF.D.PROFILE_COLUMN_VALUE` | W | 2026-11-03 | A | Yes | ✅ Migrated | `"2"` / `Record does not Exist. Cannot delete value.` for an unknown value, shown as sent. |
 | `PROF.U.BLOCK_DRIVER`, `PROF.U.UNBLOCK_DRIVER` | W | — | — | — | Not wired | |
 | `PROF.S.MATCHING_PROFILE_LIST` | R | 2026-10-30 | B | Yes (`oLoginID … oVIPNum`) | Not wired | Was listed as `LOAD_MATCHING_PROFILE_LIST`. Returns other customers' profiles (15 rows for the test login); no preference columns. |
 | `PROF.S.ACCESS_RIGHTS_GRANTED_PROFILE` | R | 2026-10-30 | B | Yes (same 7) | Not wired | Was listed as `LOAD_ACCESS_RIGHTS_GRANTED_PROFILE`. Needs `P_LOGIN_ID_FROM`; 0 rows for the test login. |
@@ -111,9 +111,11 @@ Every code is read by the heading names it sends (guide §4), one name per field
 - **Raw Oracle errors** reach the client in `JHeader.Message`.
 - **`RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` performs an INSERT**, failing with ORA-01400.
 - **`PROF.I.PROFILE` fails in the database:** `ORA-12899` on `T_VIP_PROFILE.PREFERRED_KNOCKOFF_CODE` (a 2-character value into a 1-character column). Which parameter fills it, and its codes, are needed. Codes still missing from any sample: card `P_PAYMENT_TYPE`, office `P_ADDRESS_TYPE`, phone `P_CONFIRMATION_METHOD`, non-US `P_COUNTRY`, and what `P_CAR_YEAR` / `P_CAR_PHONE` hold.
-- **Broken:** `PROF.S.CAR_INFO` (ORA-01001).
 - **`P_TOTAL_RECORDS` is ignored** by `RES.S.ALL_ORDERS`.
 - **`o_code` conventions differ per code** (`BILLING_METHOD`, `GOOGLE_ZONE_NUM`, `LATITUDE_LONGITUDE_FOR_CAR`). Ask for the documented outputs of each procedure.
+- **Insert codes report success without storing anything:** `PROF.I.PROFILE` answers `"0"` / `Saved` and `PROF.I.PROFILE_COLUMN_VALUE` answers `"0"` / `Success`, but neither record can be read back (2026-11-03).
+- **`PROF.U.PROFILE` needs every parameter**, so the client must send back the stored password and full card number that `LOAD_PROFILE` returns. An update that leaves them out fails with `ORA-01843`.
+- **`PROF.S.CAR_INFO`'s last heading is `'wc_tlc_sticker_num'`** (with quotes) and its value is the placeholder `WC_TLC_STICKER_NUM`.
 - **`RES.S.LOAD_RESERVATION` sends the `oecarnum` heading twice** (positions 75 and 118). `mapRows` keeps the later value.
 - **Fixed 2026-11-03:** record-set headings now match their values (`LOAD_PROFILE`, `USER_ADDRESSES`, the order codes and the rest). The headings were renamed at the same time.
 - **`RES.S.ZONE_THE_LOCATION` never zones:** `[["", ""]]` for every input tried, including the test client's own sample.

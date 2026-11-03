@@ -2,7 +2,7 @@ import { type AddressType, EMPTY_MAILING_ADDRESS, type MailingAddress } from '@/
 import type { PreferencesValue } from '@/components/preferences/preferences';
 import type { PersonalInfoValue } from '@/components/profile/PersonalInfoSection';
 import type { PhoneValue } from '@/components/ui/PhoneField';
-import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
+import { DB_INTERNAL_ERROR_CODE, DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { PROFILE_MESSAGES } from '@/constants/messages';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 import { UNITED_STATES } from '@/data/regions';
@@ -14,7 +14,8 @@ import { COUNTRIES, findCountryByDial, toIntlDigits } from '@/utils/phone';
  * The signed-in customer's profile, mapped from a `PROF.S.LOAD_PROFILE` row.
  * Each field is read by the one heading the code sends (`mapRowsByHeadings`),
  * and a heading that stops coming fails the load (docs/XYZ_INTEGRATION_GUIDE.md
- * §10). `opassword`, `ocardnumber` and `overifycode` are never read.
+ * §10). `opassword`, `ocardnumber` and `overifycode` are only passed back
+ * untouched by an update (`loadedProfileParams`), never shown.
  * Field names are renamed here so screens never read raw gateway columns.
  */
 
@@ -110,10 +111,57 @@ const COLUMNS = {
   specialOffer: 'ospecialoffer',
 } as const;
 
-/** Every `LOAD_PROFILE` heading the app reads; the load fails closed without one. */
-const PROFILE_HEADINGS = Object.values(COLUMNS);
+/**
+ * Every `PROF.U.PROFILE` parameter with the `LOAD_PROFILE` heading holding its
+ * stored value. The procedure needs all of them on every save — leaving any
+ * out fails (`"9"`, ORA-01843; guide §10) — so untouched values go back
+ * exactly as loaded. Password and card values are only passed through here:
+ * never shown, logged or kept anywhere else.
+ */
+const UPDATE_PARAMETER_HEADINGS = {
+  P_PASSWORD: 'opassword',
+  P_FIRST_NAME: COLUMNS.firstName,
+  P_LAST_NAME: COLUMNS.lastName,
+  P_PHONE_NUMBER: COLUMNS.intlNumber,
+  P_PHONE_EXT: COLUMNS.intlExt,
+  P_PHONE_NUMBER_US: COLUMNS.usNumber,
+  P_PHONE_EXT_US: COLUMNS.usExt,
+  P_FAX: COLUMNS.fax,
+  P_COUNTRY: COLUMNS.country,
+  P_STATE: COLUMNS.state,
+  P_CITY: COLUMNS.city,
+  P_ZIP: COLUMNS.zip,
+  P_BUILDING_NUM: COLUMNS.buildingNumber,
+  P_STREET_NAME: COLUMNS.streetName,
+  P_CROSS_STREET1: COLUMNS.crossStreet,
+  P_CROSS_STREET2: COLUMNS.unit,
+  P_ADDRESS_PHONE: COLUMNS.addressPhone,
+  P_ADDRESS_PHONE_US: COLUMNS.addressPhoneUs,
+  P_ADDRESS_TYPE: COLUMNS.addressType,
+  P_PAYMENT_TYPE: 'opaymenttype',
+  P_CC_TYPE: 'occtype',
+  P_CARD_HOLDER_NAME: 'ocardholdername',
+  P_CARD_NUMBER: 'ocardnumber',
+  P_VERIFY_CODE: 'overifycode',
+  P_CC_MONTH: 'occmonth',
+  P_CC_YEAR: 'occyear',
+  P_ACCOUNT_REQ1: 'oaccountreq1',
+  P_ACCOUNT_REQ2: 'oaccountreq2',
+  P_ACCOUNT_REQ3: 'oaccountreq3',
+  P_ACCOUNT_REQ4: 'oaccountreq4',
+  P_CONFIRMATION_METHOD: COLUMNS.confirmationMethod,
+  P_PREFERRED_FLEET: 'opreferredfleet',
+  P_CAR_YEAR: 'ocaryear',
+  P_CAR_PHONE: 'ocarphone',
+  P_SPECIAL_OFFER: COLUMNS.specialOffer,
+  P_SMOKING_CAR: 'osmokingcar',
+  P_IVR_PIN: 'oivrpin',
+} as const;
 
-export type ProfileRow = Record<(typeof COLUMNS)[keyof typeof COLUMNS], string>;
+/** Every `LOAD_PROFILE` heading the app reads; the load fails closed without one. */
+const PROFILE_HEADINGS = [...new Set([...Object.values(COLUMNS), ...Object.values(UPDATE_PARAMETER_HEADINGS)])];
+
+export type ProfileRow = Record<(typeof PROFILE_HEADINGS)[number], string>;
 
 /** The `PROF.S.LOAD_PROFILE` row, by heading. Throws `GatewayError('parsing')` when a heading is missing. */
 export function toProfileRow(response: GatewayResponse): ProfileRow | undefined {
@@ -235,29 +283,11 @@ export function mailingAddressParams(address: MailingAddress): GatewayJData {
   };
 }
 
-/**
- * Every parameter a `LOAD_PROFILE` heading vouches for, with the value it holds.
- *
- * `PROF.U.PROFILE` replaces the whole profile, so an untouched field must go
- * back exactly as it came. A parameter with no heading is left out rather
- * than sent blank — the update never clears data the app was never shown.
- */
+/** All 37 `PROF.U.PROFILE` parameters after `P_LOGIN_ID`, each exactly as `LOAD_PROFILE` stored it. */
 function loadedProfileParams(row: ProfileRow): GatewayJData {
-  return {
-    P_FIRST_NAME: text(row, COLUMNS.firstName),
-    P_LAST_NAME: text(row, COLUMNS.lastName),
-    P_PHONE_NUMBER: joinedDigits(text(row, COLUMNS.intlNumber)),
-    P_PHONE_EXT: digits(row, COLUMNS.intlExt),
-    P_PHONE_NUMBER_US: digits(row, COLUMNS.usNumber),
-    P_PHONE_EXT_US: digits(row, COLUMNS.usExt),
-    P_FAX: joinedDigits(text(row, COLUMNS.fax)),
-  };
-}
-
-/** Calling code + number as one run of digits, or '' when there is no number. */
-function joinedDigits(value: string): string {
-  const { dial, number } = splitDialNumber(value);
-  return number ? `${dial}${number}` : '';
+  return Object.fromEntries(
+    Object.entries(UPDATE_PARAMETER_HEADINGS).map(([param, heading]) => [param, row[heading]]),
+  );
 }
 
 /** The parameters the Personal Info panel edits. */
@@ -353,9 +383,10 @@ export function updateMailingAddressJData(
 }
 
 /**
- * Throws unless the update's first row carries `o_code` "0". A missing
- * `o_code` heading or row fails closed; `rejected` is shown when the server
- * refuses without a message.
+ * Throws unless the update's first row carries `o_code` "0" (`Success`). "9"
+ * is a database error whose message is raw Oracle text, so `rejected` is shown
+ * instead, as it is when the server refuses without a message. A missing
+ * `o_code` heading or row fails closed.
  */
 export function assertProfileUpdated(
   response: GatewayResponse,
@@ -363,10 +394,8 @@ export function assertProfileUpdated(
 ): void {
   const result = mapRowsByHeadings(response, ['o_code', 'o_message'])[0];
   if (!result) throw new GatewayError('parsing', 'The profile update response has no result row.');
-  // TODO(schema-unverified): `PROF.U.PROFILE` has never been sent (guide §10),
-  // so "0" = saved is assumed; confirm its answers against guide §10.
   if (result.o_code !== DB_SUCCESS_CODE) {
-    throw new ProfileError(result.o_message.trim() || rejected);
+    throw new ProfileError(result.o_code === DB_INTERNAL_ERROR_CODE ? rejected : result.o_message.trim() || rejected);
   }
 }
 

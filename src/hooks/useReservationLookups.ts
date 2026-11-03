@@ -100,7 +100,10 @@ export function useContactValues(loginId: string, columnId: number): Lookup<stri
   );
 }
 
-const toAccountList = (response: GatewayResponse): AccountOnFile[] => [toAccountOnFile(response)];
+const toAccountList = (response: GatewayResponse): AccountOnFile[] => {
+  const account = toAccountOnFile(response);
+  return account ? [account] : [];
+};
 
 /** `PROF.S.ACCOUNT_VIP_NUM` with blanks — the account and VIP number on file. */
 export function useAccountOnFile(loginId: string): AccountOnFile | null {

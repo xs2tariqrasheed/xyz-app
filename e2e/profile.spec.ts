@@ -3,6 +3,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { ACTION_CODES } from '../src/constants/actionCodes';
 import { MAILING_ADDRESS_MESSAGES, PREFERENCES_MESSAGES, PROFILE_MESSAGES } from '../src/constants/messages';
 import { sandboxClientIpLookup } from './support/clientIp';
+import { contractParams } from './support/contract';
 import { gatewayRows, waitForGatewayAction } from './support/gateway';
 import { sandboxGoogleMaps } from './support/googleMaps';
 import { fillLoginForm } from './support/login';
@@ -53,6 +54,12 @@ test('shows Personal Info as LOAD_PROFILE pairs it, validates, and sends the upd
   await page.getByRole('button', { name: PROFILE_MESSAGES.UPDATE, exact: true }).click();
   await expect(page.getByText('Intercepted by the spec')).toBeVisible();
   expect(updates).toHaveLength(1);
+
+  // The procedure needs every contract parameter on each save (guide §10):
+  // the loaded values go back with only the edited fields replaced.
+  const sent = (updates[0] as { JsonReq: { JData: Record<string, string> } }).JsonReq.JData;
+  expect(Object.keys(sent).sort()).toEqual([...contractParams(ACTION_CODES.UPDATE_PROFILE)].sort());
+  expect(sent).toMatchObject({ P_LAST_NAME: 'Doe', P_PHONE_NUMBER_US: '2125550100' });
 });
 
 test('Update Mailing Address shows the address LOAD_PROFILE sends', async ({ page }) => {

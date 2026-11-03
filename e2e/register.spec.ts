@@ -451,6 +451,35 @@ test('asks for the fields a corporate account requires', async ({ page }) => {
   expect(sentOnce(ACTION_CODES.ACCOUNT_REQUIREMENTS_RS)).toBe(1);
 });
 
+test('reads a requirements list with only the dummy heading as no requirements', async ({ page }) => {
+  const profile = await interceptCreateProfile(page);
+  profile.lookups = {
+    // Says "has requirements", so the list is asked for.
+    [ACTION_CODES.ACCOUNT_REQUIREMENTS]: {
+      headings: ['o_code', 'o_message', 'requirement_count'],
+      rows: [['0', '', '1']],
+    },
+    // What `_RS` really answers for an account with none (guide §10).
+    [ACTION_CODES.ACCOUNT_REQUIREMENTS_RS]: { headings: ['dummy'], rows: [['X']] },
+  };
+  await completeAccountAndAddress(page, uniqueEmail());
+
+  await field(page, 'Account number').fill(ACCOUNT.number);
+  const listResponse = waitForGatewayAction(page, ACTION_CODES.ACCOUNT_REQUIREMENTS_RS);
+  await field(page, 'Account name').click();
+  await listResponse;
+  await field(page, 'Account name').fill(ACCOUNT.name);
+  await tickRecaptcha(page);
+
+  const createResponse = waitForGatewayAction(page, ACTION_CODES.CREATE_PROFILE);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await createResponse;
+
+  expect(profile.calls).toHaveLength(1);
+  expect(profile.calls[0]).toMatchObject({ P_ACCOUNT_REQ1: '', P_ACCOUNT_REQ2: '', P_ACCOUNT_REQ3: '', P_ACCOUNT_REQ4: '' });
+  await expect(page.getByText('Registration complete')).toBeVisible();
+});
+
 test('stops at an account the server refuses', async ({ page }) => {
   const profile = await interceptCreateProfile(page);
   profile.lookups = {

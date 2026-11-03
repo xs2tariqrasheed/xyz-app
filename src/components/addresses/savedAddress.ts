@@ -67,6 +67,9 @@ export function toDraft({ id: _id, ...draft }: SavedAddress): AddressDraft {
 /** Pickup point: letters, digits, space and `. , ~ & / - ( ) \ #` (guide 26). */
 const PICKUP_POINT_CHARS = /^[A-Za-z0-9 .,~&/\-()\\#]+$/;
 
+/** `T_VIP_PICKUP.STATE` holds 2 characters (`ORA-12899` for longer; guide §10). */
+const STATE_CODE = /^[A-Za-z]{2}$/;
+
 const STREET_MIN = 4;
 const STREET_MAX = 30;
 const PICKUP_POINT_MAX = 20;
@@ -87,7 +90,9 @@ export function validateDraft(draft: AddressDraft): AddressErrors {
   const M = ADDRESS_BOOK_MESSAGES;
 
   if (!draft.country.trim()) errors.country = M.COUNTRY_REQUIRED;
-  if (!draft.state.trim()) errors.state = M.STATE_REQUIRED;
+  const state = draft.state.trim();
+  if (!state) errors.state = M.STATE_REQUIRED;
+  else if (!STATE_CODE.test(state)) errors.state = M.STATE_INVALID;
   if (!draft.city.trim()) errors.city = M.CITY_REQUIRED;
 
   const building = draft.building.trim();

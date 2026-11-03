@@ -25,7 +25,7 @@ export type AddressFormProps = {
 };
 
 /** Field limits from the old address book (reverse-engineer-implemented/guide/11 §3). */
-const MAX = { zip: 5, building: 6, street: 30, ext: 5, directions: 500 } as const;
+const MAX = { state: 2, zip: 5, building: 6, street: 30, ext: 5, directions: 500 } as const;
 
 /**
  * Add or edit one saved location.
@@ -81,6 +81,7 @@ export function AddressForm({
           onChangeText={(state) => patch({ state })}
           error={errors.state}
           placeholder={M.STATE_PLACEHOLDER}
+          maxLength={MAX.state}
           autoComplete="postal-address-region"
           textContentType="addressState"
           autoCapitalize="characters"

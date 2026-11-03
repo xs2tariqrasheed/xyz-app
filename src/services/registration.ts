@@ -2,7 +2,7 @@ import {
   MAX_ACCOUNT_REQUIREMENTS,
   type RegistrationDraft,
 } from '@/components/register/registration';
-import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
+import { DB_INTERNAL_ERROR_CODE, DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { normalizeLoginId } from '@/services/auth';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
 import { CONFIRMATION_CODES, mailingAddressParams, SPECIAL_OFFER_CODES } from '@/services/profile';
@@ -75,8 +75,18 @@ export function assertRegistrationStep(response: GatewayResponse, fallback: stri
     throw new GatewayError('parsing', 'The registration response has no result code.');
   }
   if (result.o_code !== DB_SUCCESS_CODE) {
-    throw new RegistrationError(result.o_message || fallback);
+    throw new RegistrationError(refusalMessage(result, fallback));
   }
+}
+
+/**
+ * The procedure's own refusal text, or `fallback`. `o_code` "9" is a database
+ * error whose message is raw Oracle text (guide §10), so it never reaches the
+ * screen.
+ */
+function refusalMessage(result: Record<string, string>, fallback: string): string {
+  if (result.o_code === DB_INTERNAL_ERROR_CODE) return fallback;
+  return ('o_message' in result ? result.o_message.trim() : '') || fallback;
 }
 
 /** Columns every procedure answer carries; anything else is the procedure's data. */
@@ -110,30 +120,38 @@ export function accountHasRequirements(response: GatewayResponse, fallback: stri
 
 /**
  * Reads an {@link ACTION_CODES.ACCOUNT_REQUIREMENTS_RS} answer: one row per
- * requirement field, in `P_ACCOUNT_REQ1–4` order. A record set may carry no
- * result code, so `o_code` is only checked when present; no rows means no
- * fields.
+ * requirement field, in `P_ACCOUNT_REQ1–4` order. An account without
+ * requirements answers a single `dummy` heading (`"X"`), which means no
+ * fields (guide §10). A record set may carry no result code, so `o_code` is
+ * only checked when present; no rows means no fields.
  */
 export function accountRequirementLabels(response: GatewayResponse, fallback: string): string[] {
+  const headings = (response.JMetaData?.Headings ?? []).map((heading) =>
+    String(Array.isArray(heading) ? heading[0] : heading),
+  );
+  if (headings.length === 1 && headings[0] === NO_REQUIREMENTS_HEADING) return [];
+
   const rows = mapRows(response);
   const result = rows[0];
   if (result && 'o_code' in result && result.o_code !== DB_SUCCESS_CODE) {
-    throw new RegistrationError(result.o_message || fallback);
+    throw new RegistrationError(refusalMessage(result, fallback));
   }
 
   return rows.map(requirementLabel).filter(Boolean).slice(0, MAX_ACCOUNT_REQUIREMENTS);
 }
 
+/** The only heading `_RS` sends for an account with no requirements. */
+const NO_REQUIREMENTS_HEADING = 'dummy';
+
 /**
- * A row's field name. `_RS` sends the headings `o_code, o_message,
- * placeholder_col1, placeholder_col2`; no account with requirements has been
- * seen yet (docs/XYZ_INTEGRATION_GUIDE.md §10).
+ * A row's field name. No account with requirements has been seen yet
+ * (docs/XYZ_INTEGRATION_GUIDE.md §10).
  */
 function requirementLabel(row: Record<string, string>): string {
   // TODO(schema-unverified): assumed the field name arrives under `o_message`;
   // confirm against an account with requirements and remove this comment. Do
   // NOT replace with a list of fallback headings.
-  return row.o_message.trim();
+  return 'o_message' in row ? row.o_message.trim() : '';
 }
 
 /** `MM/YY` → ['MM', 'YYYY'], or blanks while incomplete. */

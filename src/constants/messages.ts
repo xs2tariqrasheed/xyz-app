@@ -409,6 +409,7 @@ export const ADDRESS_BOOK_MESSAGES = {
   // Validation (reverse-engineer-implemented/guide/11 §3, 26).
   COUNTRY_REQUIRED: 'Country is required.',
   STATE_REQUIRED: 'State is required.',
+  STATE_INVALID: 'Use the 2-letter state code, e.g. NY.',
   CITY_REQUIRED: 'City is required.',
   BUILDING_REQUIRED: 'Building number is required.',
   BUILDING_INVALID: 'Use digits only, up to 6.',

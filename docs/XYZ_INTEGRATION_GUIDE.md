@@ -260,11 +260,11 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 
 **Password recovery** (`forgot-password.tsx`): `PROF.S.PASSWORD` with `{ P_LOGIN_ID }` (normalised like login) via `usePostData`. The real answer is `o_code` / `o_message`: `"0"` / `Sendmail` when the password was mailed (§10). Anything but `"0"` → `AuthError(o_message)`; no `o_code` → `GatewayError('parsing')` (fail closed). On success the screen says the password was sent to the email.
 
-**Change password** (`change-password.tsx`, form in `src/components/account/ChangePasswordForm.tsx`): `PROF.U.PASSWORD` with `{ P_LOGIN_ID: session.loginId, P_OLD_PASSWORD, P_NEW_PASSWORD }` via `usePostData`, sent with `retry: false`. The confirm field is checked on the client only — the contract has no parameter for it. A returned `o_code` other than `"0"` (e.g. a wrong old password) → `AuthError(o_message)`; no `o_code` → changed. The session holds no password, so the user stays signed in.
+**Change password** (`change-password.tsx`, form in `src/components/account/ChangePasswordForm.tsx`): `PROF.U.PASSWORD` with `{ P_LOGIN_ID: session.loginId, P_OLD_PASSWORD, P_NEW_PASSWORD }` via `usePostData`, sent with `retry: false`. The confirm field is checked on the client only — the contract has no parameter for it. `"0"` (`Changed`) = changed; `"1"` (`Invalid info`, a wrong old password) or any other code → `AuthError(o_message)`; no `o_code` / `o_message` → `GatewayError('parsing')` (§10). The session holds no password, so the user stays signed in.
 
 **Profile — Personal Info** (`profile.tsx`, state in `src/context/ProfileContext.tsx`, mapping in `src/services/profile.ts`; spec `reverse-engineer-implemented/guide/07-profile-personal-info.md`). `ProfileProvider` loads `PROF.S.LOAD_PROFILE` once per signed-in login and shares it through `useProfile()` — Home's welcome line and last-login subtitle and the Profile form read the same request. The row is read with `mapRowsByHeadings` over the headings in one `COLUMNS` map (`toProfileRow`), so a heading that stops coming shows the screen's load error rather than blank fields. The form pre-fills name, US callback phone, international callback phone and fax from the row (`ofirstname`, `olastname`, `ophonenumberus` / `ophoneextus`, `ophonenumber` / `ophoneext`, `ofax`). The international and fax numbers arrive as `<calling code>-<number>` and are split on the first `-` (`TODO(schema-unverified)`); `212-` (code only) reads as no number. There is no fax-extension heading. Home's welcome line is `ofirstname`; its last-login line is `oelastlogindate` (`DD-MON-YY`, a date only), shown as "Last login {date}". `opassword`, `ocardnumber` and `overifycode` are never read. Update sends `PROF.U.PROFILE` via `updatePersonalInfo` with `retry: false`; the answer is read by its `o_code` / `o_message` headings — anything but `"0"` → `ProfileError(o_message)` shown in the form, no `o_code` heading or row → `GatewayError('parsing')`. `"0"` = saved is unverified (never sent). On success the profile is reloaded.
 
-- **The update replaces the whole profile, so the app sends only what it knows and what changed.** `PROF.U.PROFILE` has no per-section variant. Every save (Personal Info, Preferences, Mailing Address) sends `P_LOGIN_ID`, then each parameter whose `LOAD_PROFILE` column came back, with its loaded value (name, US / international phone and fax), then only the fields the customer changed on that screen. The mailing address is the exception: one changed field sends all 11 address parameters, since they have to agree. A parameter whose column `LOAD_PROFILE` did not return is **left out**, not sent as `''`, so a save never clears data the app was never shown. The password, card and account-requirement parameters are not sent back. Value codes follow the backend test client's `PROF.U.PROFILE` sample (`P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`). Confirm with the backend that the procedure keeps omitted parameters unchanged (or that `LOAD_PROFILE` will return them) before this reaches real data.
+- **The update replaces the whole profile, and needs every parameter.** `PROF.U.PROFILE` has no per-section variant, and a save that leaves parameters out fails (`"9"`, `ORA-01843: not a valid month`; §10). So every save (Personal Info, Preferences, Mailing Address) sends `P_LOGIN_ID` and all 37 other contract parameters with the values `LOAD_PROFILE` returned, exactly as stored (`UPDATE_PARAMETER_HEADINGS` in `src/services/profile.ts`, password and card values included, never shown), with only the fields the customer changed on that screen replaced. One changed address field sends all 11 address parameters, since they have to agree. `"0"` (`Success`) = saved; `"9"` shows the screen's own refusal copy instead of the Oracle text.
 - **Update Mailing Address** (`mailing-address.tsx`, guide 08) reads `ocountry` (`01` → United States), `ostate`, `ocity`, `ozip`, `obuildingnum`, `ostreetname`, `ocrossstreet1`, `ocrossstreet2` (Apt / Mail stop), `oaddressphoneus`, `oaddressphone` (`<code>-<number>`) and `oaddresstype` (`HOME` / `O`; empty keeps the form's Office default). When every address value is empty it shows "not available". `PROF.S.USER_PROFILE_ADDRESSES` is the frequent-pickup list, not the mailing address (§10).
 - **Preferences** (`preferences.tsx`, guide 09) reads `oconfirmationmethod` (`PHONE` ticks "Phone") and `ospecialoffer` (`Y` ticks the offers). When both are empty it shows "not available" and a new booking starts with "confirm by phone" unticked. Saving sends `P_CONFIRMATION_METHOD` (`ML` / `PHONE`) and `P_SPECIAL_OFFER` (`N` / `Y`) through `PROF.U.PROFILE`.
 - **Phones.** International and fax numbers go out as calling code + number in one run of digits (`P_PHONE_NUMBER`, `P_FAX`), as in registration. On load the calling code is matched back to a picker country; a code shared by several countries (+1) picks the first listed. The fax extension box is hidden — the contract has no parameter for it.
@@ -287,7 +287,7 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 - **Fax** has no extension parameter, so registration hides the fax extension box.
 - **Car preferences** (optional, Billing step): `P_PREFERRED_FLEET`, `P_CAR_YEAR` (4 digits), `P_CAR_PHONE` (US, 10 digits), `P_SMOKING_CAR` (`Y`/`N`), `P_IVR_PIN` (4 digits).
 - **Account requirements** (two calls, as on the old site): `ACCOUNT_REQUIREMENTS` decides *whether* the account has requirement fields; only then does `ACCOUNT_REQUIREMENTS_RS` list them, one row per field (up to 4), each shown as a required field whose answer goes in `P_ACCOUNT_REQ1–4`. The answer is cached per account number, so leaving the field and then pressing Create account asks once; a new account number clears the answers. A refusal (`o_code` ≠ `"0"`) shows on the Account number field, and again above the form on Create account.
-  `ACCOUNT_REQUIREMENTS` answers only `o_code` / `o_message` (§10). `accountHasRequirements` treats any further heading with a value that is not a "no" as yes, so with today's answer the account has no requirements and `_RS` is never called. `_RS` sends `o_code, o_message, placeholder_col1, placeholder_col2`. `accountRequirementLabels` reads each label from `o_message` alone, marked `TODO(schema-unverified)`, until an account with requirements confirms it.
+  `ACCOUNT_REQUIREMENTS` answers only `o_code` / `o_message` (§10). `accountHasRequirements` treats any further heading with a value that is not a "no" as yes, so with today's answer the account has no requirements and `_RS` is never called. `ACCOUNT_REQUIREMENTS` `"0"` / `Account ok. No requirements` means none. `_RS` answers a single `dummy` heading (`"X"`) for an account with none, which `accountRequirementLabels` reads as no fields. Its label for a real requirement is read from `o_message` alone, marked `TODO(schema-unverified)`, until an account with requirements confirms it. `"9"` refusals show the step's own copy, never the Oracle text.
 - **Unconfirmed codes**, each set in one place in the service: `P_PAYMENT_TYPE` corporate = `CA` (only `CC` is documented) and `P_ADDRESS_TYPE` office = `O` (only `H` is documented).
 
 On success the screen links back to login; the user is not signed in automatically.
@@ -334,7 +334,7 @@ Wired on **Reservation 2** (`src/app/(app)/reserver-2.tsx`) and the ride screens
 - **No reservation number is ever made up.** `RES.I.RESERVATION` returns only `o_code` / `o_message` today, so the receipt says the ride is booked and links to Upcoming rides. The e-mail and Email CC writes need a number, so they run only once one is returned (and always on an edit).
 - **Unconfirmed codes**, each set once in `src/services/reservation.ts`: `P_PU_TYPE` / `P_DO_TYPE` `S` / `A` / `L` (only `A` is in the samples); `P_PAYMENT_METHOD` `CA` / `AC` / `CC` (only `CC`); `P_RESERVATION_MAKE_FOR` `SELF` / `OTHER`; `P_CONFIRMATION_METHOD` `EMAIL` / `PHONE`; `P_CALL_SOURCE` `WEB`; `P_PU_DO_TYPE` `P` / `D`; Email CC column id `8` (the contact-type id).
 - **Card data** stays in `ReservationContext` memory only — never stored, logged or shown unmasked — and is cleared after booking and on sign-out. An edit that keeps the card on file resends the masked number the record came with (the old site's "unchanged" convention); `RES.U.FORMAT_EMAIL_MESSAGE` gets a masked `P_CC_NUMBER1`. **The contract still posts full card numbers to the gateway**: tokenising them (00-README §5 #2) is a backend change.
-- **Gateway gaps today:** `CAR_INFO` fails (`ORA-01001`), and `ZONE_THE_LOCATION` never zones a street (§10). `LOAD_RESERVATION` returns the same record for every number.
+- **Gateway gaps today:** `ZONE_THE_LOCATION` never zones a street (§10). `CAR_INFO` answers by car number (`driver_1st, color, make, model, model_year`); it is keyed by the record's `oecarnum`, which the test rides leave empty. `LOAD_RESERVATION` returns the same record for every number.
 - **No action code** exists for airports, airlines, streets or landmarks (guide 05) or the fare estimate: stops come from Google Places, airline and flight are typed.
 - **Google Places (legacy)** backs address search: `place/autocomplete/json` and `place/details/json` on iOS / Android (`src/services/googlePlaces.ts`), and the Maps JavaScript API's `AutocompleteService` / `PlacesService` on web (`googlePlaces.web.ts`), because the web service sends no CORS headers. The route preview uses **Directions** the same way (`directions/json` with `mode=driving&departure_time=now`, and `waypoints` for stops, on iOS / Android; `DirectionsService` on web — `src/services/googleDirections(.web).ts`). The booking form and Track your route show the route on an interactive map the customer can pinch, drag and zoom with + / − / fit buttons (`src/components/reservation/RouteMapView(.web).tsx`: react-native-maps on iOS / Android, a Maps JavaScript API map on web). Track your route turns the car's position into a street address with **Geocoding** (`geocode/json?latlng=…`, which allows browser calls, so one implementation — `src/services/geocoding.ts`). The key needs **Places API**, **Directions API**, **Geocoding API**, **Maps JavaScript API**, and **Maps SDK for Android / iOS** for native builds (`app.config.ts` passes it to react-native-maps); refusals show short copy to the customer and Google's reason in the dev console.
 
@@ -351,11 +351,11 @@ Specs `reverse-engineer-implemented/guide/11`, `12` and `reverse-engineer-implem
 | My Addresses list (`addresses.tsx`) | `PROF.S.USER_ADDRESSES` | The **same** request `SavedPlacesContext` makes for Home and the booking form; the context exposes it as `places` (booking suggestions) and `addresses` (editable entries, `toSavedAddresses` in `src/services/addressBook.ts`). |
 | Add / edit / delete a location | `PROF.I.USER_ADDRESS`, `PROF.U.USER_ADDRESS`, `PROF.D.USER_ADDRESS` | Through `useSavedPlaces().saveAddress` / `deleteAddress`, `retry: false`, then the shared list reloads. `P_PICKUP_COUNT` = the row's `oepickupcount` (`TODO(schema-unverified)`: whether update / delete take it, or `oerowid`, is to confirm). The international number arrives as `ophonenum` = `<code>-<number>` and goes back in `P_PHONE_NUM` as dial code + number (no dial-code parameter). `P_COUNTRY` is the code (`US`). |
 | My Contacts list (`contacts.tsx`) | `PROF.S.PROFILE_COLUMN_VALUES` | `P_LOGIN_ID`. Rows mapped in `src/services/contacts.ts`; only the contact columns 3 home, 4 office, 5 fax, 6 cell, 8 e-mail are shown. |
-| Add / edit / remove a contact | `PROF.I.PROFILE_COLUMN_VALUE`, `PROF.U.PROFILE_COLUMN_VALUE`, `PROF.D.PROFILE_COLUMN_VALUE` | A contact is identified by column id + stored value. Changing a contact's **type** adds it under the new column, then deletes the old one (the contract has no move). |
+| Add / edit / remove a contact | `PROF.I.PROFILE_COLUMN_VALUE`, `PROF.U.PROFILE_COLUMN_VALUE`, `PROF.D.PROFILE_COLUMN_VALUE` | A contact is identified by column id + stored value. Changing a contact's **type** adds it under the new column, then deletes the old one (the contract has no move). Answers (§10): `"0"` = done, `"2"` = `Record does not Exist…`, shown as sent. **Add answers `"0"` / `Success` but stores nothing** (backend issue), so a new contact doesn't appear after the reload. |
 
 - **Validation** follows the old site (guide 11 §3, 12 §3, 26): a location needs country, state, city, building # (digits ≤ 6), street (4–30 street characters) and one callback number; ZIP is exactly 5 digits; pickup point ≤ 20; directions ≤ 500 without `"`. A contact phone is 10 digits not starting with 0/1; an e-mail ≤ 50; only an office phone takes an extension (≤ 5 digits).
 - **Unconfirmed**, each set in one place: office extension stored as `<number>-<ext>` (`toStoredValue` in `src/utils/contacts.ts`, the old `CompleteContactNumber` form); contact load columns `ocolumnid` / `ocolumnvalue` (one name each, §10).
-- **Stub today:** the address codes answer (the writes with a hard-coded success, so the reloaded list does not change); every contacts code answers "Action code is not supported", so My Contacts shows its load error and refuses saves with that message.
+- **Real gateway:** one `PROF.I.USER_ADDRESS` sent from the app with `P_STATE` `New york` answered `"9"` / `ORA-12899 … "T_VIP_PICKUP"."STATE" (actual: 8, maximum: 2)` (invalid JSON, so the app showed its generic error). The state column takes the 2-letter code only, so the form now requires 2 letters and sends them uppercased (`P_STATE` `NY`). Update and delete have not been sent; `P_COUNTRY` goes out as the ISO code (`US`) while stored rows hold `01`, which is unconfirmed. The contacts codes answer as in §10.
 
 ---
 
@@ -430,7 +430,7 @@ The backend fixed the record sets on 2026-11-03: every row now carries exactly o
 | `RES.S.LOAD_RESERVATION` | 160 = 160: the order headings without `oresdate`, plus the ones listed below | 1 (`W6102831267`) | **`oecarnum` is sent twice** (positions 75 and 118); `mapRows` keeps the later value (backend issue). Invalid JSON, repaired. |
 | `RES.S.VEHICLE_TYPE` | 2 = 2: `oevehiclecode, oevehicledesc` | 5 | Was 5 headings / 2 values. No passenger, luggage or description heading. First row `0` / `No Preference`. |
 | `RES.S.ALL_PREDEFINED_QUESTIONS` | 2 = 2: `question_id, question` | 2 | Was `o_code, o_message, placeholder_col1, placeholder_col2`. |
-| `PROF.S.ACCOUNT_REQUIREMENTS_RS`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` | 1 = 1: `dummy` | 1 (`"X"`) for the test account | Was 4 headings / 1 value. No account with requirements known yet. |
+| `PROF.S.ACCOUNT_REQUIREMENTS_RS`, `RES.S.ACCOUNT_REQUIREMENTS_LIST` | 1 = 1: `dummy` | 1 (`"X"`) for the test account | Was 4 headings / 1 value. `dummy` alone means the account has **no requirements** (the backend test client answers the same for `99005`); no account with requirements known yet. |
 | `RES.S.VEHICLE_LOG` | 6: `oetrackingdate, oetrackingtime, oestatuscode, oestatusdesc, oelongitude, oelatitude` | 0 | |
 | `RES.S.COMMUNICATION_LOG` | 0 | 0 | No headings at all for the reservation tried. |
 
@@ -464,26 +464,59 @@ So `PROF.S.LOAD_PROFILE` remains the only source. Since 2026-11-03 it sends the 
 
 ### PROF.I.PROFILE — create
 
-One real corporate registration was sent through the app on 2026-10-30. It used a fresh e-mail, the test account, a matching company name, a Home address, e-mail confirmation and no car preferences, with the value codes from the backend test client (`P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`, `P_PAYMENT_TYPE` `1`, `P_CONFIRMATION_METHOD` `ML`).
+Two real corporate registrations have been sent, each with a fresh e-mail and the test account.
 
-| `o_code` | `o_message` |
-|---|---|
-| `"9"` | `INTERNAL ERROR : … ORA-12899: value too large for column "OPTIMA"."T_VIP_PROFILE"."PREFERRED_KNOCKOFF_CODE" (actual: 2, maximum: 1) ORA-01403: no data found` |
+| Date | Sent | `o_code` | `o_message` | Created? |
+|---|---|---|---|---|
+| 2026-10-30 | Through the app: `P_CONFIRMATION_METHOD` `ML`, the form's car preferences | `"9"` | `INTERNAL ERROR : … ORA-12899: value too large for column "OPTIMA"."T_VIP_PROFILE"."PREFERRED_KNOCKOFF_CODE" (actual: 2, maximum: 1)` (invalid JSON, so the app showed "Something went wrong") | No |
+| 2026-11-03 | Probe: all 41 parameters, `P_CONFIRMATION_METHOD` `''`, `P_CAR_YEAR` `''`, `P_VIP_NUM` `''` | `"0"` | `Saved` | **No**: `IS_UNIQUE_EMAIL` still answers `Success`, `CHECK_LOGIN_CREDENTIALS` answers `User does not exists`, and `LOAD_PROFILE` returns a blank row |
 
-- **No profile was created:** `IS_UNIQUE_EMAIL` still answers `Success` for that e-mail.
-- **Which value is too long isn't known.** The 2-character values sent were `P_COUNTRY` `01`, `P_STATE` `NY` and `P_CONFIRMATION_METHOD` `ML`. The column is a preference, so `P_CONFIRMATION_METHOD` is the likely one, but the backend must say which parameter fills `PREFERRED_KNOCKOFF_CODE` and which 1-character codes it takes.
-- **The app showed "Something went wrong":** the body's message has unescaped quotes, so it isn't valid JSON and its `o_code` can't be read.
-- The create is sent with `retry: false`.
+- **The insert reports success without storing the profile** (backend issue), the same as `PROF.I.PROFILE_COLUMN_VALUE`.
+- The 2-character value behind `ORA-12899` is `P_CONFIRMATION_METHOD` `ML` or `P_CAR_YEAR` (both were blank on the second try). The backend must say which parameter fills `PREFERRED_KNOCKOFF_CODE` and its 1-character codes; the app still sends `ML` / `PHONE`.
+- The app reads the answer by `o_code` / `o_message`; `"9"` shows its own copy (`PROFILE_REJECTED`), never the Oracle text. Sent with `retry: false`.
 
-### PROF.U.PROFILE — update (not probed)
+### PROF.U.PROFILE — update (probed 2026-11-03)
 
-Never sent: it writes the whole profile of a real record, so no `o_code` answer has been seen. The app treats `"0"` as saved and anything else as refused (`TODO(schema-unverified)` in `assertProfileUpdated`). A missing `o_code` fails closed.
+Probed on the test login without changing it (every column compared before and after):
 
-The backend test client's sample (XYZCar Profile Module, "Dynamic SQL test 7") sends the same 37 parameters as the contract. It uses these value codes: `P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`, `P_PAYMENT_TYPE` `1`, `P_CONFIRMATION_METHOD` `''`, `P_SPECIAL_OFFER` / `P_SMOKING_CAR` / `P_CAR_PHONE` `N`, and `P_CAR_YEAR` `90`. `P_CROSS_STREET1` and `P_CROSS_STREET2` are **two cross streets** (`BROADWAY`, `8TH AVE`). The app puts Apt # / Mail stop in `P_CROSS_STREET2` because no apartment parameter exists, which needs the backend's answer.
+| Sent | `o_code` | `o_message` | Profile after |
+|---|---|---|---|
+| All 38 contract parameters, each as `LOAD_PROFILE` stored it | `"0"` | `Success` | Unchanged |
+| `P_LOGIN_ID` + the 7 personal parameters only | `"9"` | `INTERNAL ERROR : ORA-01843: not a valid month` | Unchanged |
+
+So the procedure **needs every parameter**; the app sends all of them (§7). Parameter → heading: `P_PASSWORD` `opassword`, the personal and address parameters their `o…` headings, `P_PAYMENT_TYPE` `opaymenttype`, `P_CC_TYPE` `occtype`, `P_CARD_HOLDER_NAME` `ocardholdername`, `P_CARD_NUMBER` `ocardnumber`, `P_VERIFY_CODE` `overifycode`, `P_CC_MONTH` / `P_CC_YEAR` `occmonth` / `occyear`, `P_ACCOUNT_REQ1–4` `oaccountreq1–4`, `P_CONFIRMATION_METHOD` `oconfirmationmethod`, `P_PREFERRED_FLEET` `opreferredfleet`, `P_CAR_YEAR` `ocaryear`, `P_CAR_PHONE` `ocarphone`, `P_SPECIAL_OFFER` `ospecialoffer`, `P_SMOKING_CAR` `osmokingcar`, `P_IVR_PIN` `oivrpin`.
+
+The backend test client's sample (XYZCar Profile Module) uses `P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`, `P_PAYMENT_TYPE` `1`, `P_CONFIRMATION_METHOD` `''`. Its `P_CROSS_STREET1` / `P_CROSS_STREET2` are two cross streets; the app puts Apt # / Mail stop in `P_CROSS_STREET2`, which needs the backend's answer.
+
+### PROF.U.PASSWORD — change (probed 2026-11-03)
+
+| Sent | `o_code` | `o_message` |
+|---|---|---|
+| Correct old password, new = the same password | `"0"` | `Changed` |
+| Wrong old password | `"1"` | `Invalid info` |
+
+The test login still signs in afterwards.
+
+### PROF.I / U / D.PROFILE_COLUMN_VALUE — contacts (probed 2026-11-03)
+
+Sent with `P_COLUMN_ID` 8 (e-mail) as a number, on the test login:
+
+| Code | `o_code` | `o_message` |
+|---|---|---|
+| `PROF.I.PROFILE_COLUMN_VALUE` | `"0"` | `Success`, **but nothing is stored**: neither `PROFILE_COLUMN_VALUES` nor `_BY_TYPE` lists it, and update / delete can't find it |
+| `PROF.U.PROFILE_COLUMN_VALUE` (value not found) | `"2"` | `Record does not Exist. Cannot update value.` |
+| `PROF.D.PROFILE_COLUMN_VALUE` (value not found) | `"2"` | `Record does not Exist. Cannot delete value.` |
+
+### PROF.S.CAR_INFO — car and driver (probed 2026-11-03)
+
+`P_CAR_NUM` `100`: headings `driver_1st, color, make, model, model_year, 'wc_tlc_sticker_num'` (6 = 6), one row (`""`, `BLACK`, `LINCOLN`, `TOWN CAR`, `2013`, `WC_TLC_STICKER_NUM`). Cars `1`, `1234`, `5001`: no headings, no rows. The last heading's name carries quotes and its value repeats the name (a placeholder), so it isn't read. `toCarInfo` reads the other five; no heading carries the driver number or car type. Was `"1"` / `ORA-01001` on 2026-10-30.
+
+### PROF.S.ACCOUNT_VIP_NUM (re-probed 2026-11-03)
+
+Headings `paccountnum, pvipnum`, one row, no `o_code`, whatever `P_ACCOUNT_NUM` / `P_VIP_NUM` hold. The test login answers its account and VIP number; an unknown login answers both blank, which the app reads as nothing on file (`toAccountOnFile`).
 
 ### Codes that fail on the gateway
 
 | Code | Answer |
 |---|---|
-| `PROF.S.CAR_INFO` | `"1"` `ORA-01001: invalid cursor` |
 | `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | `"9"` `ORA-01400: cannot insert NULL into …RESERVATION_COLUMN_VALUES…` — a select code that tries an INSERT; invalid JSON (unescaped quotes) |

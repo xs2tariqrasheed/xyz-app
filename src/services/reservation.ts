@@ -474,7 +474,6 @@ const C = {
   approvalDate: ['approval_date'],
   transactionDate: ['transaction_date'],
   transactionAmount: ['transaction_amount', 'transaction_amt'],
-  carNumber: ['car_num', 'car_number'],
   carColor: ['car_color'],
   carModel: ['car_model'],
   driverName: ['driver_name'],
@@ -643,7 +642,10 @@ export function toReservationRecord(response: GatewayResponse): ReservationRecor
       transactionAmount: pick(row, C.transactionAmount),
     },
     driver: {
-      carNumber: pick(row, C.carNumber),
+      // `PROF.S.CAR_INFO` is keyed by the real `oecarnum` heading (sent twice;
+      // `mapRows` keeps the later value). The rest of this record still awaits
+      // its own migration (guide §10).
+      carNumber: 'oecarnum' in row ? row.oecarnum.trim() : '',
       carColor: pick(row, C.carColor),
       carModel: pick(row, C.carModel),
       driverName: pick(row, C.driverName),
