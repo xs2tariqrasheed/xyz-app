@@ -33,12 +33,12 @@ Confirmation methods: **Online** (only when pickup within ~5 minutes of ordering
 
 ## 7. Gateway (real data)
 
-Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). **The app still reads the old heading names**, so these codes fail closed with the screen's load error until the module is remapped.
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). The app reads the new names since the same day.
 
 | Action code | When | Real answers |
 |---|---|---|
-| `PROF.S.LOAD_PROFILE` | `/preferences` opens; a new booking starts | 44 headings = 44 values. The preferences now have their own headings: `oconfirmationmethod` (empty for the test login), `ospecialoffer` (`N`), plus the legacy `opreferredfleet`, `ocaryear`, `ocarphone`, `osmokingcar`. Until the module reads them, `/preferences` shows "Your preferences are not available right now." and a new booking starts with "confirm by phone" unticked. |
-| `PROF.U.PROFILE` | Update | Not sent yet (it writes a real profile). With no loaded preferences the Update button can't be reached. |
+| `PROF.S.LOAD_PROFILE` | `/preferences` opens; a new booking starts | 44 headings = 44 values. The preferences now have their own headings: `oconfirmationmethod` (empty for the test login), `ospecialoffer` (`N`), plus the legacy `opreferredfleet`, `ocaryear`, `ocarphone`, `osmokingcar`. `PHONE` ticks "Phone", `Y` ticks the offers. Only when both are empty does `/preferences` show "Your preferences are not available right now." |
+| `PROF.U.PROFILE` | Update | Not sent yet (it writes a real profile). The Update button sends it, so it isn't pressed in tests. |
 
 Value codes from the backend test client:
 - `P_CONFIRMATION_METHOD`: `ML` (e-mail) in the `PROF.I.PROFILE`, `RES.I.RESERVATION` and `RES.U.RESERVATION` samples; `''` in the `PROF.U.PROFILE` sample. The app sends `ML` when "Phone" is unticked and `PHONE` when ticked (`TODO(schema-unverified)`).

@@ -94,7 +94,6 @@ export default function ReceiptsScreen() {
         title={RECEIPTS_MESSAGES.LIST_TITLE}
         rides={rides}
         range={{ from: searched.from, to: searched.to }}
-        now={today}
         loading={isLoading}
         searched
         failed={isError || refused}

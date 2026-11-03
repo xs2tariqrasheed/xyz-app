@@ -79,7 +79,7 @@ export default function RideSearchScreen() {
       {opener.error ? <Alert tone="danger" message={opener.error} /> : null}
 
       {tab === 'upcoming' ? (
-        <UpcomingRides key={generation} loginId={loginId} now={today} onAction={onAction} />
+        <UpcomingRides key={generation} loginId={loginId} onAction={onAction} />
       ) : (
         <RideHistory key={generation} loginId={loginId} today={today} earliest={earliest} onAction={onAction} />
       )}
@@ -117,11 +117,9 @@ function useRides(data: GatewayResponse | undefined, toList: (response: GatewayR
 
 function UpcomingRides({
   loginId,
-  now,
   onAction,
 }: {
   loginId: string;
-  now: Date;
   onAction: (action: RideAction, ride: Ride) => void;
 }) {
   const { data, isLoading, isError, refetch } = useFetchData(
@@ -137,7 +135,6 @@ function UpcomingRides({
     <RideResults
       title={RIDES_MESSAGES.UPCOMING_TITLE}
       rides={sorted}
-      now={now}
       loading={isLoading && !data}
       searched
       failed={isError || refused}
@@ -195,7 +192,6 @@ function RideHistory({
       <RideResults
         rides={shown}
         range={{ from: searched.from, to: searched.to }}
-        now={today}
         loading={isLoading}
         searched
         failed={isError || refused}

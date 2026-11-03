@@ -19,7 +19,7 @@ export class ContactsError extends Error {
 }
 
 /** The `PROF.S.PROFILE_COLUMN_VALUES` headings (docs/XYZ_INTEGRATION_GUIDE.md §10). */
-const CONTACT_HEADINGS = ['oColumnId', 'oColumnValue'] as const;
+const CONTACT_HEADINGS = ['ocolumnid', 'ocolumnvalue'] as const;
 
 /**
  * Rows → contacts, each field read by its heading. The same column space holds
@@ -28,8 +28,8 @@ const CONTACT_HEADINGS = ['oColumnId', 'oColumnValue'] as const;
  */
 export function toContacts(response: GatewayResponse): Contact[] {
   return mapRowsByHeadings(response, CONTACT_HEADINGS).flatMap((row) => {
-    const type = contactTypeByColumn(toInt(row.oColumnId, -1));
-    const stored = row.oColumnValue.trim();
+    const type = contactTypeByColumn(toInt(row.ocolumnid, -1));
+    const stored = row.ocolumnvalue.trim();
     if (!type || !stored) return [];
     return [{ id: `${type.columnId}:${stored}`, type: type.id, stored, ...fromStoredValue(type.id, stored) }];
   });

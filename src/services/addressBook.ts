@@ -30,34 +30,48 @@ function toCountryName(value: string): string {
 }
 
 /**
+ * `ophonenum` arrives as `<calling code>-<number>` (`212-` when only the code
+ * is stored), split into the form's two fields.
+ * TODO(schema-unverified): the format is read from the values, not a backend
+ * definition; confirm it against guide §10.
+ */
+function splitIntlPhone(value: string): { code: string; number: string } {
+  const [code, ...rest] = value.split('-');
+  const number = toDigits(rest.join(''), MAX_INTL_DIGITS);
+  return { code: number ? toDigits(code, 4) : '', number };
+}
+
+/**
  * `PROF.S.USER_ADDRESSES` rows → saved locations, each field read by its
- * heading. A location's id is its `address_id`, which the update and delete
- * codes take back as `P_PICKUP_COUNT`. Rows with no street and no city are
- * skipped, as the booking pickers do.
+ * heading. Rows with no street and no city are skipped, as the booking
+ * pickers do.
  */
 export function toSavedAddresses(rows: readonly UserAddressRow[]): SavedAddress[] {
   return rows.flatMap((row) => {
-    const street = row.street_name.trim();
-    const city = row.city.trim();
+    const street = row.ostreetname.trim();
+    const city = row.ocity.trim();
     if (!street && !city) return [];
+    const intl = splitIntlPhone(row.ophonenum);
 
     return [
       {
-        id: row.address_id.trim(),
-        country: toCountryName(row.country.trim()),
-        state: row.state.trim(),
+        // TODO(schema-unverified): assumed the update and delete codes take
+        // `oepickupcount` back as `P_PICKUP_COUNT`; confirm against guide §10.
+        id: row.oepickupcount.trim(),
+        country: toCountryName(row.ocountry.trim()),
+        state: row.ostate.trim(),
         city,
-        zip: row.zip_code.trim(),
-        building: row.building_num.trim(),
+        zip: row.ozip.trim(),
+        building: row.ostreetnum.trim(),
         street,
-        crossStreet: row.cross_street.trim(),
-        pickupPoint: row.pickup_point.trim(),
-        phoneUs: toDigits(row.phone_number_us, 10),
-        phoneUsExt: row.phone_ext_us.trim(),
-        phoneIntlCode: toDigits(row.dial_code_intl, 4),
-        phoneIntl: row.phone_number_intl.trim(),
-        phoneIntlExt: row.phone_ext_intl.trim(),
-        directions: row.directions.trim(),
+        crossStreet: row.ocrossstreet.trim(),
+        pickupPoint: row.opickuppoint.trim(),
+        phoneUs: toDigits(row.ophonenumus, 10),
+        phoneUsExt: row.oextus.trim(),
+        phoneIntlCode: intl.code,
+        phoneIntl: intl.number,
+        phoneIntlExt: intl.number ? row.oext.trim() : '',
+        directions: row.odirections.trim(),
       },
     ];
   });

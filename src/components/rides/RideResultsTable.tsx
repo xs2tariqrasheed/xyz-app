@@ -1,12 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { RECEIPTS_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
+import { RECEIPTS_MESSAGES, RESERVATION_INFO_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import {
   canAskAboutRide,
   canLeaveFeedback,
-  canModifyRide,
   hasReceipt,
-  PAYMENT_METHOD_LABELS,
+  paymentLabel,
   type Ride,
 } from '@/services/rides';
 import { colors, radii, shadowValues, space } from '@/theme';
@@ -17,7 +16,6 @@ import { RideStatusBadge } from './RideStatusBadge';
 
 export type RideResultsTableProps = {
   rides: readonly Ride[];
-  now: Date;
   onAction: RideActionHandler;
 };
 
@@ -40,7 +38,7 @@ const COLUMNS = {
 } as const;
 
 /** Desktop and tablet-landscape view of a result set. */
-export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps) {
+export function RideResultsTable({ rides, onAction }: RideResultsTableProps) {
   return (
     <View style={styles.table}>
       <View style={styles.headerRow}>
@@ -83,20 +81,22 @@ export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps
             <RideStatusBadge status={ride.status} />
           </View>
           <View style={[styles.cell, { flex: COLUMNS.payment }]}>
-            <Text style={styles.cellText}>{PAYMENT_METHOD_LABELS[ride.paymentMethod]}</Text>
+            <Text style={styles.cellText}>{paymentLabel(ride)}</Text>
           </View>
           <View style={[styles.cell, { flex: COLUMNS.voucher }]}>
-            {ride.voucherNo ? (
-              <RideActionLink label={ride.voucherNo} onPress={() => onAction('voucher', ride)} />
+            {ride.canPrintVoucher ? (
+              <RideActionLink label={RESERVATION_INFO_MESSAGES.VOUCHER} onPress={() => onAction('voucher', ride)} />
             ) : (
               <Text style={styles.cellEmpty}>—</Text>
             )}
           </View>
           <View style={[styles.cell, { flex: COLUMNS.actions }]}>
-            {canModifyRide(ride, now) ? (
+            {ride.canUpdate || ride.canCancel ? (
               <>
-                <RideActionLink label="Modify" onPress={() => onAction('modify', ride)} />
-                <RideActionLink label="Cancel" tone="danger" onPress={() => onAction('cancel', ride)} />
+                {ride.canUpdate ? <RideActionLink label="Modify" onPress={() => onAction('modify', ride)} /> : null}
+                {ride.canCancel ? (
+                  <RideActionLink label="Cancel" tone="danger" onPress={() => onAction('cancel', ride)} />
+                ) : null}
                 <RideActionLink label={RIDES_MESSAGES.ASK_SHORT} onPress={() => onAction('ask', ride)} />
               </>
             ) : canAskAboutRide(ride) ? (
@@ -111,7 +111,7 @@ export function RideResultsTable({ rides, now, onAction }: RideResultsTableProps
             {canLeaveFeedback(ride) ? (
               <RideActionLink label={RIDES_MESSAGES.FEEDBACK_SHORT} onPress={() => onAction('feedback', ride)} />
             ) : (
-              <Text style={styles.cellEmpty}>{ride.feedbackLeft ? RIDES_MESSAGES.FEEDBACK_SENT : '—'}</Text>
+              <Text style={styles.cellEmpty}>—</Text>
             )}
           </View>
         </View>

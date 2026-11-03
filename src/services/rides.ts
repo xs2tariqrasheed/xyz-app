@@ -1,6 +1,7 @@
 import { hasRateRideUrl } from '@/config/rateRide';
+import { COMMON_MESSAGES } from '@/constants/messages';
 import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
-import { isYes, parseGatewayDate } from '@/services/gatewayRows';
+import { parseGatewayDate } from '@/services/gatewayRows';
 import { addDays, endOfDay, pad2, startOfDay } from '@/utils/datetime';
 
 /**
@@ -51,10 +52,19 @@ export type Ride = {
   pickupLocation: string;
   destination: string;
   status: RideStatus;
-  paymentMethod: PaymentMethod;
-  voucherNo: string | null;
-  feedbackLeft: boolean;
+  /** `null`: a payment code the backend hasn't documented yet. */
+  paymentMethod: PaymentMethod | null;
+  /** The gateway's `oecanupdate` / `oecancancel` / `oecanprintvoucher` / `oeinvoiceposted` flags. */
+  canUpdate: boolean;
+  canCancel: boolean;
+  canPrintVoucher: boolean;
+  invoicePosted: boolean;
 };
+
+/** The payment label for a ride, or "not available" for an undocumented code. */
+export function paymentLabel(ride: Ride): string {
+  return ride.paymentMethod ? PAYMENT_METHOD_LABELS[ride.paymentMethod] : COMMON_MESSAGES.NOT_AVAILABLE;
+}
 
 export type RideSearchFilters = {
   from: Date;
@@ -62,17 +72,12 @@ export type RideSearchFilters = {
   paymentMethod: PaymentMethodFilter;
 };
 
-/** A ride can still be changed or called off while it is only booked. */
-export function canModifyRide(ride: Ride, now: Date): boolean {
-  return ride.status === 'confirmed' && ride.pickupAt.getTime() > now.getTime();
-}
-
 /**
  * A finished ride links to the live rate-a-ride form (guide 18's Feedback
- * column), unless the gateway says feedback was already left.
+ * column). Neither order code says whether feedback was already left.
  */
 export function canLeaveFeedback(ride: Ride): boolean {
-  return ride.status === 'completed' && !ride.feedbackLeft && hasRateRideUrl;
+  return ride.status === 'completed' && hasRateRideUrl;
 }
 
 /** Questions go to dispatch about a ride that is still open (guide 21), not one that is over. */
@@ -80,9 +85,9 @@ export function canAskAboutRide(ride: Ride): boolean {
   return ride.status === 'confirmed' || ride.status === 'in-progress';
 }
 
-/** Every completed (billed) ride has a receipt (guide 23). */
+/** A ride has a receipt once its invoice is posted (`oeinvoiceposted`). */
 export function hasReceipt(ride: Ride): boolean {
-  return ride.status === 'completed';
+  return ride.invoicePosted;
 }
 
 /** The rides a receipt can be opened for, in list order. */
@@ -174,65 +179,116 @@ export function updatableOrdersJData(loginId: string): GatewayJData {
   return { P_LOGIN_ID: loginId };
 }
 
-/** The headings both order codes send and the app reads (guide §10). */
-const RIDE_HEADINGS = [
-  'reservation_num',
-  'passenger_name',
-  'pickup_date',
-  'pickup_time',
-  'pickup_location',
-  'destination',
-  'status',
-  'payment_method',
+/**
+ * The headings the app reads; `RES.S.ALL_ORDERS` and `RES.S.UPDATABLE_ORDERS`
+ * send the same 112 (guide §10).
+ */
+const ORDER_HEADINGS = [
+  'oreservationnumber',
+  'ofirstname',
+  'olastname',
+  'oreservationdate',
+  'oreservationtime',
+  'opustreetnumber',
+  'opustreetname',
+  'opucity',
+  'opustate',
+  'opuairportname',
+  'opulandmarkname',
+  'odostreetnumber',
+  'odostreetname',
+  'odocity',
+  'odostate',
+  'odoairportname',
+  'odolandmarkname',
+  'opaymentmethod',
+  'oecallstatusdesc',
+  'oecurrentstatusdesc',
+  'oecanupdate',
+  'oecancancel',
+  'oecanprintvoucher',
+  'oeinvoiceposted',
 ] as const;
 
-/** `RES.S.ALL_ORDERS` adds the voucher and feedback headings. */
-const ALL_ORDERS_HEADINGS = [...RIDE_HEADINGS, 'voucher_num', 'feedback_left'] as const;
+type OrderRow = Record<(typeof ORDER_HEADINGS)[number], string>;
 
-/** `RES.S.UPDATABLE_ORDERS` ends in `car_type, number_of_passengers` instead, which no screen shows. */
-const UPDATABLE_ORDERS_HEADINGS = RIDE_HEADINGS;
-
-type RideRow = Record<(typeof RIDE_HEADINGS)[number], string>;
-type OrderRow = Record<(typeof ALL_ORDERS_HEADINGS)[number], string>;
-
-/** Status words, as the server spells them, onto the four the app shows. */
-export function toRideStatus(value: string): RideStatus {
-  const text = value.trim().toLowerCase();
-  if (/cancel/.test(text)) return 'canceled';
-  if (/progress|dispatch|on.?board|en.?route|in.?car|picked/.test(text)) return 'in-progress';
-  if (/complete|billed|closed|done|dropped/.test(text)) return 'completed';
+/**
+ * The reservation's call status (`oecallstatusdesc`: Open, Confirmed,
+ * Canceled) with the trip's own status (`oecurrentstatusdesc`, e.g. UnLoaded)
+ * onto the four the app shows.
+ * TODO(schema-unverified): the status words are read from the values, not a
+ * backend list; confirm them against guide §10.
+ */
+export function toRideStatus(callStatus: string, tripStatus: string): RideStatus {
+  if (/cancel/i.test(callStatus)) return 'canceled';
+  const trip = tripStatus.trim();
+  if (/^unloaded$/i.test(trip)) return 'completed';
+  if (trip) return 'in-progress';
   return 'confirmed';
 }
 
-/** Payment words onto the four filterable methods; unknown reads as the account. */
-export function toPaymentMethod(value: string): PaymentMethod {
-  const text = value.trim().toLowerCase();
-  if (/voucher/.test(text) || text === 'v') return 'voucher';
-  if (/card|^cc$|^c$|visa|master|amex|discover/.test(text)) return 'credit-card';
-  if (/cash/.test(text)) return 'cash';
-  return 'account';
+/**
+ * `opaymentmethod` codes. "1" is the corporate account (`RES.S.BILLING_METHOD`
+ * answers "1" = Corporate Account); other codes (e.g. "3") aren't documented
+ * yet, so they read as `null`.
+ */
+export function toPaymentMethod(code: string): PaymentMethod | null {
+  return code.trim() === '1' ? 'account' : null;
+}
+
+/** `Y` flags (`oecanupdate`, …). */
+function isFlagSet(value: string): boolean {
+  return value.trim().toUpperCase() === 'Y';
 }
 
 /**
- * One row as a ride, or `null` when it cannot be listed. Each field is read
- * from its own heading, as paired; today's rows are shifted (`pickup_date`
- * holds a name), so none of them parses into a ride (guide §10).
+ * A stop as one line: the airport or landmark when there is one, otherwise
+ * the street address with its city and state; "not available" when empty.
  */
-function toRide(row: RideRow, extra: { voucherNo: string | null; feedbackLeft: boolean }): Ride | null {
-  const id = row.reservation_num.trim();
-  const pickupAt = parseGatewayDate(row.pickup_date, row.pickup_time);
+function stopLabel(parts: { number: string; street: string; city: string; state: string; airport: string; landmark: string }): string {
+  const place = parts.airport.trim() || parts.landmark.trim();
+  const street = [parts.number.trim(), parts.street.trim()].filter(Boolean).join(' ');
+  const locality = [parts.city.trim(), parts.state.trim()].filter(Boolean).join(', ');
+  const label = place || [street, locality].filter(Boolean).join(', ');
+  return label || COMMON_MESSAGES.NOT_AVAILABLE;
+}
+
+/** One row as a ride, or `null` when it cannot be listed. Each field is read from its own heading. */
+function toRide(row: OrderRow): Ride | null {
+  const id = row.oreservationnumber.trim();
+  const pickupAt = parseGatewayDate(row.oreservationdate, row.oreservationtime);
   // A row with no ride number or no date cannot be listed or opened.
   if (!id || !pickupAt) return null;
 
   return {
     id,
-    passengerName: row.passenger_name.trim(),
+    passengerName:
+      [row.ofirstname.trim(), row.olastname.trim()].filter(Boolean).join(' ') || COMMON_MESSAGES.NOT_AVAILABLE,
     pickupAt,
-    pickupLocation: row.pickup_location.trim(),
-    destination: row.destination.trim(),
-    status: toRideStatus(row.status),
-    paymentMethod: toPaymentMethod(row.payment_method),
-    ...extra,
+    pickupLocation: stopLabel({
+      number: row.opustreetnumber,
+      street: row.opustreetname,
+      city: row.opucity,
+      state: row.opustate,
+      airport: row.opuairportname,
+      landmark: row.opulandmarkname,
+    }),
+    destination: stopLabel({
+      number: row.odostreetnumber,
+      street: row.odostreetname,
+      city: row.odocity,
+      state: row.odostate,
+      airport: row.odoairportname,
+      landmark: row.odolandmarkname,
+    }),
+    status: toRideStatus(row.oecallstatusdesc, row.oecurrentstatusdesc),
+    paymentMethod: toPaymentMethod(row.opaymentmethod),
+    canUpdate: isFlagSet(row.oecanupdate),
+    canCancel: isFlagSet(row.oecancancel),
+    canPrintVoucher: isFlagSet(row.oecanprintvoucher),
+    // TODO(schema-unverified): assumed `oeinvoiceposted` "Y" means the
+    // receipt can be opened; confirm against guide §10.
+    invoicePosted: isFlagSet(row.oeinvoiceposted),
   };
 }
 
@@ -250,21 +306,12 @@ function listRides(rides: (Ride | null)[]): Ride[] {
 
 /** `RES.S.ALL_ORDERS` rows → rides. Throws `GatewayError('parsing')` when a heading is missing. */
 export function toRides(response: GatewayResponse): Ride[] {
-  const rows: OrderRow[] = mapRowsByHeadings(response, ALL_ORDERS_HEADINGS);
-  return listRides(
-    rows.map((row) =>
-      toRide(row, { voucherNo: row.voucher_num.trim() || null, feedbackLeft: isYes(row.feedback_left) }),
-    ),
-  );
+  return listRides(mapRowsByHeadings(response, ORDER_HEADINGS).map(toRide));
 }
 
-/**
- * `RES.S.UPDATABLE_ORDERS` rows → rides. It has no voucher or feedback
- * heading, so those stay empty. Throws like {@link toRides}.
- */
+/** `RES.S.UPDATABLE_ORDERS` rows → rides; the same headings as {@link toRides}. */
 export function toUpdatableRides(response: GatewayResponse): Ride[] {
-  const rows: RideRow[] = mapRowsByHeadings(response, UPDATABLE_ORDERS_HEADINGS);
-  return listRides(rows.map((row) => toRide(row, { voucherNo: null, feedbackLeft: false })));
+  return listRides(mapRowsByHeadings(response, ORDER_HEADINGS).map(toRide));
 }
 
 /** The list narrowed to the form's dates and payment filter — the contract has no payment parameter. */

@@ -1,14 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { RECEIPTS_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
-import {
-  canAskAboutRide,
-  canLeaveFeedback,
-  canModifyRide,
-  hasReceipt,
-  PAYMENT_METHOD_LABELS,
-  type Ride,
-} from '@/services/rides';
+import { RECEIPTS_MESSAGES, RESERVATION_INFO_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
+import { canAskAboutRide, canLeaveFeedback, hasReceipt, paymentLabel, type Ride } from '@/services/rides';
 import { colors, radii, shadowValues, space } from '@/theme';
 import { formatClockTime, formatSlashDate } from '@/utils/datetime';
 
@@ -18,13 +11,13 @@ import { RideStatusBadge } from './RideStatusBadge';
 
 export type RideCardProps = {
   ride: Ride;
-  now: Date;
   onAction: RideActionHandler;
 };
 
 /** One ride on a phone: the same ten fields, stacked instead of columned. */
-export function RideCard({ ride, now, onAction }: RideCardProps) {
-  const modifiable = canModifyRide(ride, now);
+export function RideCard({ ride, onAction }: RideCardProps) {
+  const modifiable = ride.canUpdate;
+  const cancelable = ride.canCancel;
   const askable = canAskAboutRide(ride);
   const feedback = canLeaveFeedback(ride);
   const receipt = hasReceipt(ride);
@@ -47,28 +40,22 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
       <RideRoute pickup={ride.pickupLocation} destination={ride.destination} />
 
       <View style={styles.meta}>
-        <Meta label="Payment" value={PAYMENT_METHOD_LABELS[ride.paymentMethod]} />
+        <Meta label="Payment" value={paymentLabel(ride)} />
         <View style={styles.metaItem}>
           <Text style={styles.metaLabel}>Voucher</Text>
-          {ride.voucherNo ? (
-            <RideActionLink label={ride.voucherNo} onPress={() => onAction('voucher', ride)} />
+          {ride.canPrintVoucher ? (
+            <RideActionLink label={RESERVATION_INFO_MESSAGES.VOUCHER} onPress={() => onAction('voucher', ride)} />
           ) : (
             <Text style={styles.metaValue}>—</Text>
           )}
         </View>
       </View>
 
-      {modifiable || askable || receipt || feedback ? (
+      {modifiable || cancelable || askable || receipt || feedback ? (
         <View style={styles.actions}>
-          {modifiable ? (
-            <>
-              <RideActionLink label="Modify ride" onPress={() => onAction('modify', ride)} />
-              <RideActionLink
-                label="Cancel ride"
-                tone="danger"
-                onPress={() => onAction('cancel', ride)}
-              />
-            </>
+          {modifiable ? <RideActionLink label="Modify ride" onPress={() => onAction('modify', ride)} /> : null}
+          {cancelable ? (
+            <RideActionLink label="Cancel ride" tone="danger" onPress={() => onAction('cancel', ride)} />
           ) : null}
           {receipt ? (
             <RideActionLink label={RECEIPTS_MESSAGES.VIEW} onPress={() => onAction('receipt', ride)} />

@@ -1,28 +1,28 @@
-import type { AddressType, MailingAddress } from '@/components/account/mailingAddress';
+import { type AddressType, EMPTY_MAILING_ADDRESS, type MailingAddress } from '@/components/account/mailingAddress';
 import type { PreferencesValue } from '@/components/preferences/preferences';
 import type { PersonalInfoValue } from '@/components/profile/PersonalInfoSection';
 import type { PhoneValue } from '@/components/ui/PhoneField';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
 import { PROFILE_MESSAGES } from '@/constants/messages';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
-import { digitsOnly } from '@/utils/contact';
+import { UNITED_STATES } from '@/data/regions';
+import { digitsOnly, formatUsPhone } from '@/utils/contact';
+import { MONTHS_SHORT } from '@/utils/datetime';
 import { COUNTRIES, findCountryByDial, toIntlDigits } from '@/utils/phone';
 
 /**
  * The signed-in customer's profile, mapped from a `PROF.S.LOAD_PROFILE` row.
- * Only the columns its `JMetaData.Headings` name are read, each value paired
- * with the heading at the same position (`mapRowsByHeadings`); values past the
- * last heading are ignored, and a heading that stops coming fails the load
- * (docs/XYZ_INTEGRATION_GUIDE.md §10). Today's pairing is shifted (`first_name`
- * carries the password); it is shown as paired until the gateway is fixed.
+ * Each field is read by the one heading the code sends (`mapRowsByHeadings`),
+ * and a heading that stops coming fails the load (docs/XYZ_INTEGRATION_GUIDE.md
+ * §10). `opassword`, `ocardnumber` and `overifycode` are never read.
  * Field names are renamed here so screens never read raw gateway columns.
  */
 
 export type CustomerProfile = {
   firstName: string;
   lastName: string;
-  /** The login before this one, when the server knows it. */
-  lastLoginAt: Date | null;
+  /** Day of the login before this one, when the server knows it (no time is sent). */
+  lastLoginOn: Date | null;
   /** What the Profile screen's Personal Info panel edits. */
   personalInfo: PersonalInfoValue;
   /** Contact e-mail on file; '' when the profile has none. */
@@ -30,15 +30,14 @@ export type CustomerProfile = {
   /** Corporate account the customer books against; '' for card-only profiles. */
   accountNumber: string;
   /**
-   * What the Preferences screen edits. `null`: the app doesn't read the
-   * preference headings `LOAD_PROFILE` sends since 2026-11-03 yet
-   * (docs/XYZ_INTEGRATION_GUIDE.md §10), so a new booking starts from the
-   * form's own default.
+   * What the Preferences screen edits. `null` when both preference values are
+   * empty, so the screen shows "not available" and a new booking starts from
+   * the form's own default.
    */
   preferences: PreferencesValue | null;
   /**
-   * What the Update Mailing Address screen edits. `null`: the app doesn't read
-   * the address headings `LOAD_PROFILE` sends since 2026-11-03 yet (guide §10).
+   * What the Update Mailing Address screen edits. `null` when every address
+   * value is empty, so the screen shows "not available".
    */
   mailingAddress: MailingAddress | null;
 };
@@ -84,21 +83,31 @@ export class ProfileError extends Error {
   }
 }
 
-/** The `PROF.S.LOAD_PROFILE` headings the app reads, one per field. */
+/** The `PROF.S.LOAD_PROFILE` headings the app reads, one per field (guide §10). */
 const COLUMNS = {
-  firstName: 'first_name',
-  lastName: 'last_name',
-  usNumber: 'phone_number_us',
-  usExt: 'phone_ext_us',
-  intlDial: 'dial_code_intl',
-  intlNumber: 'phone_number_intl',
-  intlExt: 'phone_ext_intl',
-  faxDial: 'fax_dial_code',
-  faxNumber: 'fax_number',
-  faxExt: 'fax_ext',
-  lastLogin: 'last_login',
-  email: 'email',
-  accountNumber: 'account_number',
+  firstName: 'ofirstname',
+  lastName: 'olastname',
+  usNumber: 'ophonenumberus',
+  usExt: 'ophoneextus',
+  intlNumber: 'ophonenumber',
+  intlExt: 'ophoneext',
+  fax: 'ofax',
+  lastLogin: 'oelastlogindate',
+  email: 'oeemailaddress',
+  accountNumber: 'oaccountnum',
+  country: 'ocountry',
+  state: 'ostate',
+  city: 'ocity',
+  zip: 'ozip',
+  buildingNumber: 'obuildingnum',
+  streetName: 'ostreetname',
+  crossStreet: 'ocrossstreet1',
+  unit: 'ocrossstreet2',
+  addressPhoneUs: 'oaddressphoneus',
+  addressPhone: 'oaddressphone',
+  addressType: 'oaddresstype',
+  confirmationMethod: 'oconfirmationmethod',
+  specialOffer: 'ospecialoffer',
 } as const;
 
 /** Every `LOAD_PROFILE` heading the app reads; the load fails closed without one. */
@@ -121,19 +130,76 @@ export function toCustomerProfile(rows: ProfileRow[] | undefined): CustomerProfi
   return {
     firstName,
     lastName,
-    lastLoginAt: parseGatewayDateTime(row[COLUMNS.lastLogin]),
+    lastLoginOn: parseDayMonthYear(text(row, COLUMNS.lastLogin)),
     personalInfo: {
       firstName,
       lastName,
       usPhone: { country: null, number: digits(row, COLUMNS.usNumber), ext: digits(row, COLUMNS.usExt) },
-      intlPhone: intlPhone(row, COLUMNS.intlDial, COLUMNS.intlNumber, COLUMNS.intlExt),
-      fax: intlPhone(row, COLUMNS.faxDial, COLUMNS.faxNumber, COLUMNS.faxExt),
+      intlPhone: intlPhone(text(row, COLUMNS.intlNumber), digits(row, COLUMNS.intlExt)),
+      fax: intlPhone(text(row, COLUMNS.fax), ''),
     },
     email: text(row, COLUMNS.email),
     accountNumber: text(row, COLUMNS.accountNumber),
-    preferences: null,
-    mailingAddress: null,
+    preferences: toPreferences(row),
+    mailingAddress: toMailingAddress(row),
   };
+}
+
+function toPreferences(row: ProfileRow): PreferencesValue | null {
+  const confirmation = text(row, COLUMNS.confirmationMethod);
+  const specialOffer = text(row, COLUMNS.specialOffer);
+  if (!confirmation && !specialOffer) return null;
+  return {
+    confirmByPhone: confirmation === CONFIRMATION_CODES.phone,
+    subscribeSpecialOffers: specialOffer === SPECIAL_OFFER_CODES.yes,
+  };
+}
+
+/** Address columns; when every one is empty the profile carries no address. */
+const ADDRESS_COLUMNS = [
+  COLUMNS.state,
+  COLUMNS.city,
+  COLUMNS.zip,
+  COLUMNS.buildingNumber,
+  COLUMNS.streetName,
+  COLUMNS.crossStreet,
+  COLUMNS.unit,
+  COLUMNS.addressPhoneUs,
+  COLUMNS.addressPhone,
+] as const;
+
+function toMailingAddress(row: ProfileRow): MailingAddress | null {
+  if (ADDRESS_COLUMNS.every((column) => !text(row, column))) return null;
+  const intl = splitDialNumber(text(row, COLUMNS.addressPhone));
+  const type = text(row, COLUMNS.addressType).toUpperCase();
+  return {
+    country: countryName(text(row, COLUMNS.country)),
+    state: text(row, COLUMNS.state),
+    city: text(row, COLUMNS.city),
+    postalCode: text(row, COLUMNS.zip),
+    buildingNumber: text(row, COLUMNS.buildingNumber),
+    streetName: text(row, COLUMNS.streetName),
+    crossStreet: text(row, COLUMNS.crossStreet),
+    unit: text(row, COLUMNS.unit),
+    phone: formatUsPhone(digits(row, COLUMNS.addressPhoneUs)),
+    intlDialCode: intl.number ? intl.dial : '',
+    intlPhone: intl.number,
+    // An empty `oaddresstype` keeps the form's legacy default.
+    addressType:
+      type === ADDRESS_TYPE_CODES.home
+        ? 'home'
+        : type === ADDRESS_TYPE_CODES.office
+          ? 'office'
+          : EMPTY_MAILING_ADDRESS.addressType,
+  };
+}
+
+/** The address form's country name for a `ocountry` code ("01" = US). */
+function countryName(code: string): string {
+  if (!code || code === US_COUNTRY_CODE) return UNITED_STATES;
+  // TODO(schema-unverified): only the US code ("01") is in a backend sample;
+  // confirm the other countries' codes with the backend and remove this comment.
+  return COUNTRIES.find((country) => country.code === code.toUpperCase())?.name ?? code;
 }
 
 /** The `P_COUNTRY` code for a country name from the address form. */
@@ -180,19 +246,18 @@ function loadedProfileParams(row: ProfileRow): GatewayJData {
   return {
     P_FIRST_NAME: text(row, COLUMNS.firstName),
     P_LAST_NAME: text(row, COLUMNS.lastName),
-    P_PHONE_NUMBER: joinedDigits(row, COLUMNS.intlDial, COLUMNS.intlNumber),
+    P_PHONE_NUMBER: joinedDigits(text(row, COLUMNS.intlNumber)),
     P_PHONE_EXT: digits(row, COLUMNS.intlExt),
     P_PHONE_NUMBER_US: digits(row, COLUMNS.usNumber),
     P_PHONE_EXT_US: digits(row, COLUMNS.usExt),
-    // The contract has no fax extension parameter.
-    P_FAX: joinedDigits(row, COLUMNS.faxDial, COLUMNS.faxNumber),
+    P_FAX: joinedDigits(text(row, COLUMNS.fax)),
   };
 }
 
 /** Calling code + number as one run of digits, or '' when there is no number. */
-function joinedDigits(row: ProfileRow, dialColumn: ProfileColumn, numberColumn: ProfileColumn): string {
-  const number = digits(row, numberColumn);
-  return number ? `${digits(row, dialColumn)}${number}` : '';
+function joinedDigits(value: string): string {
+  const { dial, number } = splitDialNumber(value);
+  return number ? `${dial}${number}` : '';
 }
 
 /** The parameters the Personal Info panel edits. */
@@ -230,7 +295,7 @@ function loadedProfile(row: ProfileRow): CustomerProfile {
 /**
  * `JData` for {@link ACTION_CODES.UPDATE_PROFILE} from the Personal Info
  * panel: the loaded profile, with only the fields the customer changed
- * replaced. The session holds no password; `P_PASSWORD` goes back as loaded.
+ * replaced. `P_PASSWORD` is not sent.
  */
 export function updateProfileJData(
   loginId: string,
@@ -315,35 +380,30 @@ function digits(row: ProfileRow, column: ProfileColumn): string {
   return text(row, column).replace(/\D/g, '');
 }
 
-/** A calling code with no number is noise, so the country is kept only alongside one. */
-function intlPhone(
-  row: ProfileRow,
-  dialColumn: ProfileColumn,
-  numberColumn: ProfileColumn,
-  extColumn: ProfileColumn,
-): PhoneValue {
-  const number = digits(row, numberColumn);
-  if (!number) return { country: null, number: '', ext: '' };
-  return {
-    country: findCountryByDial(text(row, dialColumn))?.code ?? null,
-    number,
-    ext: digits(row, extColumn),
-  };
+/**
+ * `<calling code>-<number>`, as `ophonenumber`, `ofax` and `oaddressphone`
+ * arrive (`212-` when only the code is stored), split into digits.
+ * TODO(schema-unverified): the format is read from the values, not a backend
+ * definition; confirm it against guide §10.
+ */
+function splitDialNumber(value: string): { dial: string; number: string } {
+  const [dial, ...rest] = value.split('-');
+  return { dial: digitsOnly(dial), number: digitsOnly(rest.join('')) };
 }
 
-/**
- * "10/15/2026 6:45:35 AM" or "10/11/2026 09:20 AM" (MM/DD/YYYY hh:mm[:ss]
- * AM|PM, local time; guide 06) → Date. `last_login` has never carried a value
- * yet (guide §10), so the format is the old site's.
- */
-const DATE_TIME = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i;
+/** A calling code with no number is noise, so the country is kept only alongside one. */
+function intlPhone(value: string, ext: string): PhoneValue {
+  const { dial, number } = splitDialNumber(value);
+  if (!number) return { country: null, number: '', ext: '' };
+  return { country: findCountryByDial(dial)?.code ?? null, number, ext };
+}
 
-function parseGatewayDateTime(value: string): Date | null {
-  const match = value.trim().match(DATE_TIME);
+/** "10-SEP-26" (DD-MON-YY, local day; guide §10) → Date, or `null` when unreadable. */
+function parseDayMonthYear(value: string): Date | null {
+  const match = /^(\d{1,2})-([A-Z]{3})-(\d{2})$/i.exec(value);
   if (!match) return null;
-
-  const [, month, day, year, hour, minute, second, meridiem] = match;
-  const hours = (Number(hour) % 12) + (meridiem.toUpperCase() === 'PM' ? 12 : 0);
-  const date = new Date(Number(year), Number(month) - 1, Number(day), hours, Number(minute), Number(second ?? 0));
+  const month = MONTHS_SHORT.findIndex((name) => name.toUpperCase() === match[2].toUpperCase());
+  if (month < 0) return null;
+  const date = new Date(2000 + Number(match[3]), month, Number(match[1]));
   return Number.isNaN(date.getTime()) ? null : date;
 }

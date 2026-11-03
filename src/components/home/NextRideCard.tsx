@@ -5,7 +5,7 @@ import { RideRoute } from '@/components/rides/RideRoute';
 import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
 import { Button } from '@/components/ui/Button';
 import { HOME_MESSAGES } from '@/constants/messages';
-import { PAYMENT_METHOD_LABELS, type Ride } from '@/services/rides';
+import { paymentLabel, type Ride } from '@/services/rides';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 import { formatClockTime, formatDayDistance, formatFullDate } from '@/utils/datetime';
 
@@ -72,8 +72,7 @@ export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) 
 
         <View style={styles.meta}>
           <Meta label={HOME_MESSAGES.RIDE_NO} value={ride.id} />
-          <Meta label={HOME_MESSAGES.PAYMENT} value={PAYMENT_METHOD_LABELS[ride.paymentMethod]} />
-          {ride.voucherNo ? <Meta label={HOME_MESSAGES.VOUCHER} value={ride.voucherNo} /> : null}
+          <Meta label={HOME_MESSAGES.PAYMENT} value={paymentLabel(ride)} />
         </View>
 
         <View style={[styles.actions, roomy ? styles.actionsWide : null]}>

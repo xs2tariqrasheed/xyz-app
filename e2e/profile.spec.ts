@@ -11,12 +11,9 @@ import { fillLoginForm } from './support/login';
  * Personal Info, Update Mailing Address and Preferences against the real
  * gateway (reverse-engineer-implemented/guide/07, 08, 09; docs/XYZ_INTEGRATION_GUIDE.md §10).
  *
- * `PROF.S.LOAD_PROFILE` is read for real. `PROF.U.PROFILE` is intercepted
- * and answered here, so it never reaches the gateway.
- *
- * The gateway renamed `LOAD_PROFILE`'s headings on 2026-11-03 (guide §10):
- * this spec still reads the old ones and is rewritten with the profile remap.
- * Profile values are compared without being printed.
+ * `PROF.S.LOAD_PROFILE` is read for real, by its headings (guide §10).
+ * `PROF.U.PROFILE` is intercepted and answered here, so it never reaches the
+ * gateway. Profile values are compared without being printed.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -34,9 +31,9 @@ test('shows Personal Info as LOAD_PROFILE pairs it, validates, and sends the upd
   const usPhone = page.getByRole('textbox', { name: PROFILE_MESSAGES.US_PHONE_LABEL, exact: true });
   await expect(lastName).toBeVisible();
 
-  // Each field shows what its own heading pairs with (shifted today, §10).
-  expect((await firstName.inputValue()) === profile.first_name.trim(), 'first name = first_name').toBe(true);
-  expect((await lastName.inputValue()) === profile.last_name.trim(), 'last name = last_name').toBe(true);
+  // Each field shows its own heading's value.
+  expect((await firstName.inputValue()) === profile.ofirstname.trim(), 'first name = ofirstname').toBe(true);
+  expect((await lastName.inputValue()) === profile.olastname.trim(), 'last name = olastname').toBe(true);
 
   // Module 07 validation: an empty last name is refused on the client.
   await lastName.fill('');
@@ -58,22 +55,28 @@ test('shows Personal Info as LOAD_PROFILE pairs it, validates, and sends the upd
   expect(updates).toHaveLength(1);
 });
 
-test('Update Mailing Address shows "not available" without address headings', async ({ page }) => {
+test('Update Mailing Address shows the address LOAD_PROFILE sends', async ({ page }) => {
   const updates = await interceptProfileUpdates(page);
-  await logIn(page);
+  const profile = await logIn(page);
 
   await page.goto('/mailing-address');
-  await expect(page.getByText(MAILING_ADDRESS_MESSAGES.UNAVAILABLE)).toBeVisible();
+  const city = page.getByRole('textbox', { name: MAILING_ADDRESS_MESSAGES.CITY_LABEL, exact: true });
+  await expect(city).toBeVisible();
+  expect((await city.inputValue()) === profile.ocity.trim(), 'city = ocity').toBe(true);
+  await expect(page.getByText(MAILING_ADDRESS_MESSAGES.UNAVAILABLE)).toHaveCount(0);
   expect(updates).toHaveLength(0);
 });
 
-test('Preferences shows "not available" without preference headings', async ({ page }) => {
+test('Preferences shows the settings LOAD_PROFILE sends', async ({ page }) => {
   const updates = await interceptProfileUpdates(page);
-  await logIn(page);
+  const profile = await logIn(page);
 
   await page.goto('/preferences');
-  await expect(page.getByText(PREFERENCES_MESSAGES.UNAVAILABLE)).toBeVisible();
-  await expect(page.getByRole('button', { name: PREFERENCES_MESSAGES.UPDATE, exact: true })).toHaveCount(0);
+  const phone = page.getByRole('checkbox', { name: PREFERENCES_MESSAGES.CONFIRM_BY_PHONE });
+  const offers = page.getByRole('checkbox', { name: PREFERENCES_MESSAGES.SPECIAL_OFFERS_OPTION });
+  await expect(offers).toBeVisible();
+  expect(await phone.isChecked()).toBe(profile.oconfirmationmethod.trim() === 'PHONE');
+  expect(await offers.isChecked()).toBe(profile.ospecialoffer.trim() === 'Y');
   expect(updates).toHaveLength(0);
 });
 

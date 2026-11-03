@@ -32,7 +32,7 @@ import {
   toSuggestion,
 } from '@/services/places';
 import { CONFIRMATION_CODES } from '@/services/profile';
-import { type PaymentMethod, type RideStatus, toPaymentMethod, toRideStatus } from '@/services/rides';
+import type { PaymentMethod, RideStatus } from '@/services/rides';
 import { IDLE_ZONE } from '@/services/zones';
 import { addDays, nextSlot, pad2, startOfDay, type TimeValue } from '@/utils/datetime';
 import { digitsOnly } from '@/utils/payment';
@@ -570,11 +570,31 @@ function toPickupOption(value: string): AirportPickupOption | '' {
   return code === 'A' || code === 'B' || code === 'C' || code === 'D' ? code : '';
 }
 
+/**
+ * `RES.S.LOAD_RESERVATION` is not migrated to its real headings yet (guide
+ * §10), so its status and payment are still read as words.
+ */
+function statusFromWords(value: string): RideStatus {
+  const text = value.trim().toLowerCase();
+  if (/cancel/.test(text)) return 'canceled';
+  if (/progress|dispatch|on.?board|en.?route|in.?car|picked/.test(text)) return 'in-progress';
+  if (/complete|billed|closed|done|dropped/.test(text)) return 'completed';
+  return 'confirmed';
+}
+
+function paymentFromWords(value: string): PaymentMethod {
+  const text = value.trim().toLowerCase();
+  if (/voucher/.test(text) || text === 'v') return 'voucher';
+  if (/card|^cc$|^c$|visa|master|amex|discover/.test(text)) return 'credit-card';
+  if (/cash/.test(text)) return 'cash';
+  return 'account';
+}
+
 /** Which wizard method a stored payment reads as. */
 function toBillingMethod(paymentText: string): BillingMethodId {
   const code = paymentText.trim().toUpperCase();
   if (code === PAYMENT_METHOD_CODES['corporate-card']) return 'corporate-card';
-  const method = toPaymentMethod(paymentText);
+  const method = paymentFromWords(paymentText);
   return method === 'credit-card' ? 'card' : 'corporate';
 }
 
@@ -597,7 +617,7 @@ export function toReservationRecord(response: GatewayResponse): ReservationRecor
   return {
     reservationNumber: pick(row, C.reservationNumber),
     voucherNumber: pick(row, C.voucherNumber),
-    status: toRideStatus(pick(row, C.status)),
+    status: statusFromWords(pick(row, C.status)),
     statusLabel: pick(row, C.status),
     firstName: pick(row, C.firstName),
     lastName: pick(row, C.lastName),
@@ -608,7 +628,7 @@ export function toReservationRecord(response: GatewayResponse): ReservationRecor
     destination: toStop(row, 'do'),
     billing: {
       method: toBillingMethod(paymentLabel),
-      paymentMethod: toPaymentMethod(paymentLabel),
+      paymentMethod: paymentFromWords(paymentLabel),
       paymentLabel,
       accountNumber: pick(row, C.accountNumber),
       vipNumber: pick(row, C.vipNumber),

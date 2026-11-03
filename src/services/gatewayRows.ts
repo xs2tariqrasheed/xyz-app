@@ -56,8 +56,9 @@ const RESULT_MESSAGE = 'o_message';
 const RESULT_COLUMNS = new Set([RESULT_CODE, RESULT_MESSAGE]);
 
 /**
- * Throws unless row 0 carries `o_code` "0". A missing code fails closed
- * (docs/XYZ_INTEGRATION_GUIDE.md §4); a refusal throws `makeError(o_message)`.
+ * Throws unless row 0 carries `o_code` "0", read by its exact heading. A
+ * missing code fails closed (docs/XYZ_INTEGRATION_GUIDE.md §4); a refusal
+ * throws `makeError(o_message)`, or `fallbackMessage` when the message is empty.
  */
 export function assertResultCode(
   response: GatewayResponse,
@@ -65,11 +66,12 @@ export function assertResultCode(
   fallbackMessage: string,
 ): GatewayRow {
   const row = mapRows(response)[0];
-  if (!row || !hasColumn(row, [RESULT_CODE])) {
+  if (!row || !(RESULT_CODE in row)) {
     throw new GatewayError('parsing', 'The response has no result code.');
   }
-  if (pick(row, [RESULT_CODE]) !== DB_SUCCESS_CODE) {
-    throw makeError(pick(row, [RESULT_MESSAGE]) || fallbackMessage);
+  if (row[RESULT_CODE].trim() !== DB_SUCCESS_CODE) {
+    const message = RESULT_MESSAGE in row ? row[RESULT_MESSAGE].trim() : '';
+    throw makeError(message || fallbackMessage);
   }
   return row;
 }

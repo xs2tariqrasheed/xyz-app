@@ -44,11 +44,11 @@ Response: JSON with non-empty `message` → show; otherwise HTML page (success).
 
 ## 7. Gateway (real data)
 
-Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). **The app still reads the old heading names**, so these codes fail closed with the screen's load error until the module is remapped.
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). The app reads the new names since the same day.
 
 | Action code | Real answers |
 |---|---|
-| `PROF.S.LOAD_PROFILE` | Now sends the mailing address under its own headings: `ocountry` (code, `01`), `ostate`, `ocity`, `ozip`, `obuildingnum`, `ostreetname`, `ocrossstreet1`, `ocrossstreet2`, `oaddressphoneus`, `oaddressphone`, `oaddresstype`. The screen still shows "not available" until the module reads them. |
+| `PROF.S.LOAD_PROFILE` | Now sends the mailing address under its own headings: `ocountry` (code, `01`), `ostate`, `ocity`, `ozip`, `obuildingnum`, `ostreetname`, `ocrossstreet1`, `ocrossstreet2`, `oaddressphoneus`, `oaddressphone`, `oaddresstype`. The screen shows them; "not available" only when every address value is empty. |
 | `PROF.S.USER_PROFILE_ADDRESSES` | Headings renamed to lower case (`ocountry`, …). It is the profile's frequent-pickup list (17 rows for the test login), not one mailing address, so it isn't used here. |
 | `PROF.U.PROFILE` | Not sent yet (it writes a real profile). The app no longer refuses it before sending. |
 

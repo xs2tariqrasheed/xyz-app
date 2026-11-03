@@ -71,13 +71,13 @@ export function sessionFromLoginResponse(
   at: Date,
 ): AuthSession {
   const result = mapRows(response)[0];
-  if (!result || !('o_code' in result)) {
+  if (!result || !('o_code' in result) || !('o_message' in result)) {
     throw new GatewayError('parsing', 'The login response has no result code.');
   }
   if (result.o_code !== DB_SUCCESS_CODE) {
     throw new AuthError(result.o_message || undefined);
   }
-  return createSession(loginId, (result.o_message ?? '').trim(), at);
+  return createSession(loginId, result.o_message.trim(), at);
 }
 
 /** `JData` for {@link ACTION_CODES.PASSWORD_RECOVERY}. */

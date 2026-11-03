@@ -22,7 +22,6 @@ export type RideResultsProps = {
   failedTitle?: string;
   /** Offered beside a failed load. */
   onRetry?: () => void;
-  now: Date;
   loading: boolean;
   /** False until the first search has run. */
   searched: boolean;
@@ -42,7 +41,6 @@ export function RideResults({
   emptyTitle,
   failedTitle,
   onRetry,
-  now,
   loading,
   searched,
   failed,
@@ -92,11 +90,11 @@ export function RideResults({
           </Text>
         </Placeholder>
       ) : tabular ? (
-        <RideResultsTable rides={rides} now={now} onAction={onAction} />
+        <RideResultsTable rides={rides} onAction={onAction} />
       ) : (
         <View style={styles.cards}>
           {rides.map((ride) => (
-            <RideCard key={ride.id} ride={ride} now={now} onAction={onAction} />
+            <RideCard key={ride.id} ride={ride} onAction={onAction} />
           ))}
         </View>
       )}

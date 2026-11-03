@@ -36,13 +36,13 @@ Probed on 2026-10-30 with a test login unless stated. Every migrated read code w
 | Action code | R/W | Probed | Shape | Headings OK? | Status | Notes |
 |---|---|---|---|---|---|---|
 | `PROF.S.CHECK_LOGIN_CREDENTIALS` | R | 2026-10-30 | A | Yes | ✅ Migrated | `o_message` = VIP number on success, stored in the session |
-| `PROF.S.LOAD_PROFILE` | R | 2026-11-03 | B | Yes (44 = 44, renamed) | Remap to new headings | Now `ologinid, opassword, ofirstname, …` with each value under its own heading, including the mailing address and the preferences. `oelastlogindate` is filled. The app still reads `first_name`, …, so the profile load fails until `toProfileRow` is remapped. |
-| `PROF.S.USER_ADDRESSES` | R | 2026-11-03 | B | Yes (17 = 17, renamed) | Remap to new headings | Now the same 17 headings as `USER_PROFILE_ADDRESSES` (`ocountry … oelastservicedate`). No `address_id`: the row id for update / delete (`oepickupcount` or `oerowid`) is to confirm. 20 rows. |
-| `PROF.S.USER_PROFILE_ADDRESSES` | R | 2026-11-03 | B | Yes (renamed: `ocountry…`) | Remap to new headings | Was `oCountry…`. 17 rows for the test login: the frequent-pickup list, not the mailing address. |
-| `PROF.S.CORPORATE_ADDRESSES` | R | 2026-11-03 | B | Yes (renamed: `ocountry…`) | Remap to new headings | Was `oCountry…`. Loaded only with an account number; 2 rows for the test account. |
+| `PROF.S.LOAD_PROFILE` | R | 2026-11-03 | B | Yes (44 = 44, renamed) | ✅ Migrated | Remapped 2026-11-03: read by `ofirstname`, `olastname`, the phone and fax headings, `oeemailaddress`, `oaccountnum`, `oelastlogindate` (date only, "Last login {date}"), the mailing-address headings and `oconfirmationmethod` / `ospecialoffer`. International and fax numbers are `<code>-<number>` (to confirm). `opassword` / `ocardnumber` / `overifycode` are never read. |
+| `PROF.S.USER_ADDRESSES` | R | 2026-11-03 | B | Yes (17 = 17, renamed) | ✅ Migrated | Remapped 2026-11-03 to the shared 17 headings. The row id for update / delete is `oepickupcount` (`TODO(schema-unverified)`, or `oerowid`). 20 rows. |
+| `PROF.S.USER_PROFILE_ADDRESSES` | R | 2026-11-03 | B | Yes (renamed: `ocountry…`) | ✅ Migrated | Remapped 2026-11-03 (same 17 headings). The frequent-pickup list, not the mailing address. 17 rows. |
+| `PROF.S.CORPORATE_ADDRESSES` | R | 2026-11-03 | B | Yes (renamed: `ocountry…`) | ✅ Migrated | Remapped 2026-11-03 (same 17 headings). Loaded only with an account number; 2 rows for the test account. |
 | `RES.S.VEHICLE_TYPE` | R | 2026-11-03 | B | Yes (2 = 2, renamed) | Remap to new headings | `oevehiclecode, oevehicledesc`; 5 rows. Was 5 headings / 2 values. |
-| `RES.S.ALL_ORDERS` | R | 2026-11-03 | B | Yes (112 = 112, renamed) | Remap to new headings | Each value now under its own heading (`oreservationnumber`, `oreservationdate`, `oecurrentstatusdesc`, …; list in guide §10). 15 rows. No voucher or feedback heading. Dates sent as `MM-DD-YYYY` (test client). Invalid JSON, repaired by `parseBody`. |
-| `RES.S.UPDATABLE_ORDERS` | R | 2026-11-03 | B | Yes (112 = 112, renamed) | Remap to new headings | The same 112 headings as `ALL_ORDERS`; 4 rows. |
+| `RES.S.ALL_ORDERS` | R | 2026-11-03 | B | Yes (112 = 112, renamed) | ✅ Migrated | Remapped 2026-11-03 (`ORDER_HEADINGS`). Status from `oecallstatusdesc` + `oecurrentstatusdesc`; actions from the `oecan*` / `oeinvoiceposted` flags; `opaymentmethod` `1` = account, other codes "not available". No voucher-number or feedback heading. 15 rows. Invalid JSON, repaired by `parseBody`. |
+| `RES.S.UPDATABLE_ORDERS` | R | 2026-11-03 | B | Yes (112 = 112, renamed) | ✅ Migrated | Remapped 2026-11-03: same headings and mapping as `ALL_ORDERS`; 4 rows. |
 | `RES.S.LOAD_RESERVATION` | R | 2026-11-03 | B | Yes (160 = 160) | Remap to new headings | The order headings without `oresdate`, plus 48 more (fare breakdown, driver, car…). `oecarnum` is sent twice. Invalid JSON, repaired. |
 | `RES.S.ALL_PREDEFINED_QUESTIONS` | R | 2026-11-03 | B | Yes (2 = 2, renamed) | Remap to new headings | `question_id, question`; 2 rows. Was under `o_code / o_message` headings. |
 | `PROF.S.ACCOUNT_REQUIREMENTS_RS` | R | 2026-11-03 | B | Yes (1 = 1) | Needs data | One `dummy` heading, `[["X"]]` for the test account. The label is read from `o_message` alone (`TODO(schema-unverified)`). Needs an account with requirements. |
@@ -59,9 +59,9 @@ Probed on 2026-10-30 with a test login unless stated. Every migrated read code w
 | `RES.S.LATITUDE_LONGITUDE_FOR_CAR` | R | 2026-11-03 | A | Yes (renamed: `o_latitude, o_longitude`) | Ready — review `o_code` | `"5"` / `No Data Found`. Was `o_Latitude, o_Longitude`. |
 | `RES.S.COMMUNICATION_LOG` | R | 2026-11-03 | ? | — | Needs data | No headings and no rows for the reservation tried |
 | `RES.S.VEHICLE_LOG` | R | 2026-11-03 | B | Yes (6) | Needs data | `oetrackingdate, oetrackingtime, oestatuscode, oestatusdesc, oelongitude, oelatitude`; no rows for the reservation tried |
-| `PROF.S.PROFILE_WHO_GRANTED_ACCESS` | R | 2026-11-03 | B | Yes (renamed) | Remap to new headings | Was `LOAD_PROFILE_WHO_GRANTED_ACCESS` (not supported). Headings now `ologinid, ofirstname, olastname, ophonenumberus, ophoneextus, oaccountnum, ovipnum` (were `oLoginID … oVIPNum`); no rows for the test login. |
-| `PROF.S.PROFILE_COLUMN_VALUES` | R | 2026-11-03 | B | Yes (renamed) | Remap to new headings | Was `LOAD_PROFILE_COLUMN_VALUES` (not supported). Headings now `ocolumnid, ocolumnvalue` (were `oColumnId, oColumnValue`); no rows yet. |
-| `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` | R | 2026-11-03 | B | Yes (renamed) | Remap to new headings | Was `LOAD_PROFILE_COLUMN_VALUES_BY_TYPE` (not supported). Headings now `ocolumnid, ocolumnvalue`; one row for `P_COLUMN_ID` 2. |
+| `PROF.S.PROFILE_WHO_GRANTED_ACCESS` | R | 2026-11-03 | B | Yes (renamed) | ✅ Migrated | Remapped 2026-11-03: reads `ologinid, ofirstname, olastname`. No rows for the test login. |
+| `PROF.S.PROFILE_COLUMN_VALUES` | R | 2026-11-03 | B | Yes (renamed) | ✅ Migrated | Remapped 2026-11-03: reads `ocolumnid, ocolumnvalue`. No rows yet. |
+| `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` | R | 2026-11-03 | B | Yes (renamed) | ✅ Migrated | Remapped 2026-11-03: reads `ocolumnvalue`. One row for `P_COLUMN_ID` 2. |
 | `PROF.S.CAR_INFO` | R | 2026-10-30 | — | — | Blocked | `ORA-01001: invalid cursor` |
 | `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` | R | 2026-10-30 | — | — | Blocked | `ORA-01400`: the select tries an INSERT |
 | `RES.S.LOAD_RESERVATION_COLUMN_VALUES_BY_TYPE` | R | — | — | — | Not probed | Its sibling above writes. Ask the backend first. |
@@ -96,7 +96,7 @@ Probed on 2026-10-30 with a test login unless stated. Every migrated read code w
 
 Every code is read by the heading names it sends (guide §4), one name per field.
 
-0. Remap every code marked **Remap to new headings** to the 2026-11-03 headings in guide §10, module by module (profile, addresses, orders, reservation, lookups).
+0. ✅ Profile, addresses, orders, grantors and contacts remapped to the 2026-11-03 headings. Still to remap: `RES.S.LOAD_RESERVATION`, `RES.S.VEHICLE_TYPE`, `RES.S.ALL_PREDEFINED_QUESTIONS`.
 
 1. ✅ `PROF.S.CHECK_LOGIN_CREDENTIALS`, `PROF.S.LOAD_PROFILE`, `PROF.S.USER_ADDRESSES`, `PROF.S.USER_PROFILE_ADDRESSES`, `PROF.S.CORPORATE_ADDRESSES`: migrated.
 2. `RES.S.VEHICLE_TYPE`, `RES.S.ALL_PREDEFINED_QUESTIONS`.
@@ -120,6 +120,10 @@ Every code is read by the heading names it sends (guide §4), one name per field
 
 ## Questions for the backend
 
+- **Phone format:** `ophonenumber`, `ofax`, `oaddressphone` and `ophonenum` look like `<calling code>-<number>` (`212-` when empty). Is that the format, and is the US value (`ophonenumberus` `212`) a full number?
+- **Address row id:** do `PROF.U.USER_ADDRESS` / `PROF.D.USER_ADDRESS` take `oepickupcount` or `oerowid` as `P_PICKUP_COUNT`?
+- **Order codes:** the full lists for `oecallstatus(desc)` (seen `0` Open, `2` Canceled, `6` Confirmed), `oecurrentstatus(desc)` (seen `E` UnLoaded) and `opaymentmethod` (seen `1`, `3`). Does `oeinvoiceposted` `Y` mean the receipt can be shown? Which heading carries the voucher number and whether feedback was left?
+- **`oelastlogindate`:** only a date (`DD-MON-YY`); can it carry the time?
 - **`PROF.U.PROFILE`:** does it keep omitted parameters unchanged, or must every parameter be sent? What does it answer (`o_code` / `o_message`) on success and on refusal?
 - **`PROF.U.PROFILE` value codes** with no sample: office `P_ADDRESS_TYPE`, phone `P_CONFIRMATION_METHOD` (the update sample sends `''`), non-US `P_COUNTRY`.
 - **Apt # / Mail stop:** the test client fills `P_CROSS_STREET1` / `P_CROSS_STREET2` with two cross streets. Which parameter takes the apartment / mail stop?

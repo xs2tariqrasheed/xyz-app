@@ -13,45 +13,33 @@ import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/se
  * fields, so picking one needs no Google lookup.
  */
 
-/** The `PROF.S.USER_ADDRESSES` headings the app reads (guide §10). */
-export const USER_ADDRESS_HEADINGS = [
-  'address_id',
-  'country',
-  'state',
-  'city',
-  'zip_code',
-  'building_num',
-  'street_name',
-  'cross_street',
-  'pickup_point',
-  'phone_number_us',
-  'phone_ext_us',
-  'dial_code_intl',
-  'phone_number_intl',
-  'phone_ext_intl',
-  'directions',
+/**
+ * The headings the app reads from all three address codes, which send the
+ * same 17 (guide §10). `oerowid`, `oeusagefrequency` and `oelastservicedate`
+ * are not read.
+ */
+const ADDRESS_HEADINGS = [
+  'ocountry',
+  'ostate',
+  'ocity',
+  'ostreetnum',
+  'ostreetname',
+  'ocrossstreet',
+  'opickuppoint',
+  'ozip',
+  'odirections',
+  'ophonenum',
+  'oext',
+  'ophonenumus',
+  'oextus',
+  'oepickupcount',
 ] as const;
 
-export type UserAddressRow = Record<(typeof USER_ADDRESS_HEADINGS)[number], string>;
-
-/** The `PROF.S.USER_PROFILE_ADDRESSES` / `CORPORATE_ADDRESSES` headings the app reads (guide §10). */
-const ADDRESS_RECORD_HEADINGS = [
-  'oCountry',
-  'oState',
-  'oCity',
-  'oStreetNum',
-  'oStreetName',
-  'oCrossStreet',
-  'oPickupPoint',
-  'oZip',
-  'oDirections',
-] as const;
-
-type AddressRecordRow = Record<(typeof ADDRESS_RECORD_HEADINGS)[number], string>;
+export type UserAddressRow = Record<(typeof ADDRESS_HEADINGS)[number], string>;
 
 /** `PROF.S.USER_ADDRESSES` rows, by heading. */
 export function toUserAddressRows(response: GatewayResponse): UserAddressRow[] {
-  return mapRowsByHeadings(response, USER_ADDRESS_HEADINGS);
+  return mapRowsByHeadings(response, ADDRESS_HEADINGS);
 }
 
 /** An airport kept in the address book reads as an airport stop. */
@@ -87,49 +75,30 @@ function stop(fields: AddressFields): StructuredPlace {
   };
 }
 
-/**
- * Saved addresses as suggestions. Rows with neither a street nor a city are
- * skipped as unusable; ids use the row position, because `address_id` is not
- * unique in today's responses (guide §10).
- */
+/** An address row's booking fields, by heading. */
+function addressFields(row: UserAddressRow): AddressFields {
+  return {
+    country: toCountryCode(row.ocountry.trim()),
+    state: row.ostate.trim(),
+    city: row.ocity.trim(),
+    zip: row.ozip.trim(),
+    streetNumber: row.ostreetnum.trim(),
+    streetName: row.ostreetname.trim(),
+    crossStreet: row.ocrossstreet.trim(),
+    pickupPoint: row.opickuppoint.trim(),
+    directions: row.odirections.trim(),
+  };
+}
+
+/** Saved addresses as suggestions. Rows with neither a street nor a city are skipped as unusable. */
 export function userAddressSuggestions(rows: readonly UserAddressRow[]): AddressSuggestion[] {
-  return toSuggestions(
-    rows.map((row) =>
-      stop({
-        country: toCountryCode(row.country.trim()),
-        state: row.state.trim(),
-        city: row.city.trim(),
-        zip: row.zip_code.trim(),
-        streetNumber: row.building_num.trim(),
-        streetName: row.street_name.trim(),
-        crossStreet: row.cross_street.trim(),
-        pickupPoint: row.pickup_point.trim(),
-        directions: row.directions.trim(),
-      }),
-    ),
-    'saved',
-  );
+  return toSuggestions(rows.map((row) => stop(addressFields(row))), 'saved');
 }
 
 /** The profile's (`USER_PROFILE_ADDRESSES`) or the company's (`CORPORATE_ADDRESSES`) addresses as suggestions. */
 export function addressRecordSuggestions(response: GatewayResponse, source: 'profile' | 'company'): AddressSuggestion[] {
-  const rows: AddressRecordRow[] = mapRowsByHeadings(response, ADDRESS_RECORD_HEADINGS);
-  return toSuggestions(
-    rows.map((row) =>
-      stop({
-        country: toCountryCode(row.oCountry.trim()),
-        state: row.oState.trim(),
-        city: row.oCity.trim(),
-        zip: row.oZip.trim(),
-        streetNumber: row.oStreetNum.trim(),
-        streetName: row.oStreetName.trim(),
-        crossStreet: row.oCrossStreet.trim(),
-        pickupPoint: row.oPickupPoint.trim(),
-        directions: row.oDirections.trim(),
-      }),
-    ),
-    source,
-  );
+  const rows = mapRowsByHeadings(response, ADDRESS_HEADINGS);
+  return toSuggestions(rows.map((row) => stop(addressFields(row))), source);
 }
 
 function toSuggestions(places: StructuredPlace[], source: 'saved' | 'profile' | 'company'): AddressSuggestion[] {

@@ -8,7 +8,7 @@
 export const ACTION_CODES = {
   /** P_LOGIN_ID, P_PASSWORD → o_code / o_message (o_message = the profile's VIP number on success). */
   CHECK_LOGIN_CREDENTIALS: 'PROF.S.CHECK_LOGIN_CREDENTIALS',
-  /** P_LOGIN_ID → one row: login_id, first_name, last_name, phones (US / intl), fax, …, last_login. */
+  /** P_LOGIN_ID → one row of 44 headings (ologinid, ofirstname, …, oelastlogindate; guide §10). */
   LOAD_PROFILE: 'PROF.S.LOAD_PROFILE',
   /** The whole profile (38 P_* parameters: name, phones, fax, address, card, prefs) → o_code / o_message. */
   UPDATE_PROFILE: 'PROF.U.PROFILE',
@@ -30,13 +30,13 @@ export const ACTION_CODES = {
   CREATE_PROFILE: 'PROF.I.PROFILE',
 
   // ── Reservation flow: lookups (reverse-engineer-implemented/guide/05) ──────────────────
-  /** P_LOGIN_ID → saved addresses: 16 headings (address_id … driver_notes) over 17 values, read by heading (guide §10). */
+  /** P_LOGIN_ID → saved addresses: 17 headings (ocountry … oelastservicedate), read by heading (guide §10). */
   USER_ADDRESSES: 'PROF.S.USER_ADDRESSES',
-  /** P_LOGIN_ID → the profile's frequent pickup places (oCountry … oeLastServiceDate, headings match; guide §10). */
+  /** P_LOGIN_ID → the profile's frequent pickup places (ocountry … oelastservicedate; guide §10). */
   USER_PROFILE_ADDRESSES: 'PROF.S.USER_PROFILE_ADDRESSES',
   /** P_ACCOUNT_NUM → the company's own locations: the 17-column address record. */
   CORPORATE_ADDRESSES: 'PROF.S.CORPORATE_ADDRESSES',
-  /** P_LOGIN_ID, P_COLUMN_ID (contact type) → oColumnId, oColumnValue: the profile's contacts of that type. */
+  /** P_LOGIN_ID, P_COLUMN_ID (contact type) → ocolumnid, ocolumnvalue: the profile's contacts of that type. */
   PROFILE_COLUMN_VALUES_BY_TYPE: 'PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE',
 
   // ── Address book & contacts (reverse-engineer-implemented/guide/11, 12) ────────────────
@@ -46,7 +46,7 @@ export const ACTION_CODES = {
   UPDATE_USER_ADDRESS: 'PROF.U.USER_ADDRESS',
   /** P_LOGIN_ID, P_PICKUP_COUNT → o_code / o_message. */
   DELETE_USER_ADDRESS: 'PROF.D.USER_ADDRESS',
-  /** P_LOGIN_ID → oColumnId, oColumnValue: every extra value on the profile (contacts and others), one row each. */
+  /** P_LOGIN_ID → ocolumnid, ocolumnvalue: every extra value on the profile (contacts and others), one row each. */
   PROFILE_COLUMN_VALUES: 'PROF.S.PROFILE_COLUMN_VALUES',
   /** P_LOGIN_ID, P_COLUMN_ID, P_COLUMN_VALUE → o_code / o_message. */
   ADD_PROFILE_COLUMN_VALUE: 'PROF.I.PROFILE_COLUMN_VALUE',
@@ -62,7 +62,7 @@ export const ACTION_CODES = {
   VEHICLE_TYPE: 'RES.S.VEHICLE_TYPE',
 
   // ── Booking wizard (guides 13–17) ──────────────────────────────────────────
-  /** P_LOGIN_ID_TO → oLoginID, oFirstName, oLastName, oPhoneNumberUS, oPhoneExtUS, oAccountNum, oVIPNum: profiles that let this login book for them. */
+  /** P_LOGIN_ID_TO → ologinid, ofirstname, olastname, ophonenumberus, ophoneextus, oaccountnum, ovipnum: profiles that let this login book for them. */
   PROFILE_WHO_GRANTED_ACCESS: 'PROF.S.PROFILE_WHO_GRANTED_ACCESS',
   /** P_ACCOUNT_NUM → which billing methods the account allows; o_code / o_message. */
   BILLING_METHOD: 'RES.S.BILLING_METHOD',
@@ -86,7 +86,7 @@ export const ACTION_CODES = {
   FORMAT_EMAIL_MESSAGE: 'RES.U.FORMAT_EMAIL_MESSAGE',
 
   // ── Reservation records (guides 18–24) ─────────────────────────────────────
-  /** P_LOGIN_ID, P_DATE_FROM, P_DATE_TO (MM-DD-YYYY), P_TOTAL_RECORDS → ride history rows (10 headings; guide §10). */
+  /** P_LOGIN_ID, P_DATE_FROM, P_DATE_TO (MM-DD-YYYY), P_TOTAL_RECORDS → ride history rows (112 headings; guide §10). */
   ALL_ORDERS: 'RES.S.ALL_ORDERS',
   /** P_LOGIN_ID → open reservations that can still be changed or cancelled. */
   UPDATABLE_ORDERS: 'RES.S.UPDATABLE_ORDERS',

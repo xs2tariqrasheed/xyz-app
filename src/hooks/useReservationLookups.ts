@@ -63,13 +63,13 @@ export function useCompanyPlaces(accountNumber: string): Lookup<AddressSuggestio
 }
 
 /** The `PROF.S.PROFILE_WHO_GRANTED_ACCESS` headings the step reads (guide §10). */
-const GRANTOR_HEADINGS = ['oLoginID', 'oFirstName', 'oLastName'] as const;
+const GRANTOR_HEADINGS = ['ologinid', 'ofirstname', 'olastname'] as const;
 
 const toGrantors = (response: GatewayResponse): SelectOption<string>[] =>
   mapRowsByHeadings(response, GRANTOR_HEADINGS).flatMap((row) => {
-    const loginId = row.oLoginID.trim();
+    const loginId = row.ologinid.trim();
     if (!loginId) return [];
-    const name = [row.oFirstName.trim(), row.oLastName.trim()].filter(Boolean).join(' ');
+    const name = [row.ofirstname.trim(), row.olastname.trim()].filter(Boolean).join(' ');
     return [{ value: loginId, label: name || loginId, description: name ? loginId : undefined }];
   });
 
@@ -85,10 +85,10 @@ export function useGrantedProfiles(loginId: string): Lookup<SelectOption<string>
 export const CONTACT_COLUMN_IDS = { home: 3, office: 4, cell: 6, email: 8 } as const;
 
 /** The `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` headings the step reads (guide §10). */
-const CONTACT_VALUE_HEADINGS = ['oColumnValue'] as const;
+const CONTACT_VALUE_HEADINGS = ['ocolumnvalue'] as const;
 
 const toContactValues = (response: GatewayResponse): string[] => [
-  ...new Set(mapRowsByHeadings(response, CONTACT_VALUE_HEADINGS).map((row) => row.oColumnValue.trim()).filter(Boolean)),
+  ...new Set(mapRowsByHeadings(response, CONTACT_VALUE_HEADINGS).map((row) => row.ocolumnvalue.trim()).filter(Boolean)),
 ];
 
 /** `PROF.S.PROFILE_COLUMN_VALUES_BY_TYPE` — the profile's contacts of one type. */

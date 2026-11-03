@@ -48,7 +48,7 @@ Response: page/redirect **[U]**. Client code in the booking module supports an e
 
 ## 8. Gateway (real data)
 
-Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §7a, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). **The app still reads the old heading names**, so these codes fail closed with the screen's load error until the module is remapped.
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §7a, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). The app reads the new names since the same day.
 
 | Action code | When | Real answers |
 |---|---|---|
@@ -63,6 +63,6 @@ Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` 
 - **The 15-minute dispatch note** is copy from the old site (§3), not a gateway value.
 
 **Still unverified:**
-- The last-login format: `oelastlogindate` answers `DD-MON-YY`, while the app reads `MM/DD/YYYY h:mm[:ss] AM|PM` (fix with the remap).
+- The last-login time: `oelastlogindate` is a date only (`DD-MON-YY`), so Home shows "Last login {date}".
 - A zoned street's answer from `ZONE_THE_LOCATION` (assumed `"0"` plus the zone in `o_message`, `TODO(schema-unverified)`).
-- Ride status and payment words: `oecurrentstatusdesc` and `opaymentmethod` now carry values; check them with the remap.
+- The status and payment code lists (guide §7a): `oecallstatusdesc` / `oecurrentstatusdesc` words and `opaymentmethod` codes other than `1` are read from the values, not a backend list.

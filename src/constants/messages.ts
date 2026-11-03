@@ -654,7 +654,6 @@ export const RIDES_MESSAGES = {
   LEAVE_FEEDBACK: 'Leave feedback',
   FEEDBACK_SHORT: 'Feedback',
   FEEDBACK_COLUMN: 'Feedback',
-  FEEDBACK_SENT: 'Sent',
   FEEDBACK_OPEN_FAILED: 'The feedback page could not be opened. Try again.',
 } as const;
 
@@ -662,7 +661,7 @@ export const RIDES_MESSAGES = {
 export const HOME_MESSAGES = {
   WELCOME: 'Welcome back',
   WELCOME_NAMED: (firstName: string) => `Welcome back, ${firstName}`,
-  LAST_LOGIN: (date: string, time: string) => `Last login ${date} · ${time}`,
+  LAST_LOGIN: (date: string) => `Last login ${date}`,
   BOOK_RIDE: 'Book a ride',
   LOADING: 'Loading…',
 
@@ -688,7 +687,6 @@ export const HOME_MESSAGES = {
   NEXT_UPCOMING: 'Next ride',
   RIDE_NO: 'Ride no.',
   PAYMENT: 'Payment',
-  VOUCHER: 'Voucher',
   VIEW_DETAILS: 'View details',
   ALL_RIDES: 'All rides',
 

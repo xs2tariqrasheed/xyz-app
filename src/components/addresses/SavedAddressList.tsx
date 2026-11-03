@@ -43,7 +43,6 @@ export function SavedAddressList({ addresses, editingId, onEdit, onDelete }: Sav
         <View style={styles.list}>
           {addresses.map((address, index) => (
             <SavedAddressRow
-              // Position too: `address_id` is not unique in today's responses (guide §10).
               key={`${index}:${address.id}`}
               address={address}
               editing={address.id === editingId}

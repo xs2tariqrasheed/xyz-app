@@ -18,7 +18,7 @@ import { useReservation } from '@/context/ReservationContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { allOrdersJData, overviewWindow, type RideOverview, toRideOverview, toRides } from '@/services/rides';
 import { breakpoints, space } from '@/theme';
-import { formatClockTime, formatFullDate } from '@/utils/datetime';
+import { formatFullDate } from '@/utils/datetime';
 
 /** How many rides each dashboard list shows before deferring to /rides. */
 const LIST_LIMIT = 3;
@@ -61,7 +61,7 @@ export default function HomeScreen() {
   };
 
   const { profile } = useProfile();
-  const lastLoginAt = profile?.lastLoginAt ?? null;
+  const lastLoginOn = profile?.lastLoginOn ?? null;
   // A car already on the road is what the customer is watching; only with none
   // does the next booking take the featured slot.
   const featured = overview?.active[0] ?? overview?.upcoming[0] ?? null;
@@ -69,11 +69,7 @@ export default function HomeScreen() {
   return (
     <Screen
       title={profile?.firstName ? HOME_MESSAGES.WELCOME_NAMED(profile.firstName) : HOME_MESSAGES.WELCOME}
-      subtitle={
-        lastLoginAt
-          ? HOME_MESSAGES.LAST_LOGIN(formatFullDate(lastLoginAt), formatClockTime(lastLoginAt))
-          : undefined
-      }
+      subtitle={lastLoginOn ? HOME_MESSAGES.LAST_LOGIN(formatFullDate(lastLoginOn)) : undefined}
       trailing={<Button label={HOME_MESSAGES.BOOK_RIDE} onPress={bookRide} />}
     >
       {failed ? (

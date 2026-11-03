@@ -77,8 +77,8 @@ async function continueTo(page: Page, nextTitle: string) {
 
 /** "666 5 Ave, Manhattan, NY 10019" — how a saved address row is offered. */
 function savedLabel(row: Record<string, string>): string {
-  const street = [row.building_num, row.street_name].filter(Boolean).join(' ');
-  const locality = [row.city, [row.state, row.zip_code].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const street = [row.ostreetnum, row.ostreetname].filter(Boolean).join(' ');
+  const locality = [row.ocity, [row.ostate, row.ozip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   return street ? `${street}, ${locality}` : locality;
 }
 
@@ -93,8 +93,8 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
   expect(Object.keys(jDataOf(await vehicleTypesCall))).toEqual([]);
 
   // 1. Passenger — pre-filled from the profile the gateway returned.
-  await expect(page.getByPlaceholder('e.g. Amara')).toHaveValue(profile.first_name);
-  await expect(page.getByPlaceholder('e.g. Okafor')).toHaveValue(profile.last_name);
+  await expect(page.getByPlaceholder('e.g. Amara')).toHaveValue(profile.ofirstname);
+  await expect(page.getByPlaceholder('e.g. Okafor')).toHaveValue(profile.olastname);
   await continueTo(page, 'Ride Address Info');
 
   // 2. Pickup from a saved address (zoned by street), drop-off from a Google search (zoned by coordinates).
@@ -106,7 +106,7 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
   await page.getByRole('button', { name: savedLabel(saved[0]) }).click();
   const streetZoneCall = await streetZone;
   expectContract(streetZoneCall, ACTION_CODES.ZONE_THE_LOCATION);
-  expect(jDataOf(streetZoneCall)).toMatchObject({ P_STREET_NAME: saved[0].street_name, P_PU_DO_TYPE: 'P' });
+  expect(jDataOf(streetZoneCall)).toMatchObject({ P_STREET_NAME: saved[0].ostreetname, P_PU_DO_TYPE: 'P' });
 
   const googleZone = waitForGatewayAction(page, ACTION_CODES.GOOGLE_ZONE_NUM);
   const destinationField = page.getByLabel('Going To', { exact: true });
@@ -147,18 +147,18 @@ test('books a reservation on Reservation 2 through the gateway', async ({ page }
   await continueTo(page, 'Preview');
 
   // 5. Preview → book.
-  await expect(visibleText(page, profile.last_name)).toBeVisible();
+  await expect(visibleText(page, profile.olastname)).toBeVisible();
   const booking = waitForGatewayAction(page, ACTION_CODES.CREATE_RESERVATION);
   await page.getByRole('button', { name: 'Book reservation' }).click();
   const bookingCall = await booking;
   expectContract(bookingCall, ACTION_CODES.CREATE_RESERVATION);
   const sent = jDataOf(bookingCall);
   expect(sent).toMatchObject({
-    P_FIRST_NAME: profile.first_name,
-    P_LAST_NAME: profile.last_name,
+    P_FIRST_NAME: profile.ofirstname,
+    P_LAST_NAME: profile.olastname,
     P_CALL_SOURCE: 'WEB',
     P_ACCOUNT_NUMBER: account,
-    P_PU_STREET_NAME: saved[0].street_name,
+    P_PU_STREET_NAME: saved[0].ostreetname,
     P_DO_AIRPORT_NAME: DESTINATION.primary,
     P_DO_ZIP_CODE: '11430',
     P_CAR_TYPE: vehicleTypes[0].car_type,
@@ -218,7 +218,7 @@ test('lists open reservations and cancels one with a reason', async ({ page }) =
   expectContract(upcomingCall, ACTION_CODES.UPDATABLE_ORDERS);
   const rows = await gatewayRows(upcomingCall);
   expect(rows.length).toBeGreaterThan(0);
-  for (const row of rows) await expect(page.getByRole('button', { name: row.reservation_num }).first()).toBeVisible();
+  for (const row of rows) await expect(page.getByRole('button', { name: row.oreservationnumber }).first()).toBeVisible();
 
   // Cancel the first ride the list still offers to cancel.
   await page.getByRole('button', { name: /^Cancel( ride)?$/ }).first().click();
@@ -232,7 +232,7 @@ test('lists open reservations and cancels one with a reason', async ({ page }) =
   const cancelCall = await cancel;
   expectContract(cancelCall, ACTION_CODES.CANCEL_RESERVATION);
   expect(jDataOf(cancelCall)).toMatchObject({ P_CANCEL_REASON: 'Plans changed' });
-  expect(rows.map((row) => row.reservation_num)).toContain(jDataOf(cancelCall).P_RESERVATION_NUM);
+  expect(rows.map((row) => row.oreservationnumber)).toContain(jDataOf(cancelCall).P_RESERVATION_NUM);
   await expect(visibleText(page, 'The reservation has been cancelled.')).toBeVisible();
 });
 
@@ -296,13 +296,13 @@ test('opens a ride from history: details, messages, tracking, voucher, return tr
 
   // Details of the newest ride in the default range (the last three months up to today).
   const newest = rides
-    .filter((ride) => Date.parse(ride.pickup_date) <= Date.now())
-    .sort((a, b) => Date.parse(b.pickup_date) - Date.parse(a.pickup_date))[0];
+    .filter((ride) => Date.parse(ride.oreservationdate) <= Date.now())
+    .sort((a, b) => Date.parse(b.oreservationdate) - Date.parse(a.oreservationdate))[0];
   expect(newest).toBeTruthy();
   const details = waitForGatewayAction(page, ACTION_CODES.LOAD_RESERVATION);
   const messages = waitForGatewayAction(page, ACTION_CODES.COMMUNICATION_LOG);
   const extra = waitForGatewayAction(page, ACTION_CODES.LOAD_RESERVATION_COLUMN_SINGLE_VALUE);
-  await page.getByRole('button', { name: newest.reservation_num }).first().click();
+  await page.getByRole('button', { name: newest.oreservationnumber }).first().click();
   await expect(page).toHaveURL(/\/reservation-info/);
   expectContract(await details, ACTION_CODES.LOAD_RESERVATION);
   expectContract(await messages, ACTION_CODES.COMMUNICATION_LOG);
