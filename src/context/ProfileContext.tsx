@@ -8,17 +8,10 @@ import { MAILING_ADDRESS_MESSAGES, PREFERENCES_MESSAGES, PROFILE_MESSAGES } from
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { usePostData } from '@/hooks/usePostData';
-import {
-  type ErrorDisplay,
-  type GatewayJData,
-  type GatewayResponse,
-  getErrorDisplay,
-  hasUnheadedValues,
-} from '@/services/gateway';
+import { type ErrorDisplay, type GatewayJData, type GatewayResponse, getErrorDisplay } from '@/services/gateway';
 import {
   assertProfileUpdated,
   type CustomerProfile,
-  ProfileError,
   type ProfileRow,
   toCustomerProfile,
   toProfileRow,
@@ -96,17 +89,11 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
   const profile = useMemo(() => toCustomerProfile(row ? [row] : undefined), [row]);
 
   /**
-   * Sends the whole profile built from the loaded row, then reloads it. `copy`
-   * is the saving screen's own refusal text.
+   * Sends the whole profile built from the loaded row, then reloads it.
+   * `rejected` is the saving screen's own refusal text.
    */
-  const saveProfile = async (
-    build: (loaded: ProfileRow) => GatewayJData,
-    copy: { rejected: string; unavailable: string },
-  ) => {
-    if (!row || !data) throw new Error('The profile has not loaded yet.');
-    // The update sends the loaded values back; with values past the last
-    // heading, that pairing can't be trusted, so nothing is written.
-    if (hasUnheadedValues(data)) throw new ProfileError(copy.unavailable);
+  const saveProfile = async (build: (loaded: ProfileRow) => GatewayJData, rejected: string) => {
+    if (!row) throw new Error('The profile has not loaded yet.');
     const response = await sendUpdate(
       ACTION_CODES.UPDATE_PROFILE,
       GATEWAY_VIEW_NAME,
@@ -114,27 +101,24 @@ function SignedInProfileProvider({ loginId, children }: { loginId: string; child
       // A write: a lost response must not send the update twice.
       { retry: false },
     );
-    assertProfileUpdated(response, copy.rejected);
+    assertProfileUpdated(response, rejected);
     refetch();
   };
 
   const updatePersonalInfo = (personal: PersonalInfoValue) =>
-    saveProfile((loaded) => updateProfileJData(loginId, loaded, personal), {
-      rejected: PROFILE_MESSAGES.UPDATE_REJECTED,
-      unavailable: PROFILE_MESSAGES.UPDATE_UNAVAILABLE,
-    });
+    saveProfile((loaded) => updateProfileJData(loginId, loaded, personal), PROFILE_MESSAGES.UPDATE_REJECTED);
 
   const updatePreferences = (preferences: PreferencesValue) =>
-    saveProfile((loaded) => updatePreferencesJData(loginId, loaded, preferences), {
-      rejected: PREFERENCES_MESSAGES.UPDATE_REJECTED,
-      unavailable: PREFERENCES_MESSAGES.UPDATE_UNAVAILABLE,
-    });
+    saveProfile(
+      (loaded) => updatePreferencesJData(loginId, loaded, preferences),
+      PREFERENCES_MESSAGES.UPDATE_REJECTED,
+    );
 
   const updateMailingAddress = (address: MailingAddress) =>
-    saveProfile((loaded) => updateMailingAddressJData(loginId, loaded, address), {
-      rejected: MAILING_ADDRESS_MESSAGES.UPDATE_REJECTED,
-      unavailable: MAILING_ADDRESS_MESSAGES.UPDATE_UNAVAILABLE,
-    });
+    saveProfile(
+      (loaded) => updateMailingAddressJData(loginId, loaded, address),
+      MAILING_ADDRESS_MESSAGES.UPDATE_REJECTED,
+    );
 
   const value: ProfileContextValue = {
     profile,

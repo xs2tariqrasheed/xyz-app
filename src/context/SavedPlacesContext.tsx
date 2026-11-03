@@ -2,12 +2,10 @@ import { createContext, type ReactNode, useContext, useMemo } from 'react';
 
 import type { AddressDraft, SavedAddress } from '@/components/addresses/savedAddress';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { ADDRESS_BOOK_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
 import { usePostData } from '@/hooks/usePostData';
 import {
-  AddressBookError,
   addAddressJData,
   assertAddressDeleted,
   assertAddressSaved,
@@ -15,7 +13,7 @@ import {
   toSavedAddresses,
   updateAddressJData,
 } from '@/services/addressBook';
-import { type ErrorDisplay, type GatewayResponse, getErrorDisplay, hasUnheadedValues } from '@/services/gateway';
+import { type ErrorDisplay, type GatewayResponse, getErrorDisplay } from '@/services/gateway';
 import type { AddressSuggestion } from '@/services/places';
 import {
   toUserAddressRows,
@@ -89,16 +87,7 @@ function SignedInSavedPlacesProvider({ loginId, children }: { loginId: string; c
   const places = useMemo(() => userAddressSuggestions(read.rows), [read]);
   const addresses = useMemo(() => toSavedAddresses(read.rows), [read]);
 
-  /**
-   * Update and delete name a location by its loaded `address_id`. With values
-   * past the last heading that pairing can't be trusted, so they are refused.
-   */
-  const assertChangeable = () => {
-    if (data && hasUnheadedValues(data)) throw new AddressBookError(ADDRESS_BOOK_MESSAGES.CHANGE_UNAVAILABLE);
-  };
-
   const saveAddress = async (draft: AddressDraft, id?: string) => {
-    if (id) assertChangeable();
     const response = id
       ? await send(ACTION_CODES.UPDATE_USER_ADDRESS, GATEWAY_VIEW_NAME, updateAddressJData(loginId, id, draft), {
           retry: false,
@@ -112,7 +101,6 @@ function SignedInSavedPlacesProvider({ loginId, children }: { loginId: string; c
   };
 
   const deleteAddress = async (id: string) => {
-    assertChangeable();
     const response = await send(ACTION_CODES.DELETE_USER_ADDRESS, GATEWAY_VIEW_NAME, deleteAddressJData(loginId, id), {
       retry: false,
     });

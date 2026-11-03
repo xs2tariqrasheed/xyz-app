@@ -33,12 +33,12 @@ Confirmation methods: **Online** (only when pickup within ~5 minutes of ordering
 
 ## 7. Gateway (real data)
 
-Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10).
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). **The app still reads the old heading names**, so these codes fail closed with the screen's load error until the module is remapped.
 
 | Action code | When | Real answers |
 |---|---|---|
-| `PROF.S.LOAD_PROFILE` | `/preferences` opens; a new booking starts | 15 headings, 44 values. **No preference heading**: the confirmation and offer flags arrive only as single letters past the last heading, which the app never reads. So `/preferences` shows "Your preferences are not available right now." and a new booking starts with "confirm by phone" unticked. |
-| `PROF.U.PROFILE` | Update | **Not sent.** It is refused while `LOAD_PROFILE` has values past its last heading ("Your preferences can't be updated right now."). With no loaded preferences the Update button can't be reached anyway. |
+| `PROF.S.LOAD_PROFILE` | `/preferences` opens; a new booking starts | 44 headings = 44 values. The preferences now have their own headings: `oconfirmationmethod` (empty for the test login), `ospecialoffer` (`N`), plus the legacy `opreferredfleet`, `ocaryear`, `ocarphone`, `osmokingcar`. Until the module reads them, `/preferences` shows "Your preferences are not available right now." and a new booking starts with "confirm by phone" unticked. |
+| `PROF.U.PROFILE` | Update | Not sent yet (it writes a real profile). With no loaded preferences the Update button can't be reached. |
 
 Value codes from the backend test client:
 - `P_CONFIRMATION_METHOD`: `ML` (e-mail) in the `PROF.I.PROFILE`, `RES.I.RESERVATION` and `RES.U.RESERVATION` samples; `''` in the `PROF.U.PROFILE` sample. The app sends `ML` when "Phone" is unticked and `PHONE` when ticked (`TODO(schema-unverified)`).

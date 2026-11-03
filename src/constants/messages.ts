@@ -15,6 +15,8 @@ export const COMMON_MESSAGES = {
   REQUEST_NOT_COMPLETED_TITLE: 'Request not completed',
   /** Fallback when the gateway rejects a call without a message of its own. */
   REQUEST_NOT_ACCEPTED: 'The request was not accepted.',
+  /** Shown in place of a field the action code's response has no value for. */
+  NOT_AVAILABLE: 'Not available',
 } as const;
 
 /** Captcha control, shared by the auth screens. */
@@ -127,8 +129,6 @@ export const PROFILE_MESSAGES = {
   UPDATE_FAILED_TITLE: 'Personal info not updated',
   /** Server refused the update without saying why. */
   UPDATE_REJECTED: "We couldn't update your personal information.",
-  /** The loaded profile can't be sent back safely, so updates are off. */
-  UPDATE_UNAVAILABLE: "Your profile can't be updated right now.",
   UPDATE_SUCCESS: 'Personal information updated.',
   LOAD_FAILED_TITLE: 'Your profile could not be loaded',
   RETRY: 'Try again',
@@ -151,8 +151,6 @@ export const PREFERENCES_MESSAGES = {
   UPDATE_FAILED_TITLE: 'Preferences not updated',
   /** Server refused the update without saying why. */
   UPDATE_REJECTED: "We couldn't update your preferences.",
-  /** The loaded profile can't be sent back safely, so updates are off. */
-  UPDATE_UNAVAILABLE: "Your preferences can't be updated right now.",
   LOAD_FAILED_TITLE: 'Your preferences could not be loaded',
   /** The profile came back without any preferences. */
   UNAVAILABLE: 'Your preferences are not available right now.',
@@ -231,8 +229,6 @@ export const MAILING_ADDRESS_MESSAGES = {
   UPDATE_FAILED_TITLE: 'Mailing address not updated',
   /** Server refused the update without saying why. */
   UPDATE_REJECTED: "We couldn't update your mailing address.",
-  /** The loaded profile can't be sent back safely, so updates are off. */
-  UPDATE_UNAVAILABLE: "Your mailing address can't be updated right now.",
   LOAD_FAILED_TITLE: 'Your mailing address could not be loaded',
   RETRY: 'Try again',
   BACK_TO_PROFILE: 'Back to profile',
@@ -408,8 +404,6 @@ export const ADDRESS_BOOK_MESSAGES = {
   /** The gateway refused a write without saying why. */
   SAVE_REJECTED: "We couldn't save this location.",
   DELETE_REJECTED: "We couldn't delete this location.",
-  /** The loaded list can't name a location safely, so update and delete are off. */
-  CHANGE_UNAVAILABLE: "Saved locations can't be changed right now.",
   LOAD_REJECTED: "We couldn't load your saved locations.",
   RETRY: 'Try again',
   // Validation (reverse-engineer-implemented/guide/11 §3, 26).

@@ -35,24 +35,14 @@ A reservation app. Customers book services either for a future date/time or righ
   - Parameters follow the contract in `docs/XYZ Action Codes.md`. Outputs follow the code's **actual** response as recorded in guide §10. Fail closed where a code's verdict is missing.
   - Never branch on, hardcode or test for specific sample values, and don't treat one "success" as proof that a business rule works.
 - **Actual gateway responses** (guide §4 and §10):
-  - The body is a JSON string holding `{ JHeader, JMetaData: { Headings }, JData }`: a heading list followed by rows of string values. An error carries only `JHeader`, with a non-zero `ActionCode` and `Message`.
-  - Some record sets (profile, addresses, orders, reservation, car types…) send more values per row than headings, or values that don't belong under the heading in their position. Guide §10 records each code's heading count and row length.
+  - The body is a JSON string holding `{ JHeader, JMetaData: { Headings }, JData }`: a heading list and rows of string values in heading order. `mapRows` pairs each value with its heading. An error carries only `JHeader`, with a non-zero `ActionCode` and `Message`.
   - `o_code` / `o_message` mean different things per code: login's `o_message` is the VIP number, and `GOOGLE_ZONE_NUM` answers `"1"` + a zone. Never assume "0 = success" without checking §10.
   - Some bodies are invalid JSON. `parseBody` repairs stray backslashes.
 - **Working on an action code:**
-  - Always inspect and analyse its actual response before writing code for it: `npm run gateway:probe -- <CODE> '<JData JSON>'`.
-  - Understand the structure before implementing UI rendering: the shape, whether the headings match, the column list and row count, and what each `o_code` means. Record it in guide §10 and the tracker first.
-  - Render UI components dynamically from that code's actual response data: what it returns, in the order it returns it, with its own states (loading / error / empty / data).
-  - Never use hardcoded or dummy data where the gateway's actual response should be used.
+  - Always check its actual response first: `npm run gateway:probe -- <CODE> '<JData JSON>'`. Record its headings and what its `o_code` means in guide §10 and the tracker.
+  - Keep the UI as it is. Render the values the UI needs from that response, read by heading name. Don't change the screen's layout, fields or components unless the user asks.
+  - If the response has nothing for a field the UI shows (no such heading, or an empty value), show `COMMON_MESSAGES.NOT_AVAILABLE` there. Don't hide the field or fill it with guessed or dummy data.
   - Probe only read codes. A write code (`.I.` / `.U.` / `.D.`) needs an agreed test record and `--write`. Never commit credentials, passwords, card numbers or other sensitive response values to code or docs; test logins live in `e2e/e2e.local.env` (git-ignored).
-- **Mapping a gateway response: headings only.** For every action code (profile, addresses, orders, reservations, vehicle types and every other module):
-  1. Read the column names from `JMetaData.Headings`.
-  2. Pair each heading with the `JData` value at the same position (index). `mapRows` does exactly this.
-  3. Access and display only values that have a heading.
-  4. If a row has more values than headings, ignore every extra value. Never access, map or display a value beyond the last heading. Never name extra positions yourself (no column lists taken from the contract, from another code's headings or from the values' look), and don't guess what they mean.
-  5. Don't invent field names, assume extra mappings or use hardcoded data. A field the code's headings don't include isn't in its response: leave it out or show the screen's empty state.
-  6. Render the UI from the heading–value pairs the code actually returns.
-  - A heading whose value is plainly wrong for its name is a gateway bug: record it in guide §10 and the tracker's backend issues. Don't work around it by remapping positions.
 - **No property resolvers on gateway responses** (the `strict-property-access` skill, enabled in `.claude/settings.json`, has the full procedure):
   - Read every value from a gateway row by **one heading name**: the one that code's `JMetaData.Headings` actually sends, recorded in guide §10. Never try several names for the same value: no `pick(row, ['oCountry', 'country', 'country_name'])`, no `row.a ?? row.b`, no `row.x || row.X`.
   - Don't normalise key case or rename keys speculatively to avoid learning the real name.

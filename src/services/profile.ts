@@ -30,15 +30,15 @@ export type CustomerProfile = {
   /** Corporate account the customer books against; '' for card-only profiles. */
   accountNumber: string;
   /**
-   * What the Preferences screen edits. `null`: `LOAD_PROFILE` sends no
-   * preference headings — the values arrive only past its last heading, which
-   * the app never reads (docs/XYZ_INTEGRATION_GUIDE.md §10) — so the app has no
-   * preferences to show, and a new booking starts from the form's own default.
+   * What the Preferences screen edits. `null`: the app doesn't read the
+   * preference headings `LOAD_PROFILE` sends since 2026-11-03 yet
+   * (docs/XYZ_INTEGRATION_GUIDE.md §10), so a new booking starts from the
+   * form's own default.
    */
   preferences: PreferencesValue | null;
   /**
-   * What the Update Mailing Address screen edits. `null`: `LOAD_PROFILE` sends
-   * no address headings, so the app has no address to show.
+   * What the Update Mailing Address screen edits. `null`: the app doesn't read
+   * the address headings `LOAD_PROFILE` sends since 2026-11-03 yet (guide §10).
    */
   mailingAddress: MailingAddress | null;
 };

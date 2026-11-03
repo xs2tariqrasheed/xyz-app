@@ -50,12 +50,12 @@ Pre-filled current values of all fields above.
 
 ## 8. Gateway (real data)
 
-Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10).
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). **The app still reads the old heading names**, so these codes fail closed with the screen's load error until the module is remapped.
 
 | Action code | When | Real answers |
 |---|---|---|
-| `PROF.S.LOAD_PROFILE` | Profile opens | 15 headings, 44 values per row. Read by heading with `mapRowsByHeadings`, so a missing heading shows the load error. The pairing is shifted: `first_name` = the **password**, `last_name` = the first name, `email` = the last name, and the phone and fax headings pair with phone fragments, a country code, a state and a city. The form shows those values as paired (backend issue). Unknown login → one row `["X"]`. |
-| `PROF.U.PROFILE` | Update | **Not sent.** It is refused while `LOAD_PROFILE` has values past its last heading (`UPDATE_UNAVAILABLE`, shown in the form). |
+| `PROF.S.LOAD_PROFILE` | Profile opens | 44 headings = 44 values. The form's fields: `ofirstname`, `olastname`, `ophonenumberus` / `ophoneextus`, `ophonenumber` / `ophoneext` (international), `ofax`. There is no separate dial-code or fax-extension heading. `opassword` and `ocardnumber` are sensitive: never shown. |
+| `PROF.U.PROFILE` | Update | Not sent yet (it writes a real profile). The app no longer refuses it before sending. |
 
 Value codes follow the backend test client's update sample (`P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`, `P_PAYMENT_TYPE` `1`). Client rules are in §3: first name ≤ 15 with no digits or `"`; last name 2–20 with no digits or `"`; US phone 10 digits, not starting with 0 or 1; extensions ≤ 5 digits; international and fax numbers ≥ 7 digits with the calling code; at least one callback phone.
 

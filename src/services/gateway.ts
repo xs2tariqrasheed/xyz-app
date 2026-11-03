@@ -109,8 +109,7 @@ export function mapRows(response: GatewayResponse): Record<string, string>[] {
 /**
  * {@link mapRows}, for a caller that reads `headings`: every one of them must
  * be among the response's own `JMetaData.Headings`, or the response fails
- * closed. Values are still paired by heading position; values past the last
- * heading are ignored (docs/XYZ_INTEGRATION_GUIDE.md §4).
+ * closed (docs/XYZ_INTEGRATION_GUIDE.md §4).
  */
 export function mapRowsByHeadings<Heading extends string>(
   response: GatewayResponse,
@@ -128,17 +127,6 @@ export function mapRowsByHeadings<Heading extends string>(
   }
   // Every heading read was checked above, so each row carries all of them.
   return rows as Record<Heading, string>[];
-}
-
-/**
- * True when any row carries more values than there are headings. The extra
- * values are ignored when mapping (docs/XYZ_INTEGRATION_GUIDE.md §4), and the
- * heading–value pairing of such a response is not trusted for a write that
- * sends loaded values back.
- */
-export function hasUnheadedValues(response: GatewayResponse): boolean {
-  const headings = response.JMetaData?.Headings ?? [];
-  return (response.JData ?? []).some((row) => Array.isArray(row) && row.length > headings.length);
 }
 
 /** Ready-made copy for showing a failed gateway call (docs/XYZ_INTEGRATION_GUIDE.md §6). */

@@ -11,12 +11,12 @@ import { fillLoginForm } from './support/login';
  * Personal Info, Update Mailing Address and Preferences against the real
  * gateway (reverse-engineer-implemented/guide/07, 08, 09; docs/XYZ_INTEGRATION_GUIDE.md §10).
  *
- * `PROF.S.LOAD_PROFILE` is read for real. `PROF.U.PROFILE` must never leave
- * the app while that response has values past its last heading: any that
- * does is intercepted (never reaching the gateway) and fails the test.
+ * `PROF.S.LOAD_PROFILE` is read for real. `PROF.U.PROFILE` is intercepted
+ * and answered here, so it never reaches the gateway.
  *
- * Today's `first_name` heading pairs with the password, so values are
- * compared without being printed.
+ * The gateway renamed `LOAD_PROFILE`'s headings on 2026-11-03 (guide §10):
+ * this spec still reads the old ones and is rewritten with the profile remap.
+ * Profile values are compared without being printed.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -24,7 +24,7 @@ test.beforeEach(async ({ page }) => {
   await sandboxClientIpLookup(page);
 });
 
-test('shows Personal Info as LOAD_PROFILE pairs it, validates, and refuses the update', async ({ page }) => {
+test('shows Personal Info as LOAD_PROFILE pairs it, validates, and sends the update', async ({ page }) => {
   const updates = await interceptProfileUpdates(page);
   const profile = await logIn(page);
 
@@ -49,13 +49,13 @@ test('shows Personal Info as LOAD_PROFILE pairs it, validates, and refuses the u
   await expect(page.getByText(PROFILE_MESSAGES.LAST_NAME_INVALID)).toBeVisible();
   await expect(page.getByText(PROFILE_MESSAGES.US_PHONE_INVALID)).toBeVisible();
 
-  // A valid form is still not sent: LOAD_PROFILE has values past its last heading.
+  // A valid form is sent; the intercepted answer refuses it.
   await firstName.fill('');
   await lastName.fill('Doe');
   await usPhone.fill('2125550100');
   await page.getByRole('button', { name: PROFILE_MESSAGES.UPDATE, exact: true }).click();
-  await expect(page.getByText(PROFILE_MESSAGES.UPDATE_UNAVAILABLE)).toBeVisible();
-  expect(updates).toHaveLength(0);
+  await expect(page.getByText('Intercepted by the spec')).toBeVisible();
+  expect(updates).toHaveLength(1);
 });
 
 test('Update Mailing Address shows "not available" without address headings', async ({ page }) => {

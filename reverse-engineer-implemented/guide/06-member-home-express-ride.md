@@ -48,14 +48,14 @@ Response: page/redirect **[U]**. Client code in the booking module supports an e
 
 ## 8. Gateway (real data)
 
-Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §7a, §10). Every code below is read by its own headings; values past the last heading are ignored.
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §7a, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). **The app still reads the old heading names**, so these codes fail closed with the screen's load error until the module is remapped.
 
 | Action code | When | Real answers |
 |---|---|---|
-| `PROF.S.LOAD_PROFILE` | Home opens (shared with Profile) | 15 headings, 44 values, shifted: `first_name` holds the **password**, which the welcome line shows as paired (backend issue). `last_login` is always empty, so no last-login line shows. |
-| `RES.S.ALL_ORDERS` | Home opens (±92 days) | 10 headings, 112 values, shifted: `reservation_num` = login id, `pickup_date` = a first name. No row has a date, so the tiles count 0 and the lists show their empty states. |
-| `PROF.S.USER_ADDRESSES` | Express pickup / drop-off lists | 16 headings, 17 values, shifted by one (`country` = state, `city` = ZIP…), shown as paired. 20 rows for the test login. |
-| `PROF.S.USER_PROFILE_ADDRESSES`, `PROF.S.CORPORATE_ADDRESSES` | Booking form's "Your places" | Headings match (17). The first is the frequent-pickup list (17 rows). |
+| `PROF.S.LOAD_PROFILE` | Home opens (shared with Profile) | 44 headings = 44 values. The welcome line's name is `ofirstname`; the last-login line's value is `oelastlogindate` (`DD-MON-YY`, now filled). |
+| `RES.S.ALL_ORDERS` | Home opens (±92 days) | 112 headings = 112 values (`oreservationnumber`, `oreservationdate` `MM/DD/YYYY`, `oreservationtime`, `oecurrentstatusdesc`, …). 15 rows for the test login. |
+| `PROF.S.USER_ADDRESSES` | Express pickup / drop-off lists | 17 headings = 17 values, the same as `USER_PROFILE_ADDRESSES` (`ocountry … oelastservicedate`). No `address_id`. 20 rows for the test login. |
+| `PROF.S.USER_PROFILE_ADDRESSES`, `PROF.S.CORPORATE_ADDRESSES` | Booking form's "Your places" | 17 headings, renamed to lower case (`ocountry`, …). The first is the frequent-pickup list (17 rows). |
 | `RES.S.ZONE_THE_LOCATION` | Express → both stops zoned by street | `["", ""]` for every input tried, so both stops go to the "confirm this address" step. |
 
 - **Express writes nothing.** It opens the booking form's Preview with a live ("ready now") draft. Only "Book reservation" there sends `RES.I.RESERVATION`, and that is not tested here because it creates a real ride.
@@ -63,6 +63,6 @@ Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` 
 - **The 15-minute dispatch note** is copy from the old site (§3), not a gateway value.
 
 **Still unverified:**
-- The `last_login` format (the app reads `MM/DD/YYYY h:mm[:ss] AM|PM`).
+- The last-login format: `oelastlogindate` answers `DD-MON-YY`, while the app reads `MM/DD/YYYY h:mm[:ss] AM|PM` (fix with the remap).
 - A zoned street's answer from `ZONE_THE_LOCATION` (assumed `"0"` plus the zone in `o_message`, `TODO(schema-unverified)`).
-- Ride status and payment words, because no `status` / `payment_method` heading has carried a real value yet.
+- Ride status and payment words: `oecurrentstatusdesc` and `opaymentmethod` now carry values; check them with the remap.

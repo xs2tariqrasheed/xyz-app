@@ -44,17 +44,16 @@ Response: JSON with non-empty `message` → show; otherwise HTML page (success).
 
 ## 7. Gateway (real data)
 
-Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10).
+Checked against the live gateway on 2026-10-30 (`docs/XYZ_INTEGRATION_GUIDE.md` §7, §10). Re-probed on 2026-11-03: each row now has one value per heading, and the headings were renamed (guide §10). **The app still reads the old heading names**, so these codes fail closed with the screen's load error until the module is remapped.
 
 | Action code | Real answers |
 |---|---|
-| `PROF.S.LOAD_PROFILE` | No mailing-address headings. The address's country code (`01`), state and city arrive only past the last heading, so they're ignored and the screen shows "not available". |
-| `PROF.S.USER_PROFILE_ADDRESSES` | Headings match, but it is the profile's frequent-pickup list (17 rows for the test login), not one mailing address, so it isn't used here. Unknown login → `"1"` / `ORA-01001`. |
-| `PROF.U.PROFILE` | Not sent: refused while `LOAD_PROFILE` has values past its last heading. |
+| `PROF.S.LOAD_PROFILE` | Now sends the mailing address under its own headings: `ocountry` (code, `01`), `ostate`, `ocity`, `ozip`, `obuildingnum`, `ostreetname`, `ocrossstreet1`, `ocrossstreet2`, `oaddressphoneus`, `oaddressphone`, `oaddresstype`. The screen still shows "not available" until the module reads them. |
+| `PROF.S.USER_PROFILE_ADDRESSES` | Headings renamed to lower case (`ocountry`, …). It is the profile's frequent-pickup list (17 rows for the test login), not one mailing address, so it isn't used here. |
+| `PROF.U.PROFILE` | Not sent yet (it writes a real profile). The app no longer refuses it before sending. |
 
 Value codes follow the backend test client (`P_COUNTRY` `01`, `P_ADDRESS_TYPE` `HOME`). Client rules: ZIP 5 digits, building # ≤ 6 digits, street 4–30 street characters, Apt # with no `"`, and at least one address phone.
 
 **Still unverified:**
-- Which code and headings return the mailing address.
 - The office `P_ADDRESS_TYPE` code (the app sends `O`) and non-US `P_COUNTRY` codes.
 - Where Apt # / Mail stop goes: the app uses `P_CROSS_STREET2`, which the test client fills with a second cross street.
