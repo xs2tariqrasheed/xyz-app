@@ -1,11 +1,13 @@
 import * as Linking from 'expo-linking';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
 import { InfoCard, SplitInfoCard } from '@/components/reservation/info/InfoCard';
-import { InfoColumns, InfoList, InfoRow, type InfoRowProps } from '@/components/reservation/info/InfoRow';
+import { DriverCard } from '@/components/reservation/info/DriverCard';
+import { InfoColumns, InfoList, RecordRow } from '@/components/reservation/info/InfoRow';
+import { MessagesCard } from '@/components/reservation/info/MessagesCard';
 import { CancelReservationSheet } from '@/components/rides/CancelReservationSheet';
 import { RideQuestionSheet } from '@/components/rides/RideQuestionSheet';
 import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
@@ -15,6 +17,7 @@ import { hasRateRideUrl } from '@/config/rateRide';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
 import { COMMON_MESSAGES, RECEIPTS_MESSAGES, RESERVATION_INFO_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
+import { useCommunicationLog } from '@/hooks/useCommunicationLog';
 import { useFetchData } from '@/hooks/useFetchData';
 import { useOpenReservation } from '@/hooks/useReservationActions';
 import { useVehicleTypes } from '@/hooks/useReservationLookups';
@@ -23,18 +26,14 @@ import { placeLocalityLine } from '@/services/places';
 import {
   AIRPORT_PICKUP_OPTIONS,
   columnReadJData,
-  communicationLogJData,
   type RecordStop,
-  type ReservationRecord,
   RESERVATION_COLUMN_IDS,
-  toCommunicationLog,
   toSingleColumnValue,
 } from '@/services/reservation';
 import { hasRideReceipt, hasVoucherNumber } from '@/services/rideDocument';
 import { openRateRide } from '@/services/rateRide';
-import { carJData, toCarInfo } from '@/services/tracking';
 import { findVehicleType } from '@/services/vehicleTypes';
-import { breakpoints, colors, radii, space } from '@/theme';
+import { breakpoints, colors, space } from '@/theme';
 import { formatClockTime, formatSlashDate } from '@/utils/datetime';
 import { formatIntlPhone, formatUsPhone } from '@/utils/phone';
 
@@ -46,11 +45,6 @@ type Notice = { tone: 'success' | 'danger'; message: string } | null;
  * `RES.S.COMMUNICATION_LOG` for the messages sent, and the extra contact
  * stored on it (`RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE`).
  */
-/** A record field: a blank value shows "not available" (gateway data, CLAUDE.md). */
-function RecordRow(props: InfoRowProps) {
-  return <InfoRow emptyLabel={COMMON_MESSAGES.NOT_AVAILABLE} {...props} />;
-}
-
 export default function ReservationInfoScreen() {
   const { rideno } = useLocalSearchParams<{ rideno?: string }>();
   const reservationNumber = typeof rideno === 'string' ? rideno.trim() : '';
@@ -247,7 +241,7 @@ function LoadedReservation({ reservationNumber, onBack }: { reservationNumber: s
         </InfoCard>
       ) : null}
 
-      <MessagesCard loginId={loginId} reservationNumber={record.reservationNumber} />
+      <Messages loginId={loginId} reservationNumber={record.reservationNumber} />
 
       <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
         <Button label={RESERVATION_INFO_MESSAGES.BACK} variant="outline" onPress={onBack} />
@@ -341,51 +335,6 @@ function withExt(number: string, ext: string): string {
   return ext ? `${number} ext. ${ext}` : number;
 }
 
-/** The car and driver: the record's own fields, completed by `PROF.S.CAR_INFO` when a car is assigned. */
-function DriverCard({ record, carTypeLabel }: { record: ReservationRecord; carTypeLabel: string }) {
-  return (
-    <InfoCard title={RESERVATION_INFO_MESSAGES.DRIVER_TITLE}>
-      {record.driver.carNumber ? (
-        <CarInfo record={record} carNumber={record.driver.carNumber} carTypeLabel={carTypeLabel} />
-      ) : (
-        <Text style={styles.muted}>{RESERVATION_INFO_MESSAGES.DRIVER_PENDING}</Text>
-      )}
-    </InfoCard>
-  );
-}
-
-function CarInfo({ record, carNumber, carTypeLabel }: { record: ReservationRecord; carNumber: string; carTypeLabel: string }) {
-  const { data } = useFetchData(ACTION_CODES.CAR_INFO, GATEWAY_VIEW_NAME, carJData(carNumber));
-  const info = useMemo(() => {
-    if (!data) return null;
-    try {
-      return toCarInfo(data);
-    } catch {
-      return null;
-    }
-  }, [data]);
-  const { driver } = record;
-
-  return (
-    <InfoColumns
-      left={
-        <InfoList>
-          <RecordRow label="Car Number" value={carNumber} />
-          <RecordRow label="Car Color" value={info?.carColor || driver.carColor} />
-          <RecordRow label="Car Model" value={info?.carModel || driver.carModel} />
-        </InfoList>
-      }
-      right={
-        <InfoList>
-          <RecordRow label="Driver Name" value={info?.driverName || driver.driverName} />
-          <RecordRow label="Driver Number" value={info?.driverNumber || driver.driverNumber} />
-          <RecordRow label="Car Type" value={info?.carType || carTypeLabel} />
-        </InfoList>
-      }
-    />
-  );
-}
-
 /** The Email CC / extra contact stored on the reservation, when there is one. */
 function ExtraContact({ reservationNumber }: { reservationNumber: string }) {
   const { data } = useFetchData(
@@ -397,43 +346,8 @@ function ExtraContact({ reservationNumber }: { reservationNumber: string }) {
   return value ? <RecordRow label={RESERVATION_INFO_MESSAGES.EXTRA_CONTACT} value={value} /> : null;
 }
 
-function MessagesCard({ loginId, reservationNumber }: { loginId: string; reservationNumber: string }) {
-  const { data, isLoading } = useFetchData(
-    ACTION_CODES.COMMUNICATION_LOG,
-    GATEWAY_VIEW_NAME,
-    communicationLogJData(loginId, reservationNumber),
-  );
-  const entries = useMemo(() => {
-    if (!data) return [];
-    try {
-      return toCommunicationLog(data);
-    } catch {
-      return [];
-    }
-  }, [data]);
-
-  return (
-    <InfoCard title={RESERVATION_INFO_MESSAGES.MESSAGES_TITLE}>
-      {isLoading && !data ? (
-        <ActivityIndicator color={colors.primary[600]} />
-      ) : entries.length === 0 ? (
-        <Text style={styles.muted}>{RESERVATION_INFO_MESSAGES.MESSAGES_EMPTY}</Text>
-      ) : (
-        <View style={styles.messages}>
-          {entries.map((entry) => (
-            <View key={entry.id} style={styles.message}>
-              <Text style={styles.messageMeta}>
-                {[entry.at ? `${formatSlashDate(entry.at)} ${formatClockTime(entry.at)}` : '', entry.channel]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Text>
-              <Text style={styles.body}>{entry.text}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </InfoCard>
-  );
+function Messages({ loginId, reservationNumber }: { loginId: string; reservationNumber: string }) {
+  return <MessagesCard log={useCommunicationLog(loginId, reservationNumber)} />;
 }
 
 /** One end of the ride. Blank lines stay visible so the shape never shifts. */
@@ -536,16 +450,6 @@ const styles = StyleSheet.create({
   emailEmpty: { color: colors.textDisabled, fontSize: 14 },
 
   body: { color: colors.textBody, fontSize: 14, lineHeight: 20 },
-  muted: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
-  messages: { gap: space.md },
-  message: {
-    gap: 2,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary[200],
-    paddingLeft: space.md,
-    borderRadius: radii.sm,
-  },
-  messageMeta: { color: colors.textMuted, fontSize: 12 },
 
   actions: { gap: space.md, marginTop: space.xs, flexWrap: 'wrap' },
   actionsWide: { flexDirection: 'row', justifyContent: 'center' },

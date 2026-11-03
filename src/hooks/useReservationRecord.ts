@@ -14,6 +14,8 @@ export type ReservationRecordResult = {
   failureMessage: string | null;
   /** True only for the first load, before any answer is in. */
   isLoading: boolean;
+  /** True while any load, a refresh included, is in flight. */
+  isFetching: boolean;
   refetch: () => void;
 };
 
@@ -21,12 +23,13 @@ export type ReservationRecordResult = {
  * One reservation from `RES.S.LOAD_RESERVATION`, mapped for the screens —
  * details, voucher and receipt all read the same record the same way.
  */
-export function useReservationRecord(reservationNumber: string): ReservationRecordResult {
+export function useReservationRecord(reservationNumber: string, refreshKey = 0): ReservationRecordResult {
   const { session } = useAuth();
   const { data, isLoading, isError, error, refetch } = useFetchData(
     ACTION_CODES.LOAD_RESERVATION,
     GATEWAY_VIEW_NAME,
     loadReservationJData(session?.loginId ?? '', reservationNumber),
+    refreshKey,
   );
 
   const loaded = useMemo((): { record: ReservationRecord | null; failure: string | null } => {
@@ -44,5 +47,5 @@ export function useReservationRecord(reservationNumber: string): ReservationReco
   else if (isError) failureMessage = getErrorDisplay(error).customDescription;
   else if (!pending && !loaded.record) failureMessage = RIDES_MESSAGES.LOAD_RESERVATION_FAILED;
 
-  return { record: loaded.record, failureMessage, isLoading: pending, refetch };
+  return { record: loaded.record, failureMessage, isLoading: pending, isFetching: isLoading, refetch };
 }

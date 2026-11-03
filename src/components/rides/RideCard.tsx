@@ -21,6 +21,8 @@ export function RideCard({ ride, onAction }: RideCardProps) {
   const askable = canAskAboutRide(ride);
   const feedback = canLeaveFeedback(ride);
   const receipt = hasReceipt(ride);
+  const live = ride.status === 'in-progress';
+  const track = live ? () => onAction('track', ride) : undefined;
 
   return (
     <View style={styles.card}>
@@ -29,7 +31,7 @@ export function RideCard({ ride, onAction }: RideCardProps) {
           <RideActionLink label={ride.id} onPress={() => onAction('view', ride)} />
           <Text style={styles.passenger}>{ride.passengerName}</Text>
         </View>
-        <RideStatusBadge status={ride.status} />
+        <RideStatusBadge status={ride.status} onPress={track} />
       </View>
 
       <View style={styles.pickupRow}>
@@ -51,8 +53,9 @@ export function RideCard({ ride, onAction }: RideCardProps) {
         </View>
       </View>
 
-      {modifiable || cancelable || askable || receipt || feedback ? (
+      {live || modifiable || cancelable || askable || receipt || feedback ? (
         <View style={styles.actions}>
+          {track ? <RideActionLink label={RIDES_MESSAGES.TRACK} onPress={track} /> : null}
           {modifiable ? <RideActionLink label="Modify ride" onPress={() => onAction('modify', ride)} /> : null}
           {cancelable ? (
             <RideActionLink label="Cancel ride" tone="danger" onPress={() => onAction('cancel', ride)} />

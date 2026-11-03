@@ -78,7 +78,10 @@ export function RideResultsTable({ rides, onAction }: RideResultsTableProps) {
             <Text style={styles.cellText}>{ride.destination}</Text>
           </View>
           <View style={[styles.cell, { flex: COLUMNS.status }]}>
-            <RideStatusBadge status={ride.status} />
+            <RideStatusBadge
+              status={ride.status}
+              onPress={ride.status === 'in-progress' ? () => onAction('track', ride) : undefined}
+            />
           </View>
           <View style={[styles.cell, { flex: COLUMNS.payment }]}>
             <Text style={styles.cellText}>{paymentLabel(ride)}</Text>
@@ -91,6 +94,9 @@ export function RideResultsTable({ rides, onAction }: RideResultsTableProps) {
             )}
           </View>
           <View style={[styles.cell, { flex: COLUMNS.actions }]}>
+            {ride.status === 'in-progress' ? (
+              <RideActionLink label={RIDES_MESSAGES.TRACK_SHORT} onPress={() => onAction('track', ride)} />
+            ) : null}
             {ride.canUpdate || ride.canCancel ? (
               <>
                 {ride.canUpdate ? <RideActionLink label="Modify" onPress={() => onAction('modify', ride)} /> : null}

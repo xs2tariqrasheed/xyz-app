@@ -61,6 +61,7 @@ export default function RideSearchScreen() {
     if (action === 'view') router.push({ pathname: '/reservation-info', params: { rideno: ride.id } });
     else if (action === 'voucher') router.push({ pathname: '/voucher', params: { rideno: ride.id } });
     else if (action === 'receipt') router.push({ pathname: '/receipt', params: { rideno: ride.id } });
+    else if (action === 'track') router.push({ pathname: '/track-ride', params: { rideno: ride.id } });
     else if (action === 'modify') void opener.open(ride.id, 'edit');
     else if (action === 'cancel') setCancelling(ride.id);
     else if (action === 'ask') setAsking(ride.id);

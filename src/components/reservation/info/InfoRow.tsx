@@ -1,5 +1,6 @@
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { COMMON_MESSAGES } from '@/constants/messages';
 import { breakpoints, colors, space } from '@/theme';
 
 /** Stands in for a field the booking system left blank. */
@@ -14,6 +15,11 @@ export type InfoRowProps = {
   /** Rich value — a badge, a link — rendered instead of `value`. */
   children?: React.ReactNode;
 };
+
+/** A gateway record field: a blank value shows "not available" (gateway data, CLAUDE.md). */
+export function RecordRow(props: InfoRowProps) {
+  return <InfoRow emptyLabel={COMMON_MESSAGES.NOT_AVAILABLE} {...props} />;
+}
 
 /**
  * One `Label : value` line.

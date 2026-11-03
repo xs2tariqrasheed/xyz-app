@@ -17,6 +17,9 @@ import {
  * value, so an inline `jData` literal is fine, but keep values that change on
  * every render (timestamps, random ids) out of it. The previous result stays
  * visible while a refetch of the same request is in flight.
+ *
+ * `refreshKey` re-runs the same request whenever it changes, so one screen
+ * can refresh several reads together (Track your route's polling).
  */
 
 export type FetchDataResult = {
@@ -33,7 +36,8 @@ export type FetchDataResult = {
 
 type Settled = {
   requestKey: string;
-  attempt: number;
+  /** Which run answered: the `refetch` count and the caller's `refreshKey`. */
+  run: string;
   data?: GatewayResponse;
   error?: unknown;
 };
@@ -42,9 +46,11 @@ export function useFetchData(
   actionCode: ActionCode,
   viewName: string,
   jData: GatewayJData,
+  refreshKey = 0,
 ): FetchDataResult {
   const requestKey = JSON.stringify([actionCode, viewName, jData]);
   const [attempt, setAttempt] = useState(0);
+  const run = `${attempt}:${refreshKey}`;
   const [settled, setSettled] = useState<Settled | null>(null);
 
   useEffect(() => {
@@ -55,18 +61,18 @@ export function useFetchData(
 
     callGateway(code, params, { viewName: view, signal: controller.signal }).then(
       (data) => {
-        if (!controller.signal.aborted) setSettled({ requestKey, attempt, data });
+        if (!controller.signal.aborted) setSettled({ requestKey, run, data });
       },
       (error: unknown) => {
-        if (!controller.signal.aborted) setSettled({ requestKey, attempt, error });
+        if (!controller.signal.aborted) setSettled({ requestKey, run, error });
       },
     );
 
     return () => controller.abort();
-  }, [requestKey, attempt]);
+  }, [requestKey, run]);
 
   const current = settled?.requestKey === requestKey ? settled : null;
-  const done = current?.attempt === attempt;
+  const done = current?.run === run;
   const failed = done && current.error !== undefined;
 
   return {

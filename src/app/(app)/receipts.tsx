@@ -68,6 +68,7 @@ export default function ReceiptsScreen() {
       void openRateRide(ride.id).then((failure) => failure && setNotice({ tone: 'danger', message: failure }));
     } else if (action === 'receipt') router.push({ pathname: '/receipt', params });
     else if (action === 'voucher') router.push({ pathname: '/voucher', params });
+    else if (action === 'track') router.push({ pathname: '/track-ride', params });
     else router.push({ pathname: '/reservation-info', params });
   };
 

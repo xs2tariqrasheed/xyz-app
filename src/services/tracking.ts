@@ -3,6 +3,7 @@ import { COMMON_MESSAGES, TRACKING_MESSAGES } from '@/constants/messages';
 import type { GatewayJData, GatewayResponse } from '@/services/gateway';
 import { mapRowsByHeadings } from '@/services/gateway';
 import { parseGatewayDate, readRecords, readResult, refusalMessage } from '@/services/gatewayRows';
+import { parseCoordinate } from '@/utils/coordinates';
 
 /**
  * Where a car has been and where it is now (reverse-engineer-implemented/guide/21):
@@ -50,11 +51,6 @@ const POSITION_HEADINGS = ['o_latitude', 'o_longitude'] as const;
 /** `RES.S.LATITUDE_LONGITUDE_FOR_CAR`'s `"5"` / "No Data Found": the car has no position. */
 const NO_POSITION_CODE = '5';
 
-function coordinate(value: string): number | null {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) && parsed !== 0 ? parsed : null;
-}
-
 /** The route's timeline in the order the server logged it. */
 export function toVehicleLog(response: GatewayResponse): VehicleLogEntry[] {
   return readRecords(response, LOG_HEADINGS).map((row, index) => ({
@@ -62,8 +58,8 @@ export function toVehicleLog(response: GatewayResponse): VehicleLogEntry[] {
     id: `${row.oetrackingdate} ${row.oetrackingtime} ${index}`,
     at: parseGatewayDate(row.oetrackingdate, row.oetrackingtime),
     status: row.oestatusdesc.trim() || COMMON_MESSAGES.NOT_AVAILABLE,
-    latitude: coordinate(row.oelatitude),
-    longitude: coordinate(row.oelongitude),
+    latitude: parseCoordinate(row.oelatitude),
+    longitude: parseCoordinate(row.oelongitude),
   }));
 }
 
@@ -77,8 +73,8 @@ export function toCarPosition(response: GatewayResponse): CarPosition | null {
   if (result.code === NO_POSITION_CODE) return null;
   if (result.code !== DB_SUCCESS_CODE) throw new TrackingError(refusalMessage(result, TRACKING_MESSAGES.CAR_FAILED));
   const row = mapRowsByHeadings(response, POSITION_HEADINGS)[0];
-  const latitude = row ? coordinate(row.o_latitude) : null;
-  const longitude = row ? coordinate(row.o_longitude) : null;
+  const latitude = row ? parseCoordinate(row.o_latitude) : null;
+  const longitude = row ? parseCoordinate(row.o_longitude) : null;
   return latitude !== null && longitude !== null ? { latitude, longitude } : null;
 }
 

@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from '
 import { RideRoute } from '@/components/rides/RideRoute';
 import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
 import { Button } from '@/components/ui/Button';
-import { HOME_MESSAGES } from '@/constants/messages';
+import { HOME_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import { paymentLabel, type Ride } from '@/services/rides';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 import { formatClockTime, formatDayDistance, formatFullDate } from '@/utils/datetime';
@@ -52,12 +52,13 @@ export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) 
   }
 
   const live = ride.status === 'in-progress';
+  const track = () => router.navigate({ pathname: '/track-ride', params: { rideno: ride.id } });
 
   return (
     <View style={styles.card}>
       <View style={styles.band}>
         <Text style={styles.eyebrow}>{live ? HOME_MESSAGES.NEXT_LIVE : HOME_MESSAGES.NEXT_UPCOMING}</Text>
-        <RideStatusBadge status={ride.status} />
+        <RideStatusBadge status={ride.status} onPress={live ? track : undefined} />
       </View>
 
       <View style={styles.body}>
@@ -76,8 +77,10 @@ export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) 
         </View>
 
         <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
+          {live ? <Button label={RIDES_MESSAGES.TRACK} onPress={track} /> : null}
           <Button
             label={HOME_MESSAGES.VIEW_DETAILS}
+            variant={live ? 'outline' : 'primary'}
             onPress={() => router.navigate({ pathname: '/reservation-info', params: { rideno: ride.id } })}
           />
           <Button label={HOME_MESSAGES.ALL_RIDES} variant="outline" onPress={() => router.navigate('/rides')} />

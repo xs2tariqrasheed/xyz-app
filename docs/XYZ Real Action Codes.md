@@ -116,6 +116,8 @@ Every code is read by the heading names it sends (guide §4), one name per field
 - **`PROF.U.PROFILE` needs every parameter**, so the client must send back the stored password and full card number that `LOAD_PROFILE` returns. An update that leaves them out fails with `ORA-01843`.
 - **`PROF.S.CAR_INFO`'s last heading is `'wc_tlc_sticker_num'`** (with quotes) and its value is the placeholder `WC_TLC_STICKER_NUM`.
 - **`RES.S.LOAD_RESERVATION` sends the `oecarnum` heading twice** (positions 75 and 118). `mapRows` keeps the later value.
+- **Test-client rides have one point for both ends:** the open rides `W6102831262/64/65/67` (and `W6102831258`) store `oepickuplat/lon` = `oedropofflat/lon` = `40.7484, -73.9857` with placeholder streets (`TEST_P_S_N`, `TEST_D_S_N`), so Track your route draws A and B on one spot. Rides from the old site carry real, distinct coordinates (`6081912876`). Seen 2026-11-03.
+- **`oecanviewstatus` is `N` on every ride** (`ALL_ORDERS`, `LOAD_RESERVATION`), finished rides with a vehicle log included. The app doesn't gate tracking on it until its meaning is confirmed.
 - **Fixed 2026-11-03:** record-set headings now match their values (`LOAD_PROFILE`, `USER_ADDRESSES`, the order codes and the rest). The headings were renamed at the same time.
 - **`RES.S.ZONE_THE_LOCATION` never zones:** `[["", ""]]` for every input tried, including the test client's own sample.
 - **Database: rides created with `"0"` are not listed** — `RES.I.RESERVATION` answers `"0"` + a number, but the ride never appears (`W6110231278`, 2026-11-03): `LOAD_RESERVATION` answers `dummy`, the order lists leave it out, and update / cancel answer "Invalid reservation number." The test client's bookings of 2026-10-28 do appear.

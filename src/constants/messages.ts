@@ -343,6 +343,18 @@ export const ADDRESS_FIELD_MESSAGES = {
   FIT_ROUTE: 'Show the whole route',
 } as const;
 
+/** The route map shared by the booking form and Track your route. */
+export const ROUTE_MAP_MESSAGES = {
+  FINDING_ROUTE: 'Finding the best route…',
+  NO_KEY: 'Add a Google Maps API key to draw the live route here.',
+  CHOOSE_BOTH: 'Choose both addresses to preview the route.',
+  NO_ROUTE: 'No route found between these two addresses.',
+  PICKUP: 'Pickup',
+  DESTINATION: 'Destination',
+  DISTANCE: 'Distance',
+  DRIVE_TIME: 'Drive time',
+} as const;
+
 /** My Addresses: saved pickup / drop-off locations (reverse-engineer-implemented/guide/11). */
 export const ADDRESS_BOOK_MESSAGES = {
   SCREEN_TITLE: 'Addresses',
@@ -654,6 +666,8 @@ export const RIDES_MESSAGES = {
   HOME_RIDES_FAILED: 'The dispatch service did not answer. Booking still works.',
   ASK: 'Ask about this ride',
   ASK_SHORT: 'Ask',
+  TRACK: 'Track your ride',
+  TRACK_SHORT: 'Track',
   LEAVE_FEEDBACK: 'Leave feedback',
   FEEDBACK_SHORT: 'Feedback',
   FEEDBACK_COLUMN: 'Feedback',
@@ -732,6 +746,7 @@ export const RESERVATION_INFO_MESSAGES = {
   CHARGES_TITLE: 'Call Charges',
   MESSAGES_TITLE: 'Messages',
   MESSAGES_EMPTY: 'No messages have been sent for this ride yet.',
+  MESSAGES_FAILED: 'The messages could not be loaded.',
   EXTRA_CONTACT: 'Additional contact',
   CANCEL_REASON: 'Cancellation reason',
 } as const;
@@ -782,11 +797,19 @@ export const RECEIPTS_MESSAGES = {
 
 export const TRACKING_MESSAGES = {
   SCREEN_TITLE: 'Track your route',
+  TRIP_TITLE: 'Trip',
+  STATUS: 'Status',
+  RIDE_DATE: 'Ride Date',
+  RIDE_TIME: 'Ride Time',
+  PICKUP: 'Pickup',
+  DESTINATION: 'Destination',
   ROUTE_TITLE: 'Route detail',
   LOG_EMPTY: 'Vehicle log is not available against this ride.',
   LOG_FAILED: 'The vehicle log could not be loaded.',
-  REFRESH: 'Refresh car position',
-  REFRESHING: 'Locating…',
+  REFRESH: 'Refresh',
+  REFRESHING: 'Refreshing…',
+  UPDATED_AT: 'Updated',
+  REFRESH_FAILED: 'Could not refresh. Showing the last update.',
   CAR_POSITION: 'Car position',
   CAR_MARKER: 'Car',
   CAR_UNKNOWN: 'The car’s position is not available right now.',

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import type { Ride } from '@/services/rides';
 import { colors, space } from '@/theme';
 
-export type RideAction = 'view' | 'modify' | 'cancel' | 'ask' | 'feedback' | 'voucher' | 'receipt';
+export type RideAction = 'view' | 'modify' | 'cancel' | 'ask' | 'feedback' | 'voucher' | 'receipt' | 'track';
 
 export type RideActionHandler = (action: RideAction, ride: Ride) => void;
 
