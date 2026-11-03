@@ -4,9 +4,10 @@ import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { ADDRESS_BOOK_MESSAGES as M } from '@/constants/messages';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
-import { formatUsPhone, toDigits } from '@/utils/phone';
+import { formatUsPhone, toDigits, US_PHONE_DIGITS } from '@/utils/phone';
 
 import type { AddressDraft, AddressErrors } from './savedAddress';
 
@@ -24,8 +25,10 @@ export type AddressFormProps = {
   onCancel: () => void;
 };
 
-/** Field limits from the old address book (reverse-engineer-implemented/guide/11 §3). */
-const MAX = { state: 2, zip: 5, building: 6, street: 30, ext: 5, directions: 500 } as const;
+/** `T_VIP_PICKUP.STATE` holds a 2-letter code (reverse-engineer-implemented/guide/11 §3). */
+const STATE_MAX = 2;
+/** The dial-code box takes up to 4 digits. */
+const DIAL_CODE_MAX = 4;
 
 /**
  * Add or edit one saved location.
@@ -81,7 +84,7 @@ export function AddressForm({
           onChangeText={(state) => patch({ state })}
           error={errors.state}
           placeholder={M.STATE_PLACEHOLDER}
-          maxLength={MAX.state}
+          maxLength={STATE_MAX}
           autoComplete="postal-address-region"
           textContentType="addressState"
           autoCapitalize="characters"
@@ -105,7 +108,7 @@ export function AddressForm({
           style={styles.field}
           label={M.ZIP_LABEL}
           value={draft.zip}
-          onChangeText={(zip) => patch({ zip: toDigits(zip, MAX.zip) })}
+          onChangeText={(zip) => patch({ zip: toDigits(zip, FIELD_LIMITS.ZIP) })}
           error={errors.zip}
           placeholder={M.ZIP_PLACEHOLDER}
           keyboardType="number-pad"
@@ -121,7 +124,7 @@ export function AddressForm({
           label={M.BUILDING_LABEL}
           required
           value={draft.building}
-          onChangeText={(building) => patch({ building: toDigits(building, MAX.building) })}
+          onChangeText={(building) => patch({ building: toDigits(building, FIELD_LIMITS.BUILDING_NO) })}
           error={errors.building}
           placeholder={M.BUILDING_PLACEHOLDER}
           keyboardType="number-pad"
@@ -138,7 +141,7 @@ export function AddressForm({
           autoComplete="street-address"
           textContentType="streetAddressLine1"
           autoCapitalize="words"
-          maxLength={MAX.street}
+          maxLength={FIELD_LIMITS.STREET}
         />
       </View>
 
@@ -151,13 +154,14 @@ export function AddressForm({
           error={errors.crossStreet}
           placeholder={M.CROSS_STREET_PLACEHOLDER}
           autoCapitalize="words"
-          maxLength={MAX.street}
+          maxLength={FIELD_LIMITS.STREET}
         />
         <TextField
           style={styles.field}
           label={M.PICKUP_POINT_LABEL}
           value={draft.pickupPoint}
           onChangeText={(pickupPoint) => patch({ pickupPoint })}
+          maxLength={FIELD_LIMITS.PICKUP_POINT}
           error={errors.pickupPoint}
           placeholder={M.PICKUP_POINT_PLACEHOLDER}
           autoCapitalize="sentences"
@@ -173,7 +177,7 @@ export function AddressForm({
           value={formatUsPhone(draft.phoneUs)}
           // The mask is re-derived from digits on every keystroke, so pasting a
           // formatted number and deleting through one both behave.
-          onChangeText={(value) => patch({ phoneUs: toDigits(value, 10) })}
+          onChangeText={(value) => patch({ phoneUs: toDigits(value, US_PHONE_DIGITS) })}
           error={errors.phoneUs}
           placeholder={M.US_PHONE_PLACEHOLDER}
           keyboardType="phone-pad"
@@ -185,7 +189,7 @@ export function AddressForm({
           style={twoUp ? styles.ext : null}
           label={M.EXT_LABEL}
           value={draft.phoneUsExt}
-          onChangeText={(value) => patch({ phoneUsExt: toDigits(value, MAX.ext) })}
+          onChangeText={(value) => patch({ phoneUsExt: toDigits(value, FIELD_LIMITS.EXTENSION) })}
           keyboardType="number-pad"
           inputMode="numeric"
         />
@@ -196,7 +200,7 @@ export function AddressForm({
           style={twoUp ? styles.code : null}
           label={M.DIAL_CODE_LABEL}
           value={draft.phoneIntlCode}
-          onChangeText={(value) => patch({ phoneIntlCode: toDigits(value, 4) })}
+          onChangeText={(value) => patch({ phoneIntlCode: toDigits(value, DIAL_CODE_MAX) })}
           error={errors.phoneIntlCode}
           placeholder={M.DIAL_CODE_PLACEHOLDER}
           keyboardType="number-pad"
@@ -216,7 +220,7 @@ export function AddressForm({
           style={twoUp ? styles.ext : null}
           label={M.EXT_LABEL}
           value={draft.phoneIntlExt}
-          onChangeText={(value) => patch({ phoneIntlExt: toDigits(value, MAX.ext) })}
+          onChangeText={(value) => patch({ phoneIntlExt: toDigits(value, FIELD_LIMITS.EXTENSION) })}
           keyboardType="number-pad"
           inputMode="numeric"
         />
@@ -233,7 +237,7 @@ export function AddressForm({
         multiline
         numberOfLines={4}
         autoCapitalize="sentences"
-        maxLength={MAX.directions}
+        maxLength={FIELD_LIMITS.DIRECTIONS}
       />
 
       {formError ? <Alert tone="danger" title={M.SAVE_FAILED_TITLE} message={formError} /> : null}

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { isAllowedPassword, PASSWORD_MAX_LENGTH } from '@/components/register/registration';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { FormCard } from '@/components/ui/FormCard';
@@ -9,12 +8,14 @@ import { CheckGlyph } from '@/components/ui/Glyph';
 import { PasswordField } from '@/components/ui/PasswordField';
 import { Reveal } from '@/components/ui/Reveal';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { CHANGE_PASSWORD_MESSAGES } from '@/constants/messages';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { CHANGE_PASSWORD_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { usePostData } from '@/hooks/usePostData';
 import { assertPasswordChanged, AuthError, changePasswordJData } from '@/services/auth';
 import { getErrorDisplay } from '@/services/gateway';
 import { breakpoints, colors, radii, space } from '@/theme';
+import { isAllowedPassword } from '@/utils/validation';
 
 type Values = {
   current: string;
@@ -27,22 +28,15 @@ type Errors = Partial<Record<FieldName, string>>;
 
 const EMPTY: Values = { current: '', next: '', confirm: '' };
 
-/** What a new password has to satisfy, shown live as a checklist. */
+/**
+ * What a new password has to satisfy, shown live as a checklist: the same
+ * rule registration applies (reverse-engineer-guide/26 §5).
+ */
 const RULES = [
   {
     id: 'length',
     label: CHANGE_PASSWORD_MESSAGES.RULE_LENGTH,
     test: isAllowedPassword,
-  },
-  {
-    id: 'case',
-    label: CHANGE_PASSWORD_MESSAGES.RULE_CASE,
-    test: (value: string) => /[a-z]/.test(value) && /[A-Z]/.test(value),
-  },
-  {
-    id: 'number',
-    label: CHANGE_PASSWORD_MESSAGES.RULE_NUMBER,
-    test: (value: string) => /\d/.test(value),
   },
 ] as const;
 
@@ -64,7 +58,7 @@ function validate(values: Values): Errors {
   if (!values.confirm) {
     errors.confirm = CHANGE_PASSWORD_MESSAGES.CONFIRM_PASSWORD_REQUIRED;
   } else if (values.next && values.confirm !== values.next) {
-    errors.confirm = CHANGE_PASSWORD_MESSAGES.CONFIRM_PASSWORD_MISMATCH;
+    errors.confirm = VALIDATION_MESSAGES.PASSWORD_MISMATCH;
   }
 
   return errors;
@@ -157,7 +151,7 @@ export function ChangePasswordForm() {
       ) : null}
 
       <PasswordField
-        maxLength={PASSWORD_MAX_LENGTH}
+        maxLength={FIELD_LIMITS.PASSWORD}
         key={`current-${formKey}`}
         label={CHANGE_PASSWORD_MESSAGES.OLD_PASSWORD_LABEL}
         required
@@ -173,7 +167,7 @@ export function ChangePasswordForm() {
       />
 
       <PasswordField
-        maxLength={PASSWORD_MAX_LENGTH}
+        maxLength={FIELD_LIMITS.PASSWORD}
         key={`next-${formKey}`}
         label={CHANGE_PASSWORD_MESSAGES.NEW_PASSWORD_LABEL}
         required
@@ -204,7 +198,7 @@ export function ChangePasswordForm() {
       </View>
 
       <PasswordField
-        maxLength={PASSWORD_MAX_LENGTH}
+        maxLength={FIELD_LIMITS.PASSWORD}
         key={`confirm-${formKey}`}
         label={CHANGE_PASSWORD_MESSAGES.CONFIRM_PASSWORD_LABEL}
         required

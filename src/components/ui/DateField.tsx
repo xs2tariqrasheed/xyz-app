@@ -16,6 +16,8 @@ export type DateFieldProps = {
   today: Date;
   /** Earliest selectable day. Defaults to `today`. */
   minDate?: Date;
+  /** Latest selectable day. Unbounded when omitted. */
+  maxDate?: Date;
   quickPicks?: readonly QuickPick[];
   /** Sheet copy. Defaults to the reservation wording. */
   sheetTitle?: string;
@@ -34,6 +36,7 @@ export function DateField({
   onChange,
   today,
   minDate,
+  maxDate,
   quickPicks,
   sheetTitle = "Pick a date",
   sheetSubtitle = "",
@@ -78,6 +81,7 @@ export function DateField({
           onChange={setDraft}
           today={today}
           minDate={minDate}
+          maxDate={maxDate}
           quickPicks={quickPicks}
         />
       </Sheet>

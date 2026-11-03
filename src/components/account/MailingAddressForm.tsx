@@ -5,14 +5,15 @@ import { GlobeGlyph, PinGlyph } from '@/components/ui/Glyph';
 import { RadioGroup, type RadioOption } from '@/components/ui/RadioGroup';
 import { SelectField, type SelectOption } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { MAILING_ADDRESS_MESSAGES as M } from '@/constants/messages';
 import { COUNTRIES, US_STATES } from '@/data/regions';
 import { breakpoints, colors, space } from '@/theme';
-import { digitsOnly, formatDialCode, formatIntlPhone, formatUsPhone } from '@/utils/contact';
+import { formatDialCode, normalizeIntlPhone } from '@/utils/contact';
+import { formatUsPhone, toDigits } from '@/utils/phone';
 
 import {
   isUnitedStates,
-  MAILING_ADDRESS_LIMITS as LIMITS,
   type AddressType,
   type MailingAddress,
   type MailingAddressErrors,
@@ -96,7 +97,7 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
             value={value.state}
             onChangeText={(state) => patch({ state })}
             placeholder={M.REGION_PLACEHOLDER}
-            maxLength={LIMITS.city}
+            maxLength={FIELD_LIMITS.CITY}
             autoCapitalize="words"
             autoComplete="postal-address-region"
             textContentType="addressState"
@@ -113,7 +114,7 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           value={value.city}
           onChangeText={(city) => patch({ city })}
           placeholder={M.CITY_PLACEHOLDER}
-          maxLength={LIMITS.city}
+          maxLength={FIELD_LIMITS.CITY}
           autoCapitalize="words"
           autoComplete="postal-address-locality"
           textContentType="addressCity"
@@ -125,10 +126,10 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           required
           value={value.postalCode}
           onChangeText={(postalCode) =>
-            patch({ postalCode: domestic ? digitsOnly(postalCode).slice(0, LIMITS.zip) : postalCode })
+            patch({ postalCode: domestic ? toDigits(postalCode, FIELD_LIMITS.ZIP) : postalCode })
           }
           placeholder={domestic ? M.ZIP_PLACEHOLDER : M.POSTAL_CODE_PLACEHOLDER}
-          maxLength={domestic ? LIMITS.zip : LIMITS.city}
+          maxLength={domestic ? FIELD_LIMITS.ZIP : FIELD_LIMITS.CITY}
           keyboardType={domestic ? 'number-pad' : 'default'}
           autoComplete="postal-code"
           textContentType="postalCode"
@@ -143,11 +144,11 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           required
           value={value.buildingNumber}
           onChangeText={(buildingNumber) =>
-            patch({ buildingNumber: digitsOnly(buildingNumber).slice(0, LIMITS.buildingNumber) })
+            patch({ buildingNumber: toDigits(buildingNumber, FIELD_LIMITS.BUILDING_NO) })
           }
           placeholder={M.BUILDING_PLACEHOLDER}
           keyboardType="number-pad"
-          maxLength={LIMITS.buildingNumber}
+          maxLength={FIELD_LIMITS.BUILDING_NO}
           error={errors.buildingNumber}
         />
         <TextField
@@ -157,7 +158,7 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           value={value.streetName}
           onChangeText={(streetName) => patch({ streetName })}
           placeholder={M.STREET_PLACEHOLDER}
-          maxLength={LIMITS.street}
+          maxLength={FIELD_LIMITS.STREET}
           autoCapitalize="words"
           autoComplete="street-address"
           textContentType="streetAddressLine1"
@@ -172,7 +173,7 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           value={value.crossStreet}
           onChangeText={(crossStreet) => patch({ crossStreet })}
           placeholder={M.CROSS_STREET_PLACEHOLDER}
-          maxLength={LIMITS.street}
+          maxLength={FIELD_LIMITS.MAILING_CROSS_STREET}
           autoCapitalize="words"
           autoComplete="address-line2"
           error={errors.crossStreet}
@@ -183,7 +184,7 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
           value={value.unit}
           onChangeText={(unit) => patch({ unit })}
           placeholder={M.UNIT_PLACEHOLDER}
-          maxLength={LIMITS.unit}
+          maxLength={FIELD_LIMITS.UNIT}
           autoComplete="address-line2"
           textContentType="streetAddressLine2"
           error={errors.unit}
@@ -219,7 +220,7 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
             style={streetStyle}
             label={M.INTL_NUMBER_LABEL}
             value={value.intlPhone}
-            onChangeText={(intlPhone) => patch({ intlPhone: formatIntlPhone(intlPhone) })}
+            onChangeText={(intlPhone) => patch({ intlPhone: normalizeIntlPhone(intlPhone) })}
             placeholder={M.INTL_NUMBER_PLACEHOLDER}
             keyboardType="phone-pad"
             error={errors.intlPhone}

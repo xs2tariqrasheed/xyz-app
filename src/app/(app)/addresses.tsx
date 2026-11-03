@@ -16,7 +16,6 @@ import { SavedAddressList } from '@/components/addresses/SavedAddressList';
 import {
   emptyDraft,
   formatAddressLine,
-  hasErrors,
   toDraft,
   validateDraft,
   type AddressDraft,
@@ -33,6 +32,7 @@ import { useSavedPlaces } from '@/context/SavedPlacesContext';
 import { AddressBookError } from '@/services/addressBook';
 import { getErrorDisplay } from '@/services/gateway';
 import { breakpoints, colors, contentMaxWidth, formMaxWidth, radii, space } from '@/theme';
+import { hasErrors } from '@/utils/validation';
 
 /** How long a confirmation line stays on screen. */
 const NOTICE_MS = 4000;

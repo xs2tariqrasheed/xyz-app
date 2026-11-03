@@ -12,8 +12,6 @@ import { AccountStep } from '@/components/register/AccountStep';
 import { BillingStep } from '@/components/register/BillingStep';
 import {
   EMPTY_REGISTRATION,
-  hasErrors,
-  isVipNumber,
   REGISTRATION_STEPS,
   type BillingErrors,
   EMPTY_REQUIREMENTS,
@@ -43,6 +41,7 @@ import {
   vipJData,
 } from '@/services/registration';
 import { breakpoints, colors, formMaxWidth, space } from '@/theme';
+import { hasErrors, isValidVipNumber } from '@/utils/validation';
 
 const LAST_STEP = REGISTRATION_STEPS.length - 1;
 
@@ -189,7 +188,7 @@ export default function RegisterScreen() {
   /** Early VIP check when the field is left; Create account checks it again. */
   const checkVipOnBlur = async () => {
     const { accountNumber, vipNumber } = draft.billing;
-    if (!accountNumber.trim() || !isVipNumber(vipNumber.trim())) return;
+    if (!accountNumber.trim() || !isValidVipNumber(vipNumber)) return;
 
     const key = vipKey(draft);
     try {

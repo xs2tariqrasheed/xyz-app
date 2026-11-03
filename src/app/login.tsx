@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Field, INLINE_LABEL_WIDTH } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
-import { CAPTCHA_MESSAGES, COMMON_MESSAGES, LOGIN_MESSAGES } from '@/constants/messages';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { CAPTCHA_MESSAGES, COMMON_MESSAGES, LOGIN_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { AuthError } from '@/services/auth';
 import { GatewayError } from '@/services/gateway';
@@ -34,7 +35,7 @@ function validate({ email, password, human }: LoginValue): LoginErrors {
   const errors: LoginErrors = {};
 
   if (!email.trim()) errors.email = LOGIN_MESSAGES.EMAIL_REQUIRED;
-  else if (!isValidEmail(email)) errors.email = LOGIN_MESSAGES.EMAIL_INVALID;
+  else if (!isValidEmail(email)) errors.email = VALIDATION_MESSAGES.EMAIL_INVALID;
 
   if (!password) errors.password = LOGIN_MESSAGES.PASSWORD_REQUIRED;
   if (!human) errors.human = CAPTCHA_MESSAGES.REQUIRED;
@@ -112,6 +113,7 @@ export default function LoginScreen() {
           }}
           placeholder={LOGIN_MESSAGES.EMAIL_PLACEHOLDER}
           inputMode="email"
+          maxLength={FIELD_LIMITS.EMAIL}
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"
@@ -132,6 +134,7 @@ export default function LoginScreen() {
             clear('password');
           }}
           secureTextEntry
+          maxLength={FIELD_LIMITS.PASSWORD}
           autoComplete="current-password"
           textContentType="password"
           autoCapitalize="none"

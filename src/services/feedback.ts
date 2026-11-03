@@ -1,3 +1,4 @@
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { FEEDBACK_MESSAGES } from '@/constants/messages';
 import type { GatewayJData, GatewayResponse } from '@/services/gateway';
 import { assertResultCode, readRecords } from '@/services/gatewayRows';
@@ -18,9 +19,6 @@ export class FeedbackError extends Error {
 }
 
 export type PredefinedQuestion = { id: string; text: string };
-
-/** Longest message the old panel accepted (guide 21). */
-export const QUESTION_MESSAGE_MAX = 200;
 
 /** Letters, digits, spaces and full stops — guide 21's rule — plus everyday punctuation it never blocked. */
 const MESSAGE_CHARACTERS = /^[\p{L}\p{N}\s.,?!'-]*$/u;
@@ -58,7 +56,7 @@ export function assertQuestionSent(response: GatewayResponse): void {
 
 export function validateQuestionMessage(message: string): string | null {
   const trimmed = message.trim();
-  if (trimmed.length > QUESTION_MESSAGE_MAX || !MESSAGE_CHARACTERS.test(trimmed)) {
+  if (trimmed.length > FIELD_LIMITS.QUESTION_MESSAGE || !MESSAGE_CHARACTERS.test(trimmed)) {
     return FEEDBACK_MESSAGES.MESSAGE_INVALID;
   }
   return null;

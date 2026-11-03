@@ -14,6 +14,7 @@ import { OptionCards } from "@/components/ui/OptionCards";
 import { Reveal } from "@/components/ui/Reveal";
 import { SelectField } from "@/components/ui/SelectField";
 import { TextField } from "@/components/ui/TextField";
+import { FIELD_LIMITS } from "@/constants/fieldLimits";
 import { RESERVATION_MESSAGES } from "@/constants/messages";
 import type { RequirementField } from "@/services/billing";
 import {
@@ -218,7 +219,7 @@ export function BillingMethodSection({
               onBlur={onVipBlur}
               placeholder="e.g. 204"
               keyboardType="number-pad"
-              maxLength={10}
+              maxLength={FIELD_LIMITS.VIP_NUMBER}
               autoCorrect={false}
               returnKeyType="done"
               error={errors.vip}
@@ -298,7 +299,7 @@ function RequirementInput({
       required
       value={value}
       onChangeText={onChange}
-      maxLength={30}
+      maxLength={FIELD_LIMITS.REQUIREMENT_ANSWER}
       autoCorrect={false}
       error={error}
     />
@@ -355,7 +356,7 @@ function AccountNumberField({
         value={draft}
         onChangeText={setDraft}
         placeholder="e.g. 99005"
-        maxLength={16}
+        maxLength={FIELD_LIMITS.BOOKING_ACCOUNT_NO}
         placeholderTextColor={colors.textDisabled}
         autoCapitalize="characters"
         autoCorrect={false}
@@ -430,7 +431,7 @@ function CardFields({
         textContentType="postalCode"
         autoCapitalize="characters"
         autoCorrect={false}
-        maxLength={10}
+        maxLength={FIELD_LIMITS.ZIP}
         returnKeyType="done"
         error={errors.postalCode}
       />

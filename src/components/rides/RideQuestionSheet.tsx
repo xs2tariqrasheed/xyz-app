@@ -6,6 +6,7 @@ import { SelectField } from '@/components/ui/SelectField';
 import { Sheet } from '@/components/ui/Sheet';
 import { TextArea } from '@/components/ui/TextArea';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { FEEDBACK_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { useFetchData } from '@/hooks/useFetchData';
@@ -15,7 +16,6 @@ import {
   assertQuestionSent,
   FeedbackError,
   type PredefinedQuestion,
-  QUESTION_MESSAGE_MAX,
   toPredefinedQuestions,
   validateQuestionMessage,
 } from '@/services/feedback';
@@ -127,7 +127,7 @@ function QuestionForm({
           value={message}
           onChangeText={setMessage}
           placeholder={FEEDBACK_MESSAGES.MESSAGE_PLACEHOLDER}
-          maxLength={QUESTION_MESSAGE_MAX}
+          maxLength={FIELD_LIMITS.QUESTION_MESSAGE}
           rows={3}
           error={touched && messageError ? messageError : undefined}
         />

@@ -1,4 +1,4 @@
-import { SUPPORT_PHONE } from '@/components/reservation/RideReceiptSection';
+import { OFFICE_PHONE } from '@/config/support';
 import {
   CHARGE_LABELS,
   COMMON_MESSAGES,
@@ -159,7 +159,7 @@ export function rideDocumentHtml(doc: RideDocument): string {
 <body><div class="doc">
   <div class="head">
     <div class="brand">${escapeHtml(RIDE_DOCUMENT_MESSAGES.BRAND)}</div>
-    <div class="meta">${escapeHtml(SUPPORT_PHONE)}</div>
+    ${OFFICE_PHONE ? `<div class="meta">${escapeHtml(OFFICE_PHONE)}</div>` : ''}
     <div class="number">${escapeHtml(`${doc.title} ${doc.number}`)}</div>
   </div>
   <table>${fields}</table>

@@ -9,12 +9,12 @@ import { BuildingGlyph, CardGlyph } from '@/components/ui/Glyph';
 import { OptionCards, type OptionCard } from '@/components/ui/OptionCards';
 import { Reveal } from '@/components/ui/Reveal';
 import { TextField } from '@/components/ui/TextField';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { CAPTCHA_MESSAGES, REGISTER_MESSAGES } from '@/constants/messages';
 import { breakpoints, colors, space } from '@/theme';
 
 import { CarPreferencesFields } from './CarPreferencesFields';
 import {
-  BILLING_LIMITS,
   type BillingChoice,
   type BillingErrors,
   type CarPreferences,
@@ -106,7 +106,7 @@ export function BillingStep({
                 label={REGISTER_MESSAGES.ACCOUNT_NUMBER_LABEL}
                 required
                 value={billing.accountNumber}
-                maxLength={BILLING_LIMITS.accountNumber}
+                maxLength={FIELD_LIMITS.REGISTRATION_ACCOUNT_NO}
                 onChangeText={(accountNumber) => patch({ accountNumber })}
                 onBlur={onAccountBlur}
                 error={billingErrors.accountNumber}
@@ -120,7 +120,7 @@ export function BillingStep({
                 label={REGISTER_MESSAGES.COMPANY_NAME_LABEL}
                 required
                 value={billing.companyName}
-                maxLength={BILLING_LIMITS.companyName}
+                maxLength={FIELD_LIMITS.COMPANY_NAME}
                 onChangeText={(companyName) => patch({ companyName })}
                 error={billingErrors.companyName}
                 placeholder={REGISTER_MESSAGES.COMPANY_NAME_PLACEHOLDER}
@@ -133,7 +133,7 @@ export function BillingStep({
             <TextField
               label={REGISTER_MESSAGES.VIP_NUMBER_LABEL}
               value={billing.vipNumber}
-              maxLength={BILLING_LIMITS.vipNumber}
+              maxLength={FIELD_LIMITS.VIP_NUMBER}
               onChangeText={(vipNumber) => patch({ vipNumber })}
               onBlur={onVipBlur}
               error={billingErrors.vipNumber}
@@ -156,6 +156,7 @@ export function BillingStep({
                   })
                 }
                 error={billingErrors.requirements?.[index]}
+                maxLength={FIELD_LIMITS.REQUIREMENT_ANSWER}
                 returnKeyType="next"
               />
             ))}

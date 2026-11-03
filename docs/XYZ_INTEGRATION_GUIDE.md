@@ -229,7 +229,7 @@ const profile = toCustomerProfile(data ? mapRows(data) : undefined);
 | `parsing` | "Something went wrong. Please try again." |
 | `network` / anything else | "We couldn't reach the server. Check your connection and try again." |
 
-User-facing copy (titles, validation, success and error text) lives in [src/constants/messages.ts](../src/constants/messages.ts) — screens and services import it, never spell it inline. Never show raw technical text (DB codes, stack traces). There is no global error sheet — each screen renders its own error, from `errorDisplay` or a screen-specific mapping (e.g. `AuthError` vs `GatewayError` in `login.tsx`). Show one message per problem, and keep it short (see the "no noise" rule in CLAUDE.md).
+User-facing copy (titles, validation, success and error text) lives in [src/constants/messages.ts](../src/constants/messages.ts) — screens and services import it, never spell it inline. Never show raw technical text (DB codes, stack traces). There is no global error sheet — each screen renders its own error, from `errorDisplay` or a screen-specific mapping (e.g. `AuthError` vs `GatewayError` in `login.tsx`). The only app-wide error surface is the root `ErrorBoundary` (`src/app/_layout.tsx`), for render errors: a `StatusScreen` with Try again / Go home and the `EXPO_PUBLIC_SUPPORT_EMAIL` line. Gateway errors never reach it. Unknown URLs show `src/app/+not-found.tsx`. Form rules come from `src/utils/validation.ts`, limits from `src/constants/fieldLimits.ts` and their wording from `VALIDATION_MESSAGES` (reverse-engineer-guide/26). Show one message per problem, and keep it short (see the "no noise" rule in CLAUDE.md).
 
 ---
 
@@ -256,7 +256,9 @@ Storage failures fall back to memory. "Remember me" keeps the **session**, it ne
 
 **Restore on launch.** `AuthContext` starts in `restoring`; the root layout renders nothing and holds the splash. A stored session is accepted only if it parses, is version 2, has a valid email and a string `vipNumber`, isn't dated in the future and is younger than `EXPO_PUBLIC_AUTH_SESSION_MAX_AGE_HOURS`. Otherwise it is wiped → `signedOut`. Sessions are never re-verified with the server.
 
-**Routing.** `Stack.Protected guard={signedIn}` wraps `(app)`; `login`, `forgot-password` and `register` are guarded by `!signedIn`. Navigation follows the status — no manual redirects.
+**Expiry while open.** While signed in, `AuthContext` arms a timer for the session's max age (re-armed past `setTimeout`'s ~24.8-day limit, and re-checked when the app returns to the foreground). When it fires, the session is wiped and the state becomes `signedOut` with `sessionExpired: true`. `session-expired` shows a 5-second countdown (skippable); `acknowledgeExpiry()` then clears the flag and the stack moves on to `login`.
+
+**Routing.** `Stack.Protected guard={sessionExpired}` wraps `session-expired` and is declared first, so a timed-out session lands there; `Stack.Protected guard={signedIn}` wraps `(app)`; `login`, `forgot-password` and `register` are guarded by `!signedIn`. Navigation follows the status — no manual redirects.
 
 **Identify the user in later calls** by sending `P_LOGIN_ID: session.loginId` in `JData` (e.g. `PROF.S.LOAD_PROFILE`).
 
@@ -579,3 +581,4 @@ Headings `paccountnum, pvipnum`, one row, no `o_code`, whatever `P_ACCOUNT_NUM` 
 |---|---|
 | `RES.S.LOAD_RESERVATION_COLUMN_SINGLE_VALUE` (for a column with no value) | `"9"` `ORA-01400: cannot insert NULL into …RESERVATION_COLUMN_VALUES…` — a select code that tries an INSERT; invalid JSON (unescaped quotes). A column that has a value answers normally (above). |
 | `RES.I.RESERVATION` with neither ride purpose nor CC e-mail | `"9"` `ORA-01400` on `WS_RESERVATION_COLUMN_VALUES.COLUMN_VALUE` (write probes above) |
+| `PROF.S.DB_LOG_ERROR` (probed 2026-11-03, `P_MESS_TEXT` / `P_ERROR_CODE` / `P_PROC_NAME` / `P_DEBUG_LEVEL` / `P_USER_ID`) | `JHeader.ActionCode` `"1"` `Action code is not supported: PROF.S.DB_LOG_ERROR`, no headings or rows. Not wired: the root error boundary does not log remotely until the backend enables it. |

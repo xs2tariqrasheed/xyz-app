@@ -1,6 +1,16 @@
-import { ADDRESS_BOOK_MESSAGES } from '@/constants/messages';
-import { formatUsPhone, isCompleteUsPhone, MAX_INTL_DIGITS, toDigits, withExtension } from '@/utils/phone';
-import { hasValidStreetChars } from '@/utils/validation';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { ADDRESS_BOOK_MESSAGES, VALIDATION_MESSAGES as V } from '@/constants/messages';
+import { formatUsPhone, MAX_INTL_DIGITS, toDigits, withExtension } from '@/utils/phone';
+import {
+  hasNoDoubleQuote,
+  hasValidStreetChars,
+  intlPhoneProblem,
+  isValidBuildingNo,
+  isValidPickupPoint,
+  isValidStreetName,
+  isValidUsPhone,
+  isValidZip,
+} from '@/utils/validation';
 
 /**
  * A saved pickup location, as the address form collects it.
@@ -64,21 +74,8 @@ export function toDraft({ id: _id, ...draft }: SavedAddress): AddressDraft {
   return draft;
 }
 
-/** Pickup point: letters, digits, space and `. , ~ & / - ( ) \ #` (guide 26). */
-const PICKUP_POINT_CHARS = /^[A-Za-z0-9 .,~&/\-()\\#]+$/;
-
 /** `T_VIP_PICKUP.STATE` holds 2 characters (`ORA-12899` for longer; guide §10). */
 const STATE_CODE = /^[A-Za-z]{2}$/;
-
-const STREET_MIN = 4;
-const STREET_MAX = 30;
-const PICKUP_POINT_MAX = 20;
-const DIRECTIONS_MAX = 500;
-const INTL_NUMBER_MIN = 4;
-
-function isValidStreet(value: string): boolean {
-  return value.length >= STREET_MIN && value.length <= STREET_MAX && hasValidStreetChars(value);
-}
 
 /**
  * The legacy address book's rules (reverse-engineer-implemented/guide/11 §3, 26): country,
@@ -97,48 +94,49 @@ export function validateDraft(draft: AddressDraft): AddressErrors {
 
   const building = draft.building.trim();
   if (!building) errors.building = M.BUILDING_REQUIRED;
-  else if (!/^\d{1,6}$/.test(building)) errors.building = M.BUILDING_INVALID;
+  else if (!isValidBuildingNo(building)) errors.building = V.BUILDING_INVALID;
 
   const street = draft.street.trim();
   if (!street) errors.street = M.STREET_REQUIRED;
-  else if (!isValidStreet(street)) errors.street = M.STREET_INVALID;
+  else if (!isValidStreetName(street)) errors.street = V.STREET_INVALID;
 
+  // A cross street is checked like the mailing address's: characters only.
   const crossStreet = draft.crossStreet.trim();
-  if (crossStreet && !isValidStreet(crossStreet)) errors.crossStreet = M.CROSS_STREET_INVALID;
+  if (crossStreet && (!hasValidStreetChars(crossStreet) || crossStreet.length > FIELD_LIMITS.STREET)) {
+    errors.crossStreet = V.STREET_CHARACTERS;
+  }
 
   const pickupPoint = draft.pickupPoint.trim();
-  if (pickupPoint && (pickupPoint.length > PICKUP_POINT_MAX || !PICKUP_POINT_CHARS.test(pickupPoint))) {
-    errors.pickupPoint = M.PICKUP_POINT_INVALID;
-  }
+  if (pickupPoint && !isValidPickupPoint(pickupPoint)) errors.pickupPoint = V.PICKUP_POINT_INVALID;
 
   const zip = draft.zip.trim();
-  if (zip && !/^\d{5}$/.test(zip)) errors.zip = M.ZIP_INVALID;
+  if (zip && !isValidZip(zip)) errors.zip = V.ZIP_INVALID;
 
   const phoneUs = draft.phoneUs.trim();
-  if (phoneUs && !(isCompleteUsPhone(phoneUs) && /^[2-9]/.test(phoneUs))) {
-    errors.phoneUs = M.US_PHONE_INVALID;
-  }
+  if (phoneUs && !isValidUsPhone(phoneUs)) errors.phoneUs = V.US_PHONE_INVALID;
 
-  // The international number is a pair: a code without a number, or the
-  // reverse, is incomplete.
   const intlCode = draft.phoneIntlCode.trim();
   const intlDigits = toDigits(draft.phoneIntl, MAX_INTL_DIGITS);
-  if (intlDigits && !intlCode) errors.phoneIntlCode = M.INTL_CODE_REQUIRED;
-  if (intlCode && !intlDigits) errors.phoneIntl = M.INTL_NUMBER_REQUIRED;
-  else if (intlDigits && intlDigits.length < INTL_NUMBER_MIN) errors.phoneIntl = M.INTL_NUMBER_INVALID;
+  switch (intlPhoneProblem(intlCode, intlDigits)) {
+    case 'codeRequired':
+      errors.phoneIntlCode = V.INTL_CODE_REQUIRED;
+      break;
+    case 'numberRequired':
+      errors.phoneIntl = V.INTL_NUMBER_REQUIRED;
+      break;
+    case 'incomplete':
+      errors.phoneIntl = V.INTL_NUMBER_INCOMPLETE;
+      break;
+  }
 
   if (!phoneUs && !intlDigits && !intlCode) errors.phoneUs = M.PHONE_REQUIRED;
 
   const directions = draft.directions.trim();
-  if (directions.length > DIRECTIONS_MAX || directions.includes('"')) {
-    errors.directions = M.DIRECTIONS_INVALID;
+  if (directions.length > FIELD_LIMITS.DIRECTIONS || !hasNoDoubleQuote(directions)) {
+    errors.directions = V.DIRECTIONS_INVALID;
   }
 
   return errors;
-}
-
-export function hasErrors(errors: AddressErrors): boolean {
-  return Object.keys(errors).length > 0;
 }
 
 /** "666 5 Ave" */

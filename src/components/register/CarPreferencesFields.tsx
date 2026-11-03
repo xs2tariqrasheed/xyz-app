@@ -5,7 +5,7 @@ import { PhoneField } from '@/components/ui/PhoneField';
 import { TextField } from '@/components/ui/TextField';
 import { REGISTER_MESSAGES } from '@/constants/messages';
 import { breakpoints, colors, space } from '@/theme';
-import { digitsOnly } from '@/utils/payment';
+import { digitsOnly } from '@/utils/phone';
 
 import { type CarPreferences, type CarPreferencesErrors, IVR_PIN_LENGTH } from './registration';
 

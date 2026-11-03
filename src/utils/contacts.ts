@@ -8,7 +8,10 @@
  * Numbers are kept as bare digits and only formatted for display.
  */
 
-import { CONTACTS_MESSAGES } from '@/constants/messages';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { CONTACTS_MESSAGES, VALIDATION_MESSAGES as V } from '@/constants/messages';
+import { digitsOnly, formatUsPhone, US_PHONE_DIGITS } from '@/utils/phone';
+import { isValidEmail, isValidExtension, isValidUsPhone } from '@/utils/validation';
 
 export type ContactKind = 'phone' | 'email';
 
@@ -58,31 +61,10 @@ export type Contact = {
   stored: string;
 };
 
-/** Everything that is not a digit, dropped. */
-export function phoneDigits(input: string): string {
-  return input.replace(/\D/g, '');
-}
-
-const PHONE_LENGTH = 10;
-const EXTENSION_MAX = 5;
-const EMAIL_MAX = 50;
-
-/**
- * `(555) 123-4567`, filled in progressively as the digits arrive so the field
- * can format while the user is still typing.
- */
-export function formatPhone(input: string): string {
-  const digits = phoneDigits(input).slice(0, PHONE_LENGTH);
-  if (digits.length === 0) return '';
-  if (digits.length <= 3) return `(${digits}`;
-  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-}
-
 /** Display form for a saved contact: `(212) 555-0134 ext. 101`, or the e-mail. */
 export function formatContactValue(contact: Pick<Contact, 'type' | 'value' | 'extension'>): string {
   if (contactType(contact.type).kind !== 'phone') return contact.value;
-  const number = formatPhone(contact.value);
+  const number = formatUsPhone(contact.value);
   return contact.extension ? `${number} ext. ${contact.extension}` : number;
 }
 
@@ -94,8 +76,8 @@ export function formatContactValue(contact: Pick<Contact, 'type' | 'value' | 'ex
 export function toStoredValue(type: ContactTypeId, value: string, extension: string): string {
   const { kind, hasExtension } = contactType(type);
   if (kind === 'email') return value.trim();
-  const digits = phoneDigits(value);
-  const ext = hasExtension ? phoneDigits(extension) : '';
+  const digits = digitsOnly(value);
+  const ext = hasExtension ? digitsOnly(extension) : '';
   return ext ? `${digits}-${ext}` : digits;
 }
 
@@ -107,17 +89,14 @@ export function toStoredValue(type: ContactTypeId, value: string, extension: str
 export function fromStoredValue(type: ContactTypeId, stored: string): Pick<Contact, 'value' | 'extension'> {
   const { kind, hasExtension } = contactType(type);
   if (kind === 'email') return { value: stored.trim(), extension: '' };
-  const digits = phoneDigits(stored);
+  const digits = digitsOnly(stored);
   return {
-    value: digits.slice(0, PHONE_LENGTH),
-    extension: hasExtension ? digits.slice(PHONE_LENGTH, PHONE_LENGTH + EXTENSION_MAX) : '',
+    value: digits.slice(0, US_PHONE_DIGITS),
+    extension: hasExtension ? digits.slice(US_PHONE_DIGITS, US_PHONE_DIGITS + FIELD_LIMITS.EXTENSION) : '',
   };
 }
 
 export type ContactErrors = { value?: string; extension?: string };
-
-/** Deliberately loose: `a@b.c` shaped, no attempt to police real mailboxes. */
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** The old site's rules (guide 12 §3, 26 §11); an empty object when the draft is usable. */
 export function validateContact(type: ContactTypeId, value: string, extension: string): ContactErrors {
@@ -127,19 +106,16 @@ export function validateContact(type: ContactTypeId, value: string, extension: s
 
   if (kind === 'email') {
     if (!trimmed) return { value: M.EMAIL_REQUIRED };
-    if (trimmed.length > EMAIL_MAX) return { value: M.EMAIL_TOO_LONG };
-    return EMAIL_PATTERN.test(trimmed) ? {} : { value: M.EMAIL_INVALID };
+    return isValidEmail(trimmed) ? {} : { value: V.EMAIL_INVALID };
   }
 
   const errors: ContactErrors = {};
-  const digits = phoneDigits(trimmed);
+  const digits = digitsOnly(trimmed);
   if (!digits) errors.value = M.PHONE_REQUIRED;
-  else if (digits.length !== PHONE_LENGTH || !/^[2-9]/.test(digits)) errors.value = M.PHONE_INVALID;
+  else if (!isValidUsPhone(digits)) errors.value = V.US_PHONE_INVALID;
 
   const ext = extension.trim();
-  if (hasExtension && ext && !/^\d{1,5}$/.test(ext)) {
-    errors.extension = M.EXTENSION_INVALID;
-  }
+  if (hasExtension && ext && !isValidExtension(ext)) errors.extension = V.EXTENSION_INVALID;
   return errors;
 }
 

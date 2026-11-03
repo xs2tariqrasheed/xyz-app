@@ -1,7 +1,16 @@
-import { MAILING_ADDRESS_MESSAGES as M } from '@/constants/messages';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { MAILING_ADDRESS_MESSAGES as M, VALIDATION_MESSAGES as V } from '@/constants/messages';
 import { UNITED_STATES } from '@/data/regions';
-import { digitsOnly, US_PHONE_LENGTH } from '@/utils/contact';
-import { hasValidStreetChars } from '@/utils/validation';
+import { digitsOnly } from '@/utils/phone';
+import {
+  hasNoDoubleQuote,
+  hasValidStreetChars,
+  intlPhoneProblem,
+  isValidBuildingNo,
+  isValidStreetName,
+  isValidUsPhone,
+  isValidZip,
+} from '@/utils/validation';
 
 export type AddressType = 'home' | 'office';
 
@@ -25,24 +34,6 @@ export type MailingAddress = {
   intlPhone: string;
   addressType: AddressType;
 };
-
-/** Field limits from the legacy mailing address page (reverse-engineer-implemented/guide/08 §3). */
-export const MAILING_ADDRESS_LIMITS = {
-  city: 30,
-  zip: 5,
-  buildingNumber: 6,
-  street: 30,
-  unit: 30,
-} as const;
-
-const STREET_MIN = 4;
-const INTL_NUMBER_MIN = 4;
-/**
- * Legacy minimums: 3 for the country + city code, 4 for the number. The
- * gateway stores both as one run of digits, so a loaded number's split is a
- * guess — the code alone is not checked, only the pair's total.
- */
-const INTL_TOTAL_MIN = 3 + INTL_NUMBER_MIN;
 
 /**
  * A blank form: registration starts here, and so does the Update Mailing
@@ -94,45 +85,42 @@ export function validateMailingAddress(value: MailingAddress): MailingAddressErr
   const postalCode = value.postalCode.trim();
   if (!postalCode) {
     errors.postalCode = domestic ? M.ZIP_REQUIRED : M.POSTAL_CODE_REQUIRED;
-  } else if (domestic && !/^\d{5}$/.test(postalCode)) {
-    errors.postalCode = M.ZIP_INVALID;
+  } else if (domestic && !isValidZip(postalCode)) {
+    errors.postalCode = V.ZIP_INVALID;
   }
 
   const building = value.buildingNumber.trim();
   if (!building) errors.buildingNumber = M.BUILDING_REQUIRED;
-  else if (!/^\d{1,6}$/.test(building)) errors.buildingNumber = M.BUILDING_INVALID;
+  else if (!isValidBuildingNo(building)) errors.buildingNumber = V.BUILDING_INVALID;
 
   const street = value.streetName.trim();
   if (!street) errors.streetName = M.STREET_REQUIRED;
-  else if (!hasValidStreetChars(street)) errors.streetName = M.STREET_CHARACTERS;
-  else if (street.length < STREET_MIN || street.length > MAILING_ADDRESS_LIMITS.street) {
-    errors.streetName = M.STREET_INVALID;
-  }
+  else if (!isValidStreetName(street)) errors.streetName = V.STREET_INVALID;
 
   const crossStreet = value.crossStreet.trim();
-  if (crossStreet && !hasValidStreetChars(crossStreet)) errors.crossStreet = M.STREET_CHARACTERS;
-
-  if (value.unit.includes('"')) errors.unit = M.UNIT_INVALID;
-
-  const phoneDigits = digitsOnly(value.phone);
-  // A US area code never starts with 0 or 1.
-  if (phoneDigits.length > 0 && !(phoneDigits.length === US_PHONE_LENGTH && /^[2-9]/.test(phoneDigits))) {
-    errors.phone = M.PHONE_INVALID;
+  if (crossStreet && (!hasValidStreetChars(crossStreet) || crossStreet.length > FIELD_LIMITS.MAILING_CROSS_STREET)) {
+    errors.crossStreet = V.STREET_CHARACTERS;
   }
 
-  // The international number is a pair: a code without a number, or the
-  // reverse, is incomplete.
+  if (!hasNoDoubleQuote(value.unit)) errors.unit = M.UNIT_INVALID;
+
+  const phoneDigits = digitsOnly(value.phone);
+  if (phoneDigits.length > 0 && !isValidUsPhone(phoneDigits)) errors.phone = V.US_PHONE_INVALID;
+
+  // The gateway stores the code and number as one run of digits, so a loaded
+  // number's split is a guess — only the pair as a whole is checked.
   const intlDigits = digitsOnly(value.intlPhone);
   const dialDigits = digitsOnly(value.intlDialCode);
-  if (dialDigits.length > 0 && intlDigits.length === 0) {
-    errors.intlPhone = M.INTL_NUMBER_REQUIRED;
-  } else if (intlDigits.length > 0 && dialDigits.length === 0) {
-    errors.intlDialCode = M.INTL_DIAL_REQUIRED;
-  } else if (
-    dialDigits.length > 0 &&
-    (intlDigits.length < INTL_NUMBER_MIN || dialDigits.length + intlDigits.length < INTL_TOTAL_MIN)
-  ) {
-    errors.intlPhone = M.INTL_NUMBER_INVALID;
+  switch (intlPhoneProblem(dialDigits, intlDigits)) {
+    case 'codeRequired':
+      errors.intlDialCode = V.INTL_CODE_REQUIRED;
+      break;
+    case 'numberRequired':
+      errors.intlPhone = V.INTL_NUMBER_REQUIRED;
+      break;
+    case 'incomplete':
+      errors.intlPhone = V.INTL_NUMBER_INCOMPLETE;
+      break;
   }
 
   if (phoneDigits.length === 0 && intlDigits.length === 0 && dialDigits.length === 0) {

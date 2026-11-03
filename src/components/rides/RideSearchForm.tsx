@@ -5,8 +5,10 @@ import { HISTORY_QUICK_PICKS } from '@/components/ui/CalendarPicker';
 import { DateField } from '@/components/ui/DateField';
 import { CardGlyph } from '@/components/ui/Glyph';
 import { SelectField } from '@/components/ui/SelectField';
-import { PAYMENT_METHOD_FILTERS, type PaymentMethodFilter } from '@/services/rides';
+import { RIDES_MESSAGES } from '@/constants/messages';
+import { HISTORY_REACH_DAYS, PAYMENT_METHOD_FILTERS, type PaymentMethodFilter } from '@/services/rides';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
+import { addDays, startOfDay } from '@/utils/datetime';
 
 export type RideSearchFormValue = {
   from: Date;
@@ -18,7 +20,7 @@ export type RideSearchFormProps = {
   value: RideSearchFormValue;
   onChange: (next: RideSearchFormValue) => void;
   onSubmit: () => void;
-  /** "Now" — the calendar's today marker and the ceiling on both dates. */
+  /** "Now" — the calendar's today marker and the ceiling on the from date. */
   today: Date;
   /** Earliest bookable history. Rides older than this are not kept. */
   earliest: Date;
@@ -39,6 +41,9 @@ export function RideSearchForm({
   const wide = width >= breakpoints.md;
 
   const invalidRange = value.from.getTime() > value.to.getTime();
+  // From: back to `earliest`, up to today. To: from the from date up to the
+  // same reach ahead (reverse-engineer-guide/26 §11).
+  const latest = addDays(startOfDay(today), HISTORY_REACH_DAYS);
   // The basis is a *width* only while the fields sit in a row. Left on in the
   // stacked layout it would become a 220px-tall main axis for every field.
   const fieldStyle = twoUp ? styles.field : null;
@@ -57,6 +62,7 @@ export function RideSearchForm({
           onChange={(from) => patch({ from })}
           today={today}
           minDate={earliest}
+          maxDate={today}
           quickPicks={HISTORY_QUICK_PICKS}
           sheetTitle="From date"
         />
@@ -66,7 +72,8 @@ export function RideSearchForm({
           value={value.to}
           onChange={(to) => patch({ to })}
           today={today}
-          minDate={earliest}
+          minDate={value.from}
+          maxDate={latest}
           quickPicks={HISTORY_QUICK_PICKS}
           sheetTitle="To date"
         />
@@ -82,9 +89,7 @@ export function RideSearchForm({
       </View>
 
       {invalidRange ? (
-        <Text style={styles.error}>
-          The “from” date is after the “to” date — swap them to run the search.
-        </Text>
+        <Text style={styles.error}>{RIDES_MESSAGES.SEARCH_RANGE_INVALID}</Text>
       ) : null}
 
       <View style={[styles.actions, wide ? styles.actionsWide : null]}>

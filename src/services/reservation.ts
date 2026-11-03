@@ -10,6 +10,7 @@ import {
 } from '@/components/reservation/RideAddressInfoSection';
 import type { PhoneValue } from '@/components/ui/PhoneField';
 import { DB_SUCCESS_CODE } from '@/constants/actionCodes';
+import { BOOKING_HORIZON_DAYS, FIELD_LIMITS } from '@/constants/fieldLimits';
 import { CHARGE_LABELS, COMMON_MESSAGES, RESERVATION_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
 import { cardTypeCode, contractExpiry, requirementParams } from '@/services/billing';
 import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
@@ -31,8 +32,8 @@ import {
 import { ORDER_HEADINGS, PAYMENT_METHOD_LABELS, type PaymentMethod, type RideStatus, toPaymentMethod, toRideStatus } from '@/services/rides';
 import { IDLE_ZONE } from '@/services/zones';
 import { addDays, nextSlot, pad2, startOfDay, type TimeValue } from '@/utils/datetime';
-import { digitsOnly } from '@/utils/payment';
-import { findCountryByDial, toIntlDigits } from '@/utils/phone';
+import { digitsOnly, findCountryByDial, toIntlDigits } from '@/utils/phone';
+import { hasValidLandmarkChars } from '@/utils/validation';
 
 /**
  * A reservation in both directions (reverse-engineer-implemented/guide/13–20):
@@ -148,9 +149,6 @@ export const AIRPORT_PICKUP_OPTIONS: readonly { value: AirportPickupOption; labe
 
 /** How soon express checkout promises a car (guide 06, `hfNextReservation`). */
 export const EXPRESS_DISPATCH_MINUTES = 15;
-
-/** Longest a cancel reason may be (guide 19). */
-export const CANCEL_REASON_MAX = 50;
 
 // ── Date and time ──────────────────────────────────────────────────────────
 
@@ -426,7 +424,10 @@ export function assertCancelled(response: GatewayResponse): void {
 export function validateCancelReason(reason: string): string | null {
   const trimmed = reason.trim();
   if (!trimmed) return RIDES_MESSAGES.CANCEL_REASON_REQUIRED;
-  if (trimmed.length > CANCEL_REASON_MAX || /["]/.test(trimmed)) return RIDES_MESSAGES.CANCEL_REASON_INVALID;
+  // Up to 50 of the landmark field's characters (reverse-engineer-guide/26 §11).
+  if (trimmed.length > FIELD_LIMITS.CANCEL_REASON || !hasValidLandmarkChars(trimmed)) {
+    return RIDES_MESSAGES.CANCEL_REASON_INVALID;
+  }
   return null;
 }
 
@@ -863,11 +864,9 @@ export function recordToDraft(
   };
 }
 
-/** Latest a ride may be booked ahead (guide 14). */
-export const MAX_DAYS_AHEAD = 90;
-
+/** Latest day a ride may be booked for (guide 14, reverse-engineer-guide/26 §4). */
 export function latestBookableDay(today: Date): Date {
-  return addDays(startOfDay(today), MAX_DAYS_AHEAD);
+  return addDays(startOfDay(today), BOOKING_HORIZON_DAYS);
 }
 
 // ── Confirmation e-mail ────────────────────────────────────────────────────

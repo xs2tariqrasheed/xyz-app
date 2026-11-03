@@ -148,11 +148,19 @@ export function parseStoredSession(raw: string | null, now: Date): AuthSession |
   if (typeof vipNumber !== 'string') return null;
   if (typeof authenticatedAt !== 'string') return null;
 
+  const session: AuthSession = { version, loginId, vipNumber, authenticatedAt };
   const at = Date.parse(authenticatedAt);
-  if (Number.isNaN(at)) return null;
+  if (Number.isNaN(at) || at > now.getTime() || isSessionExpired(session, now)) return null;
 
-  const age = now.getTime() - at;
-  if (age < 0 || age > sessionMaxAgeMs) return null;
+  return session;
+}
 
-  return { version, loginId, vipNumber, authenticatedAt };
+/** When the session stops being valid on this device (`EXPO_PUBLIC_AUTH_SESSION_MAX_AGE_HOURS`). */
+export function sessionExpiresAt(session: AuthSession): number {
+  return Date.parse(session.authenticatedAt) + sessionMaxAgeMs;
+}
+
+/** True once the session is past its max age — checked at restore and while the app is open. */
+export function isSessionExpired(session: AuthSession, now: Date): boolean {
+  return now.getTime() > sessionExpiresAt(session);
 }

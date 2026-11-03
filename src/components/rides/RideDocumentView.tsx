@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { SUPPORT_PHONE } from '@/components/reservation/RideReceiptSection';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { OFFICE_PHONE } from '@/config/support';
 import { RIDE_DOCUMENT_MESSAGES } from '@/constants/messages';
 import { isTotalCharge, type RideDocument } from '@/services/rideDocument';
 import { colors, radii, space } from '@/theme';
@@ -37,7 +37,7 @@ export function RideDocumentView({ doc, printLabel }: RideDocumentViewProps) {
       <View style={styles.document}>
         <View style={styles.header}>
           <Text style={styles.brand}>{RIDE_DOCUMENT_MESSAGES.BRAND}</Text>
-          <Text style={styles.headerMeta}>{SUPPORT_PHONE}</Text>
+          {OFFICE_PHONE ? <Text style={styles.headerMeta}>{OFFICE_PHONE}</Text> : null}
           <Text style={styles.number}>{`${doc.title} ${doc.number}`}</Text>
         </View>
 

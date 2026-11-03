@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **App today** | 🔴 Missing. There are no status routes, no `+not-found.tsx` and no error boundary. A locked or expired login only shows `o_message` inline on the login form. |
+| **App today** | 🟡 Partly built (2026-11-03). ✅ `StatusScreen`, `session-expired` (5 s countdown, in-app expiry), `+not-found`, root `ErrorBoundary`. ⏸ Account locked / expired wait for the backend to say which `o_code` means each (login keeps its inline message). ⏸ Not allowed: nothing triggers it yet. ⛔ `PROF.S.DB_LOG_ERROR` answers "Action code is not supported", so the boundary does not log remotely. |
 | **Legacy reference** | [`../reverse-engineer-guide/25-system-pages-errors.md`](../reverse-engineer-guide/25-system-pages-errors.md), [`02-authentication.md`](../reverse-engineer-implemented/guide/02-authentication.md) §4.1 |
-| **Gateway** | ✅ `PROF.S.DB_LOG_ERROR` (client error logging, not wired). The screens themselves are client-side states. |
+| **Gateway** | ⛔ `PROF.S.DB_LOG_ERROR` — probed 2026-11-03: `"1"` "Action code is not supported" (guide §10). The screens themselves are client-side states. |
 | **Priority** | P1 |
 
 ## 1. Purpose

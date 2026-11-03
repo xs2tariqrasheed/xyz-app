@@ -7,10 +7,11 @@ import {
 } from '@/components/profile/PersonalInfoSection';
 import { PasswordField } from '@/components/ui/PasswordField';
 import { TextField } from '@/components/ui/TextField';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { REGISTER_MESSAGES } from '@/constants/messages';
 import { breakpoints, colors, space } from '@/theme';
 
-import { type AccountErrors, type AccountValue, PASSWORD_MAX_LENGTH } from './registration';
+import { type AccountErrors, type AccountValue } from './registration';
 
 export type AccountStepProps = {
   account: AccountValue;
@@ -47,6 +48,7 @@ export function AccountStep({
           error={accountErrors.email}
           placeholder={REGISTER_MESSAGES.EMAIL_PLACEHOLDER}
           inputMode="email"
+          maxLength={FIELD_LIMITS.EMAIL}
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"
@@ -63,6 +65,7 @@ export function AccountStep({
           error={accountErrors.confirmEmail}
           placeholder={REGISTER_MESSAGES.EMAIL_PLACEHOLDER}
           inputMode="email"
+          maxLength={FIELD_LIMITS.EMAIL}
           keyboardType="email-address"
           autoComplete="email"
           autoCapitalize="none"
@@ -73,7 +76,7 @@ export function AccountStep({
 
       <View style={rowStyle}>
         <PasswordField
-          maxLength={PASSWORD_MAX_LENGTH}
+          maxLength={FIELD_LIMITS.PASSWORD}
           style={styles.field}
           label={REGISTER_MESSAGES.PASSWORD_LABEL}
           required
@@ -87,7 +90,7 @@ export function AccountStep({
           returnKeyType="next"
         />
         <PasswordField
-          maxLength={PASSWORD_MAX_LENGTH}
+          maxLength={FIELD_LIMITS.PASSWORD}
           style={styles.field}
           label={REGISTER_MESSAGES.CONFIRM_PASSWORD_LABEL}
           required

@@ -1,18 +1,19 @@
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { TextField } from '@/components/ui/TextField';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { CARD_MESSAGES } from '@/constants/messages';
 import { breakpoints, space } from '@/theme';
 import {
   cardNumberLength,
   cvvLength,
   detectBrand,
-  digitsOnly,
   formatCardNumber,
   formatExpiry,
   isValidExpiry,
   passesLuhn,
 } from '@/utils/payment';
+import { digitsOnly } from '@/utils/phone';
 
 /** The four values every card form collects. */
 export type CardFieldsValue = {
@@ -60,6 +61,7 @@ export function CardDetailsFields({ value, onChange, today, errors = {} }: CardD
         value={value.holder}
         onChangeText={(holder) => onChange({ holder })}
         placeholder={CARD_MESSAGES.HOLDER_PLACEHOLDER}
+        maxLength={FIELD_LIMITS.CARD_HOLDER}
         autoComplete="cc-name"
         textContentType="creditCardName"
         autoCapitalize="words"

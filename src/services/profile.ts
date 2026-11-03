@@ -6,9 +6,8 @@ import { DB_INTERNAL_ERROR_CODE, DB_SUCCESS_CODE } from '@/constants/actionCodes
 import { PROFILE_MESSAGES } from '@/constants/messages';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 import { UNITED_STATES } from '@/data/regions';
-import { digitsOnly, formatUsPhone } from '@/utils/contact';
 import { parseDayMonthYear } from '@/services/gatewayRows';
-import { COUNTRIES, findCountryByDial, toIntlDigits } from '@/utils/phone';
+import { COUNTRIES, digitsOnly, findCountryByDial, formatUsPhone, toIntlDigits } from '@/utils/phone';
 
 /**
  * The signed-in customer's profile, mapped from a `PROF.S.LOAD_PROFILE` row.

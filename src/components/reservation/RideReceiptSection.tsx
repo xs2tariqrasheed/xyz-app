@@ -1,10 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { OFFICE_PHONE } from '@/config/support';
 import { RESERVATION_MESSAGES } from '@/constants/messages';
 import { colors, radii, space } from '@/theme';
-
-/** Where customers reach a human once the reservation is in. */
-export const SUPPORT_PHONE = '929-XYZLimo';
 
 export type RideReceiptSectionProps = {
   /** Number the booking came back with; `null` when the server sent none. */
@@ -75,9 +73,11 @@ export function RideReceiptSection({
         )}
       </View>
 
-      <Text style={styles.paragraph}>
-        {RESERVATION_MESSAGES.HELP_PREFIX} <Text style={styles.strong}>{SUPPORT_PHONE}</Text>
-      </Text>
+      {OFFICE_PHONE ? (
+        <Text style={styles.paragraph}>
+          {RESERVATION_MESSAGES.HELP_PREFIX} <Text style={styles.strong}>{OFFICE_PHONE}</Text>
+        </Text>
+      ) : null}
 
       <View style={styles.disclaimer}>
         <Text style={styles.disclaimerText}>{RESERVATION_MESSAGES.DISCLAIMER}</Text>

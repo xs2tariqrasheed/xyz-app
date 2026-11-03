@@ -4,18 +4,18 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { SelectField, type SelectOption } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { CONTACTS_MESSAGES as M } from '@/constants/messages';
 import { breakpoints, space } from '@/theme';
 import {
   CONTACT_TYPES,
   contactType,
   DEFAULT_CONTACT_TYPE,
-  formatPhone,
-  phoneDigits,
   validateContact,
   type ContactErrors,
   type ContactTypeId,
 } from '@/utils/contacts';
+import { formatUsPhone, toExtension } from '@/utils/phone';
 
 import { ContactTypeGlyph } from './ContactTypeGlyph';
 
@@ -74,12 +74,12 @@ export function ContactForm({ mode, initial, onSubmit, onCancel }: ContactFormPr
 
   const changeValue = (nextValue: string) => {
     setErrors({});
-    setValue(isPhone ? formatPhone(nextValue) : nextValue);
+    setValue(isPhone ? formatUsPhone(nextValue) : nextValue);
   };
 
   const changeExtension = (nextValue: string) => {
     setErrors((current) => ({ ...current, extension: undefined }));
-    setExtension(phoneDigits(nextValue).slice(0, 5));
+    setExtension(toExtension(nextValue));
   };
 
   const submit = async () => {
@@ -138,7 +138,7 @@ export function ContactForm({ mode, initial, onSubmit, onCancel }: ContactFormPr
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="done"
-          maxLength={isPhone ? undefined : 50}
+          maxLength={isPhone ? undefined : FIELD_LIMITS.EMAIL}
         />
 
         {hasExtension ? (
@@ -164,7 +164,7 @@ export function ContactForm({ mode, initial, onSubmit, onCancel }: ContactFormPr
 }
 
 function displayValue(type: ContactTypeId, value: string): string {
-  return contactType(type).kind === 'phone' ? formatPhone(value) : value;
+  return contactType(type).kind === 'phone' ? formatUsPhone(value) : value;
 }
 
 const styles = StyleSheet.create({

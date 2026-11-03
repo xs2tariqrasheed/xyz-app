@@ -4,7 +4,8 @@ import { RESERVATION_MESSAGES } from '@/constants/messages';
 import { type GatewayJData, type GatewayResponse, mapRowsByHeadings } from '@/services/gateway';
 import { assertResultCode, readRecords, readResult, refusalMessage } from '@/services/gatewayRows';
 import { CARD_TYPE_CODES } from '@/services/registration';
-import { detectBrand, digitsOnly } from '@/utils/payment';
+import { detectBrand } from '@/utils/payment';
+import { digitsOnly } from '@/utils/phone';
 
 /**
  * Step 3 of the booking — who pays and how (reverse-engineer-implemented/guide/16).

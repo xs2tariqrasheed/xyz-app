@@ -9,6 +9,7 @@ import { OptionCards } from "@/components/ui/OptionCards";
 import { PhoneField, type PhoneValue } from "@/components/ui/PhoneField";
 import { Stepper } from "@/components/ui/Stepper";
 import { TextField } from "@/components/ui/TextField";
+import { FIELD_LIMITS } from "@/constants/fieldLimits";
 import { RESERVATION_MESSAGES } from "@/constants/messages";
 import { findVehicleType, type VehicleType } from "@/services/vehicleTypes";
 import { breakpoints, colors, radii, space } from "@/theme";
@@ -38,9 +39,6 @@ export type PreferencesValue = {
 export const MIN_PASSENGERS = 1;
 export const MAX_PASSENGERS = 4;
 export const MAX_STOPS = 4;
-export const CC_EMAILS_MAX_LENGTH = 500;
-/** Longest trip purpose the form takes (`P_RIDE_PURPOSE`). */
-export const RIDE_PURPOSE_MAX = 50;
 
 export function emptyPreferences(carType = ""): PreferencesValue {
   return {
@@ -166,7 +164,7 @@ export function PreferencesSection({
         textContentType="emailAddress"
         autoCapitalize="none"
         autoCorrect={false}
-        maxLength={50}
+        maxLength={FIELD_LIMITS.EMAIL}
       />
 
       <TextField
@@ -179,7 +177,7 @@ export function PreferencesSection({
         inputMode="email"
         autoCapitalize="none"
         autoCorrect={false}
-        maxLength={CC_EMAILS_MAX_LENGTH}
+        maxLength={FIELD_LIMITS.CC_EMAILS}
       />
       {unusedEmails.length > 0 ? (
         <ContactChips
@@ -219,7 +217,7 @@ export function PreferencesSection({
         value={value.ridePurpose}
         onChangeText={(ridePurpose) => patch({ ridePurpose })}
         placeholder={RESERVATION_MESSAGES.RIDE_PURPOSE_PLACEHOLDER}
-        maxLength={RIDE_PURPOSE_MAX}
+        maxLength={FIELD_LIMITS.RIDE_PURPOSE}
         error={errors.ridePurpose}
       />
 

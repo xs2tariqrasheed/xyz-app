@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
-import { CAPTCHA_MESSAGES, FORGOT_PASSWORD_MESSAGES } from '@/constants/messages';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { CAPTCHA_MESSAGES, FORGOT_PASSWORD_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages';
 import { usePostData } from '@/hooks/usePostData';
 import {
   assertPasswordRecoverySent,
@@ -32,7 +33,7 @@ function validate(loginName: string, human: boolean): RecoveryErrors {
   const errors: RecoveryErrors = {};
 
   if (!loginName.trim()) errors.loginName = FORGOT_PASSWORD_MESSAGES.LOGIN_NAME_REQUIRED;
-  else if (!isValidEmail(loginName)) errors.loginName = FORGOT_PASSWORD_MESSAGES.LOGIN_NAME_INVALID;
+  else if (!isValidEmail(loginName)) errors.loginName = VALIDATION_MESSAGES.EMAIL_INVALID;
 
   if (!human) errors.human = CAPTCHA_MESSAGES.REQUIRED;
 
@@ -133,6 +134,7 @@ export default function ForgotPasswordScreen() {
           }}
           placeholder={FORGOT_PASSWORD_MESSAGES.LOGIN_NAME_PLACEHOLDER}
           inputMode="email"
+          maxLength={FIELD_LIMITS.EMAIL}
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"

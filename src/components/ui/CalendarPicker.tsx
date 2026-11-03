@@ -25,6 +25,8 @@ export type CalendarPickerProps = {
   today: Date;
   /** Earliest selectable day. Defaults to `today` — bookings never go backwards. */
   minDate?: Date;
+  /** Latest selectable day. Unbounded when omitted. */
+  maxDate?: Date;
   quickPicks?: readonly QuickPick[];
 };
 
@@ -42,19 +44,21 @@ export const HISTORY_QUICK_PICKS: readonly QuickPick[] = [
   { label: 'A month ago', offset: -30 },
 ];
 
-/** Month grid with quick-pick shortcuts. Days before the floor are inert. */
+/** Month grid with quick-pick shortcuts. Days outside the floor and ceiling are inert. */
 export function CalendarPicker({
   value,
   onChange,
   today,
   minDate,
+  maxDate,
   quickPicks = BOOKING_QUICK_PICKS,
 }: CalendarPickerProps) {
   const [month, setMonth] = useState(() => new Date(value.getFullYear(), value.getMonth(), 1));
 
   const floor = minDate ?? today;
-  const days = buildMonthGrid(month, today, floor);
+  const days = buildMonthGrid(month, today, floor, maxDate);
   const atFloorMonth = isSameMonth(month, floor);
+  const atCeilingMonth = maxDate ? isSameMonth(month, maxDate) : false;
 
   return (
     <View style={styles.root}>
@@ -95,6 +99,7 @@ export function CalendarPicker({
         <NavButton
           direction="right"
           label="Next month"
+          disabled={atCeilingMonth}
           onPress={() => setMonth(addMonths(month, 1))}
         />
       </View>
@@ -110,7 +115,7 @@ export function CalendarPicker({
       <View style={styles.grid}>
         {days.map((day) => {
           const selected = isSameDay(day.date, value);
-          const disabled = day.isPast;
+          const disabled = day.outOfRange;
 
           return (
             <Pressable

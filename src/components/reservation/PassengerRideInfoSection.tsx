@@ -3,12 +3,14 @@ import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
 import { CheckboxCard } from "@/components/ui/Checkbox";
 import { SelectField, type SelectOption } from "@/components/ui/SelectField";
+import { FIELD_LIMITS } from "@/constants/fieldLimits";
 import { RESERVATION_MESSAGES } from "@/constants/messages";
 import { DateField } from "@/components/ui/DateField";
 import { ClockGlyph } from "@/components/ui/Glyph";
 import { Reveal } from "@/components/ui/Reveal";
 import { TextField } from "@/components/ui/TextField";
 import { TimeField } from "@/components/ui/TimeField";
+import { latestBookableDay } from "@/services/reservation";
 import { breakpoints, colors, space } from "@/theme";
 import { formatFullDate, formatTime, type TimeValue } from "@/utils/datetime";
 
@@ -74,7 +76,7 @@ export function PassengerRideInfoSection({
           style={styles.field}
           label="First name"
           error={errors.firstName}
-          maxLength={15}
+          maxLength={FIELD_LIMITS.FIRST_NAME}
           value={value.firstName}
           onChangeText={(firstName) => patch({ firstName })}
           placeholder="e.g. Amara"
@@ -88,7 +90,7 @@ export function PassengerRideInfoSection({
           label="Last name"
           required
           error={errors.lastName}
-          maxLength={20}
+          maxLength={FIELD_LIMITS.LAST_NAME}
           value={value.lastName}
           onChangeText={(lastName) => patch({ lastName })}
           placeholder="e.g. Okafor"
@@ -135,6 +137,7 @@ export function PassengerRideInfoSection({
             value={value.date}
             onChange={(date) => patch({ date })}
             today={today}
+            maxDate={latestBookableDay(today)}
             error={errors.date}
           />
           <TimeField

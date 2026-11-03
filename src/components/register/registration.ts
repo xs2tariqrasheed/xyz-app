@@ -8,16 +8,25 @@ import {
   validatePersonalInfo,
 } from '@/components/profile/PersonalInfoSection';
 import type { PhoneValue } from '@/components/ui/PhoneField';
-import { REGISTER_MESSAGES } from '@/constants/messages';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { CARD_MESSAGES, REGISTER_MESSAGES, VALIDATION_MESSAGES as V } from '@/constants/messages';
 import {
   detectBrand,
-  digitsOnly,
   isCompleteCardNumber,
   isCompleteCvv,
   isValidExpiry,
 } from '@/utils/payment';
-import { isCompleteUsPhone } from '@/utils/phone';
-import { isValidEmail } from '@/utils/validation';
+import { digitsOnly } from '@/utils/phone';
+import {
+  hasNoDoubleQuote,
+  isAlphanumericWithSpaces,
+  isValidCardHolderName,
+  isValidEmail,
+  isValidRequirementAnswer,
+  isValidUsPhone,
+  isValidVipNumber,
+  passwordProblem,
+} from '@/utils/validation';
 
 /** The wizard's steps, in the order they are filled in. */
 export const REGISTRATION_STEPS = [
@@ -26,29 +35,8 @@ export const REGISTRATION_STEPS = [
   { title: REGISTER_MESSAGES.STEP_BILLING_TITLE, short: REGISTER_MESSAGES.STEP_BILLING_SHORT },
 ] as const;
 
-/** Login passwords: 4–10 characters, no `'` or `"` (reverse-engineer-guide/26 §5). */
-export const PASSWORD_MIN_LENGTH = 4;
-export const PASSWORD_MAX_LENGTH = 10;
-
-/** A VIP number as the old site took it: digits only, at most 10. */
-export function isVipNumber(value: string): boolean {
-  return /^\d+$/.test(value) && value.length <= BILLING_LIMITS.vipNumber;
-}
-
-/** True when `password` has an allowed length and no quotation mark. */
-export function isAllowedPassword(password: string): boolean {
-  return (
-    password.length >= PASSWORD_MIN_LENGTH &&
-    password.length <= PASSWORD_MAX_LENGTH &&
-    !/['"]/.test(password)
-  );
-}
-
 /** `PROF.I.PROFILE` carries at most four account requirement values. */
 export const MAX_ACCOUNT_REQUIREMENTS = 4;
-
-/** Billing field limits (reverse-engineer-implemented/guide/04 §4.1). */
-export const BILLING_LIMITS = { accountNumber: 10, companyName: 50, vipNumber: 10, cardHolder: 30 } as const;
 
 export const IVR_PIN_LENGTH = 4;
 
@@ -139,22 +127,18 @@ export function validateAccount(value: AccountValue): AccountErrors {
   const errors: AccountErrors = {};
 
   if (!value.email.trim()) errors.email = REGISTER_MESSAGES.EMAIL_REQUIRED;
-  else if (!isValidEmail(value.email)) errors.email = REGISTER_MESSAGES.EMAIL_INVALID;
+  else if (!isValidEmail(value.email)) errors.email = V.EMAIL_INVALID;
 
   if (value.confirmEmail.trim().toLowerCase() !== value.email.trim().toLowerCase()) {
     errors.confirmEmail = REGISTER_MESSAGES.CONFIRM_EMAIL_MISMATCH;
   }
 
+  const problem = passwordProblem(value.password);
   if (!value.password) errors.password = REGISTER_MESSAGES.PASSWORD_REQUIRED;
-  else if (value.password.length < PASSWORD_MIN_LENGTH || value.password.length > PASSWORD_MAX_LENGTH) {
-    errors.password = REGISTER_MESSAGES.PASSWORD_LENGTH;
-  } else if (!isAllowedPassword(value.password)) {
-    errors.password = REGISTER_MESSAGES.PASSWORD_INVALID;
-  }
+  else if (problem === 'length') errors.password = V.PASSWORD_LENGTH;
+  else if (problem === 'characters') errors.password = V.PASSWORD_CHARACTERS;
 
-  if (value.confirmPassword !== value.password) {
-    errors.confirmPassword = REGISTER_MESSAGES.CONFIRM_PASSWORD_MISMATCH;
-  }
+  if (value.confirmPassword !== value.password) errors.confirmPassword = V.PASSWORD_MISMATCH;
 
   return errors;
 }
@@ -180,22 +164,24 @@ export function validateBilling(
     const errors: BillingErrors = {};
     const accountNumber = value.accountNumber.trim();
     if (!accountNumber) errors.accountNumber = REGISTER_MESSAGES.ACCOUNT_NUMBER_REQUIRED;
-    else if (accountNumber.length > BILLING_LIMITS.accountNumber || !/^[A-Za-z0-9 ]+$/.test(accountNumber)) {
+    else if (accountNumber.length > FIELD_LIMITS.REGISTRATION_ACCOUNT_NO || !isAlphanumericWithSpaces(accountNumber)) {
       errors.accountNumber = REGISTER_MESSAGES.ACCOUNT_NUMBER_INVALID;
     }
 
     const companyName = value.companyName.trim();
     if (!companyName) errors.companyName = REGISTER_MESSAGES.COMPANY_NAME_REQUIRED;
-    else if (companyName.length > BILLING_LIMITS.companyName || companyName.includes('"')) {
+    else if (companyName.length > FIELD_LIMITS.COMPANY_NAME || !hasNoDoubleQuote(companyName)) {
       errors.companyName = REGISTER_MESSAGES.COMPANY_NAME_INVALID;
     }
 
     const vipNumber = value.vipNumber.trim();
-    if (vipNumber && !isVipNumber(vipNumber)) errors.vipNumber = REGISTER_MESSAGES.VIP_NUMBER_FORMAT;
+    if (vipNumber && !isValidVipNumber(vipNumber)) errors.vipNumber = V.VIP_INVALID;
 
-    const requirements = requirementLabels.map((_, index) =>
-      value.requirements[index]?.trim() ? undefined : REGISTER_MESSAGES.REQUIREMENT_REQUIRED,
-    );
+    const requirements = requirementLabels.map((_, index) => {
+      const answer = value.requirements[index]?.trim() ?? '';
+      if (!answer) return REGISTER_MESSAGES.REQUIREMENT_REQUIRED;
+      return isValidRequirementAnswer(answer) ? undefined : V.REQUIREMENT_INVALID;
+    });
     if (requirements.some(Boolean)) errors.requirements = requirements;
     return errors;
   }
@@ -206,15 +192,13 @@ export function validateBilling(
 
   const holder = card.holder.trim();
   if (!holder) cardErrors.holder = REGISTER_MESSAGES.CARD_HOLDER_REQUIRED;
-  else if (holder.length < 2 || holder.length > BILLING_LIMITS.cardHolder || !/^[A-Za-z .']+$/.test(holder)) {
-    cardErrors.holder = REGISTER_MESSAGES.CARD_HOLDER_INVALID;
-  }
+  else if (!isValidCardHolderName(holder)) cardErrors.holder = V.CARD_HOLDER_INVALID;
 
   if (digitsOnly(card.number).length === 0) cardErrors.number = REGISTER_MESSAGES.CARD_NUMBER_REQUIRED;
-  else if (brand === 'unknown') cardErrors.number = REGISTER_MESSAGES.CARD_BRAND_UNSUPPORTED;
+  else if (brand === 'unknown') cardErrors.number = CARD_MESSAGES.BRAND_UNSUPPORTED;
   else if (!isCompleteCardNumber(card.number)) cardErrors.number = REGISTER_MESSAGES.CARD_NUMBER_INVALID;
 
-  if (!isValidExpiry(card.expiry, today)) cardErrors.expiry = REGISTER_MESSAGES.CARD_EXPIRY_INVALID;
+  if (!isValidExpiry(card.expiry, today)) cardErrors.expiry = CARD_MESSAGES.EXPIRY_PAST;
   if (!isCompleteCvv(card.cvv, brand)) cardErrors.cvv = REGISTER_MESSAGES.CARD_CVV_INVALID;
 
   return Object.keys(cardErrors).length > 0 ? { card: cardErrors } : {};
@@ -232,20 +216,11 @@ export function validateCarPreferences(value: CarPreferences, today: Date): CarP
     }
   }
 
-  if (value.carPhone.number && !isCompleteUsPhone(value.carPhone.number)) {
-    errors.carPhone = REGISTER_MESSAGES.CAR_PHONE_INVALID;
-  }
+  if (value.carPhone.number && !isValidUsPhone(value.carPhone.number)) errors.carPhone = V.US_PHONE_INVALID;
 
   if (value.ivrPin && value.ivrPin.length !== IVR_PIN_LENGTH) {
     errors.ivrPin = REGISTER_MESSAGES.IVR_PIN_INVALID;
   }
 
   return errors;
-}
-
-/** True when an errors object (nested objects and arrays included) holds any message. */
-export function hasErrors(errors: object): boolean {
-  return Object.values(errors).some((entry) =>
-    typeof entry === 'object' && entry !== null ? hasErrors(entry) : Boolean(entry),
-  );
 }

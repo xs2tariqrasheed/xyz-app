@@ -5,13 +5,13 @@ import { Alert } from '@/components/ui/Alert';
 import { Sheet } from '@/components/ui/Sheet';
 import { TextField } from '@/components/ui/TextField';
 import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 import { RIDES_MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/context/AuthContext';
 import { actionErrorMessage } from '@/hooks/useReservationActions';
 import { usePostData } from '@/hooks/usePostData';
 import {
   assertCancelled,
-  CANCEL_REASON_MAX,
   cancelReservationJData,
   validateCancelReason,
 } from '@/services/reservation';
@@ -88,7 +88,7 @@ export function CancelReservationSheet({ reservationNumber, onClose, onCancelled
           onChangeText={setReason}
           onBlur={() => setTouched(true)}
           placeholder={RIDES_MESSAGES.CANCEL_REASON_PLACEHOLDER}
-          maxLength={CANCEL_REASON_MAX}
+          maxLength={FIELD_LIMITS.CANCEL_REASON}
           error={touched && reasonError ? reasonError : undefined}
         />
       </View>

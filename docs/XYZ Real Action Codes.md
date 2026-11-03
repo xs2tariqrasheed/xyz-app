@@ -90,7 +90,7 @@ Probed on 2026-10-30 with a test login unless stated. Every migrated read code w
 | `PROF.S.MATCHING_PROFILE_LIST` | R | 2026-10-30 | B | Yes (`oLoginID … oVIPNum`) | Not wired | Was listed as `LOAD_MATCHING_PROFILE_LIST`. Returns other customers' profiles (15 rows for the test login); no preference columns. |
 | `PROF.S.ACCESS_RIGHTS_GRANTED_PROFILE` | R | 2026-10-30 | B | Yes (same 7) | Not wired | Was listed as `LOAD_ACCESS_RIGHTS_GRANTED_PROFILE`. Needs `P_LOGIN_ID_FROM`; 0 rows for the test login. |
 | `PROF.I.ACCESS_RIGHTS`, `PROF.D.ACCESS_RIGHTS`, `PROF.S.GRANT_ACCESS_RIGHTS_TO_ALL`, `PROF.U.GRANT_ACCESS_RIGHTS_TO_ALL`, `PROF.U.REVOKE_ACCESS_RIGHTS_TO_ALL` | R/W | — | — | — | Not wired | Names as the backend test client lists them. |
-| `PROF.S.DB_LOG_ERROR` | W | — | — | — | Not wired | Writes a log entry |
+| `PROF.S.DB_LOG_ERROR` | W | 2026-11-03 | — | — | Blocked | `JHeader.ActionCode` `"1"` / `Action code is not supported: PROF.S.DB_LOG_ERROR` (guide §10). The root error boundary does not log remotely until the backend enables it. |
 
 ## Migration order
 

@@ -19,6 +19,51 @@ export const COMMON_MESSAGES = {
   NOT_AVAILABLE: 'Not available',
 } as const;
 
+/** Status screens shown when a normal flow cannot continue (reverse-engineer-guide/25). */
+export const SYSTEM_MESSAGES = {
+  SESSION_EXPIRED_TITLE: 'Session timed out',
+  SESSION_EXPIRED_MESSAGE: 'Your session has expired. Please sign in again.',
+  SESSION_EXPIRED_COUNTDOWN: (seconds: number) =>
+    `Taking you to sign in in ${seconds} second${seconds === 1 ? '' : 's'}.`,
+  SIGN_IN_NOW: 'Sign in now',
+  UNEXPECTED_ERROR_TITLE: 'Something went wrong',
+  UNEXPECTED_ERROR_MESSAGE: 'An unexpected error occurred. Please try again in a minute.',
+  UNEXPECTED_ERROR_CONTACT: (email: string) => `If it keeps happening, contact us at ${email}.`,
+  TRY_AGAIN: 'Try again',
+  NOT_FOUND_TITLE: 'Page not found',
+  NOT_FOUND_MESSAGE: "We couldn't find the page you were looking for.",
+  GO_HOME: 'Go home',
+} as const;
+
+/**
+ * Wording for the shared validation rules (src/utils/validation.ts,
+ * reverse-engineer-guide/26). One message per rule, used by every form that
+ * applies it; "required" messages stay with their own form.
+ */
+export const VALIDATION_MESSAGES = {
+  EMAIL_INVALID: 'Enter an email address in the form name@example.com, 50 characters at most.',
+  US_PHONE_INVALID: 'A US number needs 10 digits, area code first, not starting with 0 or 1.',
+  EXTENSION_INVALID: 'An extension is up to 5 digits.',
+  INTL_CODE_REQUIRED: 'Add the country + city code.',
+  INTL_NUMBER_REQUIRED: 'Add the international number.',
+  INTL_NUMBER_INCOMPLETE: 'Add the full international number: country + city code, then at least 4 digits.',
+  ZIP_INVALID: 'Use a 5-digit ZIP, e.g. 10019.',
+  BUILDING_INVALID: 'Use digits only, up to 6.',
+  STREET_INVALID: 'Use 4 to 30 letters, digits, spaces or . , - ( ) / &',
+  STREET_CHARACTERS: 'Use letters, digits, spaces or . , - ( ) / & only.',
+  PICKUP_POINT_INVALID: 'Use up to 20 letters, digits, spaces or . , ~ & / - ( ) \\ #',
+  DIRECTIONS_INVALID: 'Use up to 500 characters, without quotation marks.',
+  FIRST_NAME_TOO_LONG: 'First name can be at most 15 characters.',
+  LAST_NAME_LENGTH: 'Last name must be 2 to 20 characters.',
+  NAME_INVALID: 'Names cannot contain digits or quotation marks.',
+  CARD_HOLDER_INVALID: 'Use 2 to 30 letters, spaces, periods or apostrophes.',
+  VIP_INVALID: 'A VIP number is digits only, 10 at most.',
+  REQUIREMENT_INVALID: 'Use letters, digits, spaces and - _ . , / & only.',
+  PASSWORD_LENGTH: 'Use 4 to 10 characters.',
+  PASSWORD_CHARACTERS: "A password can't contain quotation marks.",
+  PASSWORD_MISMATCH: "The passwords don't match.",
+} as const;
+
 /** Captcha control, shared by the auth screens. */
 export const CAPTCHA_MESSAGES = {
   LABEL: 'Captcha',
@@ -37,7 +82,6 @@ export const LOGIN_MESSAGES = {
   EMAIL_PLACEHOLDER: 'you@example.com',
   PASSWORD_LABEL: 'Password',
   EMAIL_REQUIRED: 'Enter your email address.',
-  EMAIL_INVALID: "That doesn't look like an email address.",
   PASSWORD_REQUIRED: 'Enter your password.',
   REMEMBER_ME: 'Remember me',
   REMEMBER_ME_HINT: 'Keeps you signed in on this device',
@@ -55,7 +99,6 @@ export const FORGOT_PASSWORD_MESSAGES = {
   LOGIN_NAME_LABEL: 'Login Name',
   LOGIN_NAME_PLACEHOLDER: 'you@example.com',
   LOGIN_NAME_REQUIRED: 'Enter your login name.',
-  LOGIN_NAME_INVALID: "That doesn't look like an email address.",
   SUBMIT: 'Send',
   SUBMITTING: 'Sending…',
   REQUEST_FAILED_TITLE: 'Request not sent',
@@ -76,14 +119,11 @@ export const CHANGE_PASSWORD_MESSAGES = {
   CONFIRM_PASSWORD_LABEL: 'Confirm new password',
   CONFIRM_PASSWORD_PLACEHOLDER: 'Re-type the new password',
   RULE_LENGTH: '4 to 10 characters, no quotation marks',
-  RULE_CASE: 'An upper and a lower case letter',
-  RULE_NUMBER: 'At least one number',
   OLD_PASSWORD_REQUIRED: 'Enter your current password.',
   NEW_PASSWORD_REQUIRED: 'Choose a new password.',
   NEW_PASSWORD_WEAK: 'This password does not meet the requirements below yet.',
   NEW_PASSWORD_UNCHANGED: 'Your new password must be different from your current one.',
   CONFIRM_PASSWORD_REQUIRED: 'Re-type your new password.',
-  CONFIRM_PASSWORD_MISMATCH: 'The two passwords do not match.',
   SUBMIT: 'Update',
   SUBMITTING: 'Updating…',
   FAILED_TITLE: 'Password not changed',
@@ -108,18 +148,11 @@ export const PROFILE_MESSAGES = {
   INTL_PHONE_LABEL: 'Callback phone (international)',
   FAX_LABEL: 'Fax',
   FIRST_NAME_REQUIRED: 'Enter your first name.',
-  FIRST_NAME_TOO_LONG: 'First name can be at most 15 characters.',
-  FIRST_NAME_INVALID: 'First name cannot contain digits or quotation marks.',
   LAST_NAME_REQUIRED: 'Enter your last name.',
-  LAST_NAME_LENGTH: 'Last name must be 2 to 20 characters.',
-  LAST_NAME_INVALID: 'Last name cannot contain digits or quotation marks.',
-  US_PHONE_INVALID: 'A US number needs 10 digits, area code first, not starting with 0 or 1.',
   CALLBACK_REQUIRED: 'Add a callback number — US or international.',
   INTL_COUNTRY_REQUIRED: 'Choose the country for the international number.',
-  INTL_NUMBER_INCOMPLETE: 'Add the full international number.',
   FAX_COUNTRY_REQUIRED: 'Choose the country for the fax number.',
   FAX_NUMBER_INCOMPLETE: 'Add the full fax number.',
-  EXT_TOO_LONG: 'An extension can be at most 5 digits.',
   ONE_FIELD_NEEDS_ATTENTION: '1 field needs a look.',
   /** Follows the count: "3 fields need a look." */
   FIELDS_NEED_ATTENTION: 'fields need a look.',
@@ -205,19 +238,11 @@ export const MAILING_ADDRESS_MESSAGES = {
   REGION_REQUIRED: 'Enter a state, province or region.',
   CITY_REQUIRED: 'Enter a city.',
   ZIP_REQUIRED: 'Enter a ZIP code.',
-  ZIP_INVALID: 'Invalid zip code.',
   POSTAL_CODE_REQUIRED: 'Enter a postal code.',
   BUILDING_REQUIRED: 'Enter a building number.',
-  BUILDING_INVALID: 'A building number is up to 6 digits.',
   STREET_REQUIRED: 'Enter a street name.',
-  STREET_CHARACTERS: 'Street Name contains invalid character(s).',
-  STREET_INVALID: 'Invalid Street Name specified.',
   UNIT_INVALID: 'Invalid apartment # specified.',
-  PHONE_INVALID: 'A US number needs 10 digits, area code first, not starting with 0 or 1.',
   PHONE_REQUIRED: 'Please enter at least one Address Phone number.',
-  INTL_NUMBER_REQUIRED: 'Please enter at least one Address Phone International number.',
-  INTL_DIAL_REQUIRED: 'Please enter at least one Address Phone International Country+City Code.',
-  INTL_NUMBER_INVALID: 'Add the full international number: country + city code, then at least 4 digits.',
 
   ONE_FIELD_NEEDS_ATTENTION: '1 field needs a look.',
   /** Follows the count: "3 fields need a look." */
@@ -246,6 +271,7 @@ export const CARD_MESSAGES = {
   CVV_PLACEHOLDER: '3 digits',
   NUMBER_CHECKSUM: 'Check this number — the digits do not add up.',
   EXPIRY_PAST: 'Enter a future MM/YY.',
+  BRAND_UNSUPPORTED: 'We accept Visa, Mastercard, Amex and Discover.',
 } as const;
 
 export const REGISTER_MESSAGES = {
@@ -264,12 +290,8 @@ export const REGISTER_MESSAGES = {
   PASSWORD_LABEL: 'Password',
   CONFIRM_PASSWORD_LABEL: 'Confirm password',
   EMAIL_REQUIRED: 'Enter your email address.',
-  EMAIL_INVALID: "That doesn't look like an email address.",
   CONFIRM_EMAIL_MISMATCH: "The email addresses don't match.",
   PASSWORD_REQUIRED: 'Choose a password.',
-  PASSWORD_LENGTH: 'Use 4 to 10 characters.',
-  PASSWORD_INVALID: "A password can't contain quotation marks.",
-  CONFIRM_PASSWORD_MISMATCH: "The passwords don't match.",
   /** Server refused the email without saying why. */
   EMAIL_TAKEN: 'An account already uses this email address.',
 
@@ -288,7 +310,6 @@ export const REGISTER_MESSAGES = {
   ACCOUNT_NUMBER_INVALID: 'Use up to 10 letters, digits or spaces.',
   COMPANY_NAME_REQUIRED: 'Enter the account name.',
   COMPANY_NAME_INVALID: "Use up to 50 characters, without quotation marks.",
-  VIP_NUMBER_FORMAT: 'Use up to 10 digits.',
   /** Server refused the account / name pair without saying why. */
   COMPANY_INVALID: "That account number and name don't match.",
   /** Server refused the VIP number without saying why. */
@@ -296,11 +317,8 @@ export const REGISTER_MESSAGES = {
   /** Server refused the account's requirements lookup without saying why. */
   ACCOUNT_NOT_AVAILABLE: "This account can't be used for registration.",
   CARD_HOLDER_REQUIRED: 'Enter the name on the card.',
-  CARD_HOLDER_INVALID: 'Use 2 to 30 letters, spaces, periods or apostrophes.',
   CARD_NUMBER_REQUIRED: 'Enter the card number.',
   CARD_NUMBER_INVALID: 'Check the card number.',
-  CARD_BRAND_UNSUPPORTED: 'We accept Visa, Mastercard, Amex and Discover.',
-  CARD_EXPIRY_INVALID: 'Enter a future MM/YY.',
   CARD_CVV_INVALID: 'Enter the security code.',
   /** An account requirement field the account asks for, left empty. */
   REQUIREMENT_REQUIRED: 'Fill this in for your account.',
@@ -315,7 +333,6 @@ export const REGISTER_MESSAGES = {
   IVR_PIN_PLACEHOLDER: '4 digits',
   SMOKING_CAR_LABEL: 'Smoking car',
   CAR_YEAR_INVALID: 'Enter a 4-digit year.',
-  CAR_PHONE_INVALID: 'A US number needs 10 digits.',
   IVR_PIN_INVALID: 'Use 4 digits.',
 
   BACK: 'Back',
@@ -424,18 +441,8 @@ export const ADDRESS_BOOK_MESSAGES = {
   STATE_INVALID: 'Use the 2-letter state code, e.g. NY.',
   CITY_REQUIRED: 'City is required.',
   BUILDING_REQUIRED: 'Building number is required.',
-  BUILDING_INVALID: 'Use digits only, up to 6.',
   STREET_REQUIRED: 'Street name is required.',
-  STREET_INVALID: 'Use 4 to 30 letters, digits, spaces or . , - ( ) / &',
-  CROSS_STREET_INVALID: 'Use 4 to 30 letters, digits, spaces or . , - ( ) / &',
-  PICKUP_POINT_INVALID: 'Use up to 20 letters, digits, spaces or . , ~ & / - ( ) \\ #',
-  ZIP_INVALID: 'Use a 5-digit ZIP, e.g. 10019.',
-  US_PHONE_INVALID: 'A US number needs 10 digits, area code first, not starting with 0 or 1.',
-  INTL_CODE_REQUIRED: 'Add the country dial code.',
-  INTL_NUMBER_REQUIRED: 'Add the international number.',
-  INTL_NUMBER_INVALID: 'Use at least 4 digits.',
   PHONE_REQUIRED: 'Add a callback number — US or international.',
-  DIRECTIONS_INVALID: 'Use up to 500 characters, without quotation marks.',
 } as const;
 
 /** My Contacts: extra phones and e-mails (reverse-engineer-implemented/guide/12). */
@@ -484,11 +491,7 @@ export const CONTACTS_MESSAGES = {
   RETRY: 'Try again',
   // Validation (reverse-engineer-implemented/guide/12 §6, 26 §11).
   EMAIL_REQUIRED: 'Please provide your email address.',
-  EMAIL_INVALID: 'Invalid email address.',
-  EMAIL_TOO_LONG: 'An email address can be at most 50 characters.',
   PHONE_REQUIRED: 'Please provide your contact number.',
-  PHONE_INVALID: 'Enter 10 digits, area code first, not starting with 0 or 1.',
-  EXTENSION_INVALID: 'An extension is up to 5 digits.',
   DUPLICATE: 'This contact is already saved.',
 } as const;
 
@@ -515,10 +518,7 @@ export const RESERVATION_MESSAGES = {
   // Step 1 — passenger and time (guide 14)
   BOOKING_FOR_LABEL: 'Reservation for',
   BOOKING_FOR_SELF: 'Myself',
-  FIRST_NAME_TOO_LONG: 'First name can be at most 15 characters.',
-  NAME_INVALID: 'Names cannot contain digits or quotation marks.',
   LAST_NAME_REQUIRED: 'Enter the passenger’s last name.',
-  LAST_NAME_LENGTH: 'Last name must be 2 to 20 characters.',
   DATE_TOO_FAR: 'Reservations can be made at most 90 days in advance.',
   TIME_PAST: 'Choose a pickup time later than now.',
 
@@ -531,7 +531,6 @@ export const RESERVATION_MESSAGES = {
   ZONE_UNMATCHED: 'This address could not be matched with our service area.',
   ZONE_ACKNOWLEDGE: 'Book it anyway — dispatch will confirm the address',
   ZONE_ACK_REQUIRED: 'Confirm the unmatched address to continue.',
-  DIRECTIONS_INVALID: 'Directions cannot contain quotation marks.',
   AIRLINE_LABEL: 'Airline',
   AIRLINE_PLACEHOLDER: 'e.g. Delta',
   AIRLINE_REQUIRED: 'Enter the airline.',
@@ -557,14 +556,11 @@ export const RESERVATION_MESSAGES = {
   ACCOUNT_REQUIRED: 'Enter the account number this ride is billed to.',
   ACCOUNT_INVALID: 'Use letters, digits, spaces and hyphens only (16 at most).',
   ACCOUNT_REJECTED: 'This account number was not accepted.',
-  VIP_INVALID: 'A VIP number is digits only, 10 at most.',
   VIP_REJECTED: 'This VIP number does not belong to the account.',
   REQUIREMENT_FALLBACK_LABEL: 'Account field',
   REQUIREMENT_REQUIRED: 'Fill in this field for your account.',
-  REQUIREMENT_INVALID: 'Use letters, digits, spaces and - _ . , / & only.',
   REQUIREMENTS_REJECTED: 'The account details were not accepted.',
-  HOLDER_REQUIRED: 'Enter the name on the card (2 to 30 letters).',
-  HOLDER_INVALID: 'Use letters, spaces, full stops and apostrophes only.',
+  HOLDER_REQUIRED: 'Enter the name on the card.',
   CARD_REQUIRED: 'Enter a complete card number.',
   EXPIRY_REQUIRED: 'Enter the card’s expiry date.',
   CVV_REQUIRED: 'Enter the card’s security code.',
@@ -583,13 +579,11 @@ export const RESERVATION_MESSAGES = {
   CAR_TYPES_FAILED: 'Car types could not be loaded.',
   RETRY: 'Try again',
   EMAIL_REQUIRED: 'Enter the e-mail address for the confirmation.',
-  EMAIL_INVALID: 'Enter an email address in the form name@example.com.',
   CC_EMAIL_LABEL: 'Email CC',
   CC_EMAIL_PLACEHOLDER: 'Separate addresses with commas',
   CC_EMAIL_INVALID: 'Check the CC addresses — one of them is not an e-mail address.',
   CC_EMAIL_TOO_LONG: 'The CC list can be at most 500 characters.',
   CALLBACK_REQUIRED: 'Add a callback number, or turn phone confirmation off.',
-  US_PHONE_INVALID: 'A US number needs all 10 digits, area code first, not starting with 0 or 1.',
   RIDE_PURPOSE_LABEL: 'Trip purpose',
   RIDE_PURPOSE_PLACEHOLDER: 'e.g. Client meeting',
   RIDE_PURPOSE_REQUIRED: 'Enter the trip purpose.',
@@ -655,7 +649,8 @@ export const RIDES_MESSAGES = {
   CANCEL_REASON_LABEL: 'Reason',
   CANCEL_REASON_PLACEHOLDER: 'e.g. Change of plans',
   CANCEL_REASON_REQUIRED: 'Tell us why the ride is being cancelled.',
-  CANCEL_REASON_INVALID: 'Use 50 characters at most, without quotation marks.',
+  SEARCH_RANGE_INVALID: 'The “from” date is after the “to” date — swap them to run the search.',
+  CANCEL_REASON_INVALID: "Use 50 characters at most: letters, digits, spaces and . ? - _ , ( ) : / ' ~ & < > [ ] { } @ ! % $",
   CANCEL_CONFIRM: 'Yes, cancel it',
   CANCEL_KEEP: 'Keep reservation',
   CANCELLING: 'Cancelling…',
@@ -826,7 +821,7 @@ export const FEEDBACK_MESSAGES = {
   QUESTIONS_FAILED: 'The questions could not be loaded.',
   MESSAGE_LABEL: 'Message',
   MESSAGE_PLACEHOLDER: 'Anything we should know',
-  MESSAGE_INVALID: 'Use 200 characters at most: letters, digits, spaces and full stops.',
+  MESSAGE_INVALID: "Use 200 characters at most: letters, digits, spaces and . , ? ! ' -",
   SEND: 'Send',
   SENDING: 'Sending…',
   SENT: 'Question inserted successfully.',

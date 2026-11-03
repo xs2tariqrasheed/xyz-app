@@ -6,8 +6,8 @@ import { DB_INTERNAL_ERROR_CODE, DB_SUCCESS_CODE } from '@/constants/actionCodes
 import { normalizeLoginId } from '@/services/auth';
 import { GatewayError, type GatewayJData, type GatewayResponse, mapRows } from '@/services/gateway';
 import { CONFIRMATION_CODES, mailingAddressParams, SPECIAL_OFFER_CODES } from '@/services/profile';
-import { detectBrand, digitsOnly, type CardBrand } from '@/utils/payment';
-import { toIntlDigits } from '@/utils/phone';
+import { detectBrand, type CardBrand } from '@/utils/payment';
+import { digitsOnly, toIntlDigits } from '@/utils/phone';
 
 /**
  * New-account registration against the API gateway

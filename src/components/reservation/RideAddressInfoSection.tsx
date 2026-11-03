@@ -8,14 +8,12 @@ import { SwapGlyph } from "@/components/ui/Glyph";
 import { SelectField } from "@/components/ui/SelectField";
 import { TextArea } from "@/components/ui/TextArea";
 import { TextField } from "@/components/ui/TextField";
+import { FIELD_LIMITS } from "@/constants/fieldLimits";
 import { RESERVATION_MESSAGES } from "@/constants/messages";
 import { useRoute } from "@/hooks/useRoute";
 import type { AddressSuggestion, StructuredPlace } from "@/services/places";
 import { IDLE_ZONE, type Leg, type ZoneState } from "@/services/zones";
 import { breakpoints, colors, focusedFieldStyle, radii, space } from "@/theme";
-
-/** Directions limit from the old booking form (guide 15). */
-export const NOTES_MAX_LENGTH = 500;
 
 /** Where the driver meets an airport pickup (guide 01): C, D, B or A. */
 export type AirportPickupOption = "A" | "B" | "C" | "D";
@@ -173,7 +171,7 @@ export function RideAddressInfoSection({
           accessibilityLabel="Directions or special instructions for the pickup address"
           placeholder="Gate code, building entrance, floor, or anything the driver should know."
           rows={3}
-          maxLength={NOTES_MAX_LENGTH}
+          maxLength={FIELD_LIMITS.DIRECTIONS}
           value={value.pickupNotes}
           onChangeText={(pickupNotes) => onChange({ ...value, pickupNotes })}
           error={errors.pickupNotes}
@@ -258,7 +256,7 @@ export function RideAddressInfoSection({
           accessibilityLabel="Directions or special instructions for the destination address"
           placeholder="Which entrance, terminal or suite the ride should end at."
           rows={3}
-          maxLength={NOTES_MAX_LENGTH}
+          maxLength={FIELD_LIMITS.DIRECTIONS}
           value={value.destinationNotes}
           onChangeText={(destinationNotes) =>
             onChange({ ...value, destinationNotes })
@@ -352,7 +350,7 @@ function AirportFields({
           value={airport.flightNumber}
           onChangeText={(flightNumber) => patch({ flightNumber })}
           placeholder={RESERVATION_MESSAGES.FLIGHT_PLACEHOLDER}
-          maxLength={20}
+          maxLength={FIELD_LIMITS.FLIGHT_NUMBER}
           autoCapitalize="characters"
           autoCorrect={false}
           error={pickup ? errors.pickupFlight : errors.destinationFlight}

@@ -2,9 +2,11 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { PhoneField, type PhoneValue } from '@/components/ui/PhoneField';
 import { TextField } from '@/components/ui/TextField';
-import { PROFILE_MESSAGES } from '@/constants/messages';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { PROFILE_MESSAGES, VALIDATION_MESSAGES as V } from '@/constants/messages';
 import { breakpoints, space } from '@/theme';
-import { isCompleteUsPhone, toIntlDigits } from '@/utils/phone';
+import { findCountry } from '@/utils/phone';
+import { intlPhoneProblem, isValidExtension, isValidNameChars, isValidUsPhone } from '@/utils/validation';
 
 /** Everything the personal info panel edits. */
 export type PersonalInfoValue = {
@@ -29,46 +31,28 @@ export const EMPTY_PERSONAL_INFO: PersonalInfoValue = {
   fax: EMPTY_PHONE,
 };
 
-/** Column limits and rules from reverse-engineer-implemented/guide/07-profile-personal-info.md. */
-const FIRST_NAME_MAX = 15;
-const LAST_NAME_MIN = 2;
-const LAST_NAME_MAX = 20;
-const MAX_EXT_DIGITS = 5;
-/** Shortest local part we accept as a real international number. */
-const MIN_INTL_NUMBER_DIGITS = 4;
-/** Shortest calling code + number we accept as a whole international number. */
-const MIN_INTL_TOTAL_DIGITS = 7;
-/** Names are free text, except for digits and the quote the server cannot store. */
-const NAME_INVALID = /["\d]/;
-
 type IntlMessages = { country: string; incomplete: string };
 
 /** An international number is only whole once it has a country and a number. */
 function intlProblem(phone: PhoneValue, messages: IntlMessages): string | undefined {
-  if (phone.number.length === 0 && phone.country === null) return undefined;
-  if (phone.country === null) return messages.country;
-  if (
-    phone.number.length < MIN_INTL_NUMBER_DIGITS ||
-    toIntlDigits(phone).length < MIN_INTL_TOTAL_DIGITS
-  ) {
-    return messages.incomplete;
-  }
-  return undefined;
+  const problem = intlPhoneProblem(findCountry(phone.country)?.dial ?? '', phone.number);
+  if (problem === 'codeRequired') return messages.country;
+  return problem ? messages.incomplete : undefined;
 }
 
 function firstNameProblem(name: string, required: boolean): string | undefined {
   if (name.length === 0) return required ? PROFILE_MESSAGES.FIRST_NAME_REQUIRED : undefined;
-  if (name.length > FIRST_NAME_MAX) return PROFILE_MESSAGES.FIRST_NAME_TOO_LONG;
-  if (NAME_INVALID.test(name)) return PROFILE_MESSAGES.FIRST_NAME_INVALID;
+  if (name.length > FIELD_LIMITS.FIRST_NAME) return V.FIRST_NAME_TOO_LONG;
+  if (!isValidNameChars(name)) return V.NAME_INVALID;
   return undefined;
 }
 
 function lastNameProblem(name: string): string | undefined {
   if (name.length === 0) return PROFILE_MESSAGES.LAST_NAME_REQUIRED;
-  if (name.length < LAST_NAME_MIN || name.length > LAST_NAME_MAX) {
-    return PROFILE_MESSAGES.LAST_NAME_LENGTH;
+  if (name.length < FIELD_LIMITS.LAST_NAME_MIN || name.length > FIELD_LIMITS.LAST_NAME) {
+    return V.LAST_NAME_LENGTH;
   }
-  if (NAME_INVALID.test(name)) return PROFILE_MESSAGES.LAST_NAME_INVALID;
+  if (!isValidNameChars(name)) return V.NAME_INVALID;
   return undefined;
 }
 
@@ -93,14 +77,11 @@ export function validatePersonalInfo(
   const hasUs = value.usPhone.number.length > 0;
   const hasIntl = value.intlPhone.number.length > 0 || value.intlPhone.country !== null;
 
-  // A US area code never starts with 0 or 1.
-  if (hasUs && (!isCompleteUsPhone(value.usPhone.number) || /^[01]/.test(value.usPhone.number))) {
-    errors.usPhone = PROFILE_MESSAGES.US_PHONE_INVALID;
-  }
+  if (hasUs && !isValidUsPhone(value.usPhone.number)) errors.usPhone = V.US_PHONE_INVALID;
 
   const intlError = intlProblem(value.intlPhone, {
     country: PROFILE_MESSAGES.INTL_COUNTRY_REQUIRED,
-    incomplete: PROFILE_MESSAGES.INTL_NUMBER_INCOMPLETE,
+    incomplete: V.INTL_NUMBER_INCOMPLETE,
   });
   if (intlError) errors.intlPhone = intlError;
 
@@ -119,8 +100,8 @@ export function validatePersonalInfo(
   // An over-long extension is the least of a field's problems, so it only
   // speaks when nothing else has.
   (['usPhone', 'intlPhone', 'fax'] as const).forEach((field) => {
-    if (!errors[field] && value[field].ext.length > MAX_EXT_DIGITS) {
-      errors[field] = PROFILE_MESSAGES.EXT_TOO_LONG;
+    if (!errors[field] && value[field].ext && !isValidExtension(value[field].ext)) {
+      errors[field] = V.EXTENSION_INVALID;
     }
   });
 
@@ -174,7 +155,7 @@ export function PersonalInfoSection({
           onChangeText={(firstName) => patch({ firstName })}
           error={errors.firstName}
           placeholder={PROFILE_MESSAGES.FIRST_NAME_PLACEHOLDER}
-          maxLength={FIRST_NAME_MAX}
+          maxLength={FIELD_LIMITS.FIRST_NAME}
           autoComplete="given-name"
           textContentType="givenName"
           autoCapitalize="words"
@@ -188,7 +169,7 @@ export function PersonalInfoSection({
           onChangeText={(lastName) => patch({ lastName })}
           error={errors.lastName}
           placeholder={PROFILE_MESSAGES.LAST_NAME_PLACEHOLDER}
-          maxLength={LAST_NAME_MAX}
+          maxLength={FIELD_LIMITS.LAST_NAME}
           autoComplete="family-name"
           textContentType="familyName"
           autoCapitalize="words"

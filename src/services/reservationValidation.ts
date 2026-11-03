@@ -9,18 +9,14 @@ import type {
   PassengerRideInfoErrors,
   PassengerRideInfoValue,
 } from '@/components/reservation/PassengerRideInfoSection';
-import {
-  CC_EMAILS_MAX_LENGTH,
-  type PreferencesErrors,
-  type PreferencesValue,
-  RIDE_PURPOSE_MAX,
-} from '@/components/reservation/PreferencesSection';
+import type { PreferencesErrors, PreferencesValue } from '@/components/reservation/PreferencesSection';
 import type {
   LegDetails,
   RideAddressInfoErrors,
   RideAddressInfoValue,
 } from '@/components/reservation/RideAddressInfoSection';
-import { CARD_MESSAGES, RESERVATION_MESSAGES } from '@/constants/messages';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { CARD_MESSAGES, RESERVATION_MESSAGES, VALIDATION_MESSAGES as V } from '@/constants/messages';
 import type { RequirementField } from '@/services/billing';
 import { ccEmailList, latestBookableDay } from '@/services/reservation';
 import { findVehicleType, type VehicleType } from '@/services/vehicleTypes';
@@ -29,11 +25,23 @@ import {
   cardNumberLength,
   cvvLength,
   detectBrand,
-  digitsOnly,
   isValidExpiry,
   passesLuhn,
 } from '@/utils/payment';
-import { isValidEmail } from '@/utils/phone';
+import { digitsOnly, findCountry } from '@/utils/phone';
+import {
+  hasErrors,
+  hasNoDoubleQuote,
+  intlPhoneProblem,
+  isAlphanumericWithSpaces,
+  isValidCardHolderName,
+  isValidEmail,
+  isValidNameChars,
+  isValidRequirementAnswer,
+  isValidUsPhone,
+  isValidVipNumber,
+  isValidZip,
+} from '@/utils/validation';
 
 /**
  * Client-side checks for each booking step, from the old site's rules
@@ -41,26 +49,12 @@ import { isValidEmail } from '@/utils/phone';
  * the server still validates everything itself.
  */
 
-/** No digits or quotation marks (`isValidAlpha`). */
-const NAME = /^[^\d"]*$/;
-/** Letters, digits and spaces (`isValidAlphaNumericWithoutDashes`) — flight numbers. */
-const ALPHANUMERIC = /^[A-Za-z0-9 ]+$/;
 /**
- * Account numbers: the same, plus the hyphen account numbers on file are
- * stored with — a number the server issued must never fail the client check.
+ * Account numbers: letters, digits and spaces, plus the hyphen account numbers
+ * on file are stored with — a number the server issued must never fail the
+ * client check.
  */
 const ACCOUNT = /^[A-Za-z0-9 -]+$/;
-/** Requirement answers: letters, digits and `- _ space . , / &` (guide 16). */
-const REQUIREMENT = /^[A-Za-z0-9\-_ .,/&]+$/;
-/** Card holder: letters, spaces, full stops, apostrophes (`isValidCardHolderName`). */
-const CARD_HOLDER = /^[\p{L} .']+$/u;
-/** US numbers never start with 0 or 1 (guide 26). */
-const US_PHONE = /^[2-9]\d{9}$/;
-const ZIP = /^\d{5}$/;
-
-function hasErrors(errors: object): boolean {
-  return Object.values(errors).some(Boolean);
-}
 
 /** Two-way result: the errors, and whether the step may be left. */
 export type StepCheck<E> = { errors: E; ok: boolean };
@@ -82,12 +76,13 @@ export function checkPassenger(info: PassengerRideInfoValue, now: Date): StepChe
   const first = info.firstName.trim();
   const last = info.lastName.trim();
 
-  if (first.length > 15) errors.firstName = RESERVATION_MESSAGES.FIRST_NAME_TOO_LONG;
-  else if (!NAME.test(first)) errors.firstName = RESERVATION_MESSAGES.NAME_INVALID;
+  if (first.length > FIELD_LIMITS.FIRST_NAME) errors.firstName = V.FIRST_NAME_TOO_LONG;
+  else if (!isValidNameChars(first)) errors.firstName = V.NAME_INVALID;
 
   if (!last) errors.lastName = RESERVATION_MESSAGES.LAST_NAME_REQUIRED;
-  else if (last.length < 2 || last.length > 20) errors.lastName = RESERVATION_MESSAGES.LAST_NAME_LENGTH;
-  else if (!NAME.test(last)) errors.lastName = RESERVATION_MESSAGES.NAME_INVALID;
+  else if (last.length < FIELD_LIMITS.LAST_NAME_MIN || last.length > FIELD_LIMITS.LAST_NAME) {
+    errors.lastName = V.LAST_NAME_LENGTH;
+  } else if (!isValidNameChars(last)) errors.lastName = V.NAME_INVALID;
 
   if (!info.isLive) {
     if (startOfDay(info.date) > latestBookableDay(now)) errors.date = RESERVATION_MESSAGES.DATE_TOO_FAR;
@@ -127,16 +122,16 @@ export function checkAddresses(addresses: RideAddressInfoValue): StepCheck<RideA
     const { airline, flightNumber, pickupOption } = pickupLeg.airport;
     if (!airline.trim()) errors.pickupAirline = RESERVATION_MESSAGES.AIRLINE_REQUIRED;
     if (!flightNumber.trim()) errors.pickupFlight = RESERVATION_MESSAGES.FLIGHT_REQUIRED;
-    else if (!ALPHANUMERIC.test(flightNumber.trim())) errors.pickupFlight = RESERVATION_MESSAGES.FLIGHT_INVALID;
+    else if (!isAlphanumericWithSpaces(flightNumber)) errors.pickupFlight = RESERVATION_MESSAGES.FLIGHT_INVALID;
     if (!pickupOption) errors.pickupOption = RESERVATION_MESSAGES.PICKUP_OPTION_REQUIRED;
   }
   const dropFlight = destinationLeg.airport.flightNumber.trim();
-  if (destinationLeg.place?.kind === 'airport' && dropFlight && !ALPHANUMERIC.test(dropFlight)) {
+  if (destinationLeg.place?.kind === 'airport' && dropFlight && !isAlphanumericWithSpaces(dropFlight)) {
     errors.destinationFlight = RESERVATION_MESSAGES.FLIGHT_INVALID;
   }
 
-  if (addresses.pickupNotes.includes('"')) errors.pickupNotes = RESERVATION_MESSAGES.DIRECTIONS_INVALID;
-  if (addresses.destinationNotes.includes('"')) errors.destinationNotes = RESERVATION_MESSAGES.DIRECTIONS_INVALID;
+  if (!hasNoDoubleQuote(addresses.pickupNotes)) errors.pickupNotes = V.DIRECTIONS_INVALID;
+  if (!hasNoDoubleQuote(addresses.destinationNotes)) errors.destinationNotes = V.DIRECTIONS_INVALID;
 
   return result(errors);
 }
@@ -161,15 +156,17 @@ export function checkBilling(
   if (needsAccount(billing.method)) {
     const account = billing.accountNumber.trim();
     if (!account) errors.account = RESERVATION_MESSAGES.ACCOUNT_REQUIRED;
-    else if (account.length > 16 || !ACCOUNT.test(account)) errors.account = RESERVATION_MESSAGES.ACCOUNT_INVALID;
+    else if (account.length > FIELD_LIMITS.BOOKING_ACCOUNT_NO || !ACCOUNT.test(account)) {
+      errors.account = RESERVATION_MESSAGES.ACCOUNT_INVALID;
+    }
 
-    if (billing.vipNumber && !/^\d{1,10}$/.test(billing.vipNumber)) errors.vip = RESERVATION_MESSAGES.VIP_INVALID;
+    if (billing.vipNumber && !isValidVipNumber(billing.vipNumber)) errors.vip = V.VIP_INVALID;
 
     for (const field of requirementFields) {
       const answer = billing.requirements[field.index]?.trim() ?? '';
       const key = `requirement${field.index}` as keyof BillingErrors;
       if (!answer) errors[key] = RESERVATION_MESSAGES.REQUIREMENT_REQUIRED;
-      else if (!REQUIREMENT.test(answer)) errors[key] = RESERVATION_MESSAGES.REQUIREMENT_INVALID;
+      else if (!isValidRequirementAnswer(answer)) errors[key] = V.REQUIREMENT_INVALID;
     }
   }
 
@@ -177,19 +174,23 @@ export function checkBilling(
   if (needsCard(billing.method) && !usesCardOnFile(billing)) {
     const { card } = billing;
     const holder = card.holder.trim();
-    if (holder.length < 2 || holder.length > 30) errors.holder = RESERVATION_MESSAGES.HOLDER_REQUIRED;
-    else if (!CARD_HOLDER.test(holder)) errors.holder = RESERVATION_MESSAGES.HOLDER_INVALID;
+    if (!holder) errors.holder = RESERVATION_MESSAGES.HOLDER_REQUIRED;
+    else if (!isValidCardHolderName(holder)) errors.holder = V.CARD_HOLDER_INVALID;
 
+    // Brand regex + Luhn, as at registration (reverse-engineer-guide/26 §3).
     const brand = detectBrand(card.number);
     const digits = digitsOnly(card.number);
-    if (digits.length !== cardNumberLength(brand)) errors.number = RESERVATION_MESSAGES.CARD_REQUIRED;
+    if (digits.length > 0 && brand === 'unknown') errors.number = CARD_MESSAGES.BRAND_UNSUPPORTED;
+    else if (digits.length !== cardNumberLength(brand)) errors.number = RESERVATION_MESSAGES.CARD_REQUIRED;
     else if (!passesLuhn(digits)) errors.number = CARD_MESSAGES.NUMBER_CHECKSUM;
 
     if (!card.expiry) errors.expiry = RESERVATION_MESSAGES.EXPIRY_REQUIRED;
     else if (!isValidExpiry(card.expiry, now)) errors.expiry = CARD_MESSAGES.EXPIRY_PAST;
 
     if (digitsOnly(card.cvv).length !== cvvLength(brand)) errors.cvv = RESERVATION_MESSAGES.CVV_REQUIRED;
-    if (!ZIP.test(card.postalCode.trim())) errors.postalCode = RESERVATION_MESSAGES.ZIP_REQUIRED;
+    const postalCode = card.postalCode.trim();
+    if (!postalCode) errors.postalCode = RESERVATION_MESSAGES.ZIP_REQUIRED;
+    else if (!isValidZip(postalCode)) errors.postalCode = V.ZIP_INVALID;
   }
 
   return result(errors);
@@ -209,9 +210,9 @@ export function checkPreferences(
 
   const email = preferences.email.trim();
   if (!email) errors.email = RESERVATION_MESSAGES.EMAIL_REQUIRED;
-  else if (!isValidEmail(email)) errors.email = RESERVATION_MESSAGES.EMAIL_INVALID;
+  else if (!isValidEmail(email)) errors.email = V.EMAIL_INVALID;
 
-  if (preferences.ccEmails.length > CC_EMAILS_MAX_LENGTH) errors.ccEmails = RESERVATION_MESSAGES.CC_EMAIL_TOO_LONG;
+  if (preferences.ccEmails.length > FIELD_LIMITS.CC_EMAILS) errors.ccEmails = RESERVATION_MESSAGES.CC_EMAIL_TOO_LONG;
   else if (ccEmailList(preferences.ccEmails).some((address) => !isValidEmail(address))) {
     errors.ccEmails = RESERVATION_MESSAGES.CC_EMAIL_INVALID;
   }
@@ -219,11 +220,15 @@ export function checkPreferences(
   // `RES.I.RESERVATION` fails (`ORA-01400`) without a ride purpose (guide §10).
   const ridePurpose = preferences.ridePurpose.trim();
   if (!ridePurpose) errors.ridePurpose = RESERVATION_MESSAGES.RIDE_PURPOSE_REQUIRED;
-  else if (ridePurpose.length > RIDE_PURPOSE_MAX) errors.ridePurpose = RESERVATION_MESSAGES.RIDE_PURPOSE_TOO_LONG;
+  else if (ridePurpose.length > FIELD_LIMITS.RIDE_PURPOSE) {
+    errors.ridePurpose = RESERVATION_MESSAGES.RIDE_PURPOSE_TOO_LONG;
+  }
 
   const us = preferences.callbackUs.number;
   const intl = preferences.callbackIntl.number;
-  if (us && !US_PHONE.test(us)) errors.callbackUs = RESERVATION_MESSAGES.US_PHONE_INVALID;
+  if (us && !isValidUsPhone(us)) errors.callbackUs = V.US_PHONE_INVALID;
+  const intlDial = findCountry(preferences.callbackIntl.country)?.dial ?? '';
+  if (intl && intlPhoneProblem(intlDial, intl)) errors.callbackIntl = V.INTL_NUMBER_INCOMPLETE;
   if (preferences.confirmByPhone && !us && !intl) errors.callbackUs = RESERVATION_MESSAGES.CALLBACK_REQUIRED;
 
   return result(errors);
