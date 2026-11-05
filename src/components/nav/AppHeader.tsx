@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { XyzLogo } from '@/components/brand/XyzLogo';
+import { useAuth } from '@/context/AuthContext';
 import { breakpoints, colors, contentMaxWidth, radii, space } from '@/theme';
 
 import { MenuButton } from './MenuButton';
@@ -29,6 +30,7 @@ export function AppHeader({ title, subtitle, trailing }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { status, signOut } = useAuth();
 
   const inlineNav = width >= breakpoints.nav;
   // Derived, not synced: a rotate to landscape (or a desktop resize) closes the
@@ -77,6 +79,17 @@ export function AppHeader({ title, subtitle, trailing }: AppHeaderProps) {
                   </Link>
                 );
               })}
+
+              {status === 'signedIn' ? (
+                <Pressable accessibilityRole="button" onPress={() => void signOut()}>
+                  {({ pressed }) => (
+                    <View style={[styles.navItem, pressed ? styles.navItemPressed : null]}>
+                      <Text style={styles.navLabel}>Log out</Text>
+                      <View style={styles.navRule} />
+                    </View>
+                  )}
+                </Pressable>
+              ) : null}
             </View>
           ) : (
             <MenuButton open={drawerOpen} onPress={() => setMenuOpen((open) => !open)} />
@@ -126,7 +139,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  nav: { flexDirection: 'row', alignItems: 'center', gap: space.xl - 4 },
+  nav: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   navItem: { alignItems: 'center', gap: 5, paddingVertical: space.sm },
   navItemPressed: { opacity: 0.75 },
   navLabel: { color: colors.headerFgMuted, fontSize: 14, fontWeight: '600' },

@@ -1,4 +1,16 @@
-import { formatUsPhone, isCompleteUsPhone, toDigits, withExtension } from '@/utils/phone';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { ADDRESS_BOOK_MESSAGES, VALIDATION_MESSAGES as V } from '@/constants/messages';
+import { formatUsPhone, MAX_INTL_DIGITS, toDigits, withExtension } from '@/utils/phone';
+import {
+  hasNoDoubleQuote,
+  hasValidStreetChars,
+  intlPhoneProblem,
+  isValidBuildingNo,
+  isValidPickupPoint,
+  isValidStreetName,
+  isValidUsPhone,
+  isValidZip,
+} from '@/utils/validation';
 
 /**
  * A saved pickup location, as the address form collects it.
@@ -27,6 +39,10 @@ export type AddressDraft = {
   directions: string;
 };
 
+/**
+ * A location from `PROF.S.USER_ADDRESSES`. `id` is what the update and delete
+ * codes take as `P_PICKUP_COUNT` (src/services/addressBook.ts).
+ */
 export type SavedAddress = AddressDraft & { id: string };
 
 export type AddressErrors = Partial<Record<keyof AddressDraft, string>>;
@@ -58,34 +74,69 @@ export function toDraft({ id: _id, ...draft }: SavedAddress): AddressDraft {
   return draft;
 }
 
+/** `T_VIP_PICKUP.STATE` holds 2 characters (`ORA-12899` for longer; guide §10). */
+const STATE_CODE = /^[A-Za-z]{2}$/;
+
 /**
- * Only the parts a driver cannot arrive without are required. Everything else
- * — cross street, pickup point, callbacks, directions — is help, not gating.
+ * The legacy address book's rules (reverse-engineer-implemented/guide/11 §3, 26): country,
+ * state, city, building # and street are required, and at least one callback
+ * number — US, or a complete international one.
  */
 export function validateDraft(draft: AddressDraft): AddressErrors {
   const errors: AddressErrors = {};
+  const M = ADDRESS_BOOK_MESSAGES;
 
-  if (!draft.country.trim()) errors.country = 'Country is required.';
-  if (!draft.state.trim()) errors.state = 'State is required.';
-  if (!draft.city.trim()) errors.city = 'City is required.';
-  if (!draft.street.trim()) errors.street = 'Street name is required.';
+  if (!draft.country.trim()) errors.country = M.COUNTRY_REQUIRED;
+  const state = draft.state.trim();
+  if (!state) errors.state = M.STATE_REQUIRED;
+  else if (!STATE_CODE.test(state)) errors.state = M.STATE_INVALID;
+  if (!draft.city.trim()) errors.city = M.CITY_REQUIRED;
 
-  const zip = draft.zip.trim();
-  if (zip && !/^\d{5}(-\d{4})?$/.test(zip)) errors.zip = 'Use a 5-digit ZIP, e.g. 10019.';
+  const building = draft.building.trim();
+  if (!building) errors.building = M.BUILDING_REQUIRED;
+  else if (!isValidBuildingNo(building)) errors.building = V.BUILDING_INVALID;
 
-  if (draft.phoneUs.trim() && !isCompleteUsPhone(draft.phoneUs)) {
-    errors.phoneUs = 'A US number needs 10 digits.';
+  const street = draft.street.trim();
+  if (!street) errors.street = M.STREET_REQUIRED;
+  else if (!isValidStreetName(street)) errors.street = V.STREET_INVALID;
+
+  // A cross street is checked like the mailing address's: characters only.
+  const crossStreet = draft.crossStreet.trim();
+  if (crossStreet && (!hasValidStreetChars(crossStreet) || crossStreet.length > FIELD_LIMITS.STREET)) {
+    errors.crossStreet = V.STREET_CHARACTERS;
   }
 
-  if (draft.phoneIntl.trim() && !draft.phoneIntlCode.trim()) {
-    errors.phoneIntlCode = 'Add the country dial code.';
+  const pickupPoint = draft.pickupPoint.trim();
+  if (pickupPoint && !isValidPickupPoint(pickupPoint)) errors.pickupPoint = V.PICKUP_POINT_INVALID;
+
+  const zip = draft.zip.trim();
+  if (zip && !isValidZip(zip)) errors.zip = V.ZIP_INVALID;
+
+  const phoneUs = draft.phoneUs.trim();
+  if (phoneUs && !isValidUsPhone(phoneUs)) errors.phoneUs = V.US_PHONE_INVALID;
+
+  const intlCode = draft.phoneIntlCode.trim();
+  const intlDigits = toDigits(draft.phoneIntl, MAX_INTL_DIGITS);
+  switch (intlPhoneProblem(intlCode, intlDigits)) {
+    case 'codeRequired':
+      errors.phoneIntlCode = V.INTL_CODE_REQUIRED;
+      break;
+    case 'numberRequired':
+      errors.phoneIntl = V.INTL_NUMBER_REQUIRED;
+      break;
+    case 'incomplete':
+      errors.phoneIntl = V.INTL_NUMBER_INCOMPLETE;
+      break;
+  }
+
+  if (!phoneUs && !intlDigits && !intlCode) errors.phoneUs = M.PHONE_REQUIRED;
+
+  const directions = draft.directions.trim();
+  if (directions.length > FIELD_LIMITS.DIRECTIONS || !hasNoDoubleQuote(directions)) {
+    errors.directions = V.DIRECTIONS_INVALID;
   }
 
   return errors;
-}
-
-export function hasErrors(errors: AddressErrors): boolean {
-  return Object.keys(errors).length > 0;
 }
 
 /** "666 5 Ave" */
@@ -117,71 +168,4 @@ export function formatIntlCallback(address: AddressDraft): string | null {
   if (!rest) return null;
   const dial = toDigits(address.phoneIntlCode, 4);
   return withExtension(dial ? `+${dial} ${rest}` : rest, address.phoneIntlExt);
-}
-
-/**
- * Locations the account starts with. Stands in for the customer's stored
- * addresses until the reservation API is wired up.
- */
-export const SEED_ADDRESSES: readonly SavedAddress[] = [
-  {
-    id: 'addr-1',
-    country: DEFAULT_COUNTRY,
-    state: 'NY',
-    city: 'Manhattan',
-    zip: '10019',
-    building: '666',
-    street: '5 Ave',
-    crossStreet: 'W 53 St',
-    pickupPoint: 'North entrance, under the awning',
-    phoneUs: '2125550134',
-    phoneUsExt: '12',
-    phoneIntlCode: '',
-    phoneIntl: '',
-    phoneIntlExt: '',
-    directions: 'The doorman will call up on arrival — please wait in the lobby.',
-  },
-  {
-    id: 'addr-2',
-    country: DEFAULT_COUNTRY,
-    state: 'NY',
-    city: 'Manhattan',
-    zip: '10036',
-    building: '',
-    street: 'W 41 St',
-    crossStreet: '8 Ave',
-    pickupPoint: 'Loading bay',
-    phoneUs: '2125550188',
-    phoneUsExt: '',
-    phoneIntlCode: '44',
-    phoneIntl: '20 7946 0018',
-    phoneIntlExt: '',
-    directions: '',
-  },
-  {
-    id: 'addr-3',
-    country: DEFAULT_COUNTRY,
-    state: 'NY',
-    city: 'Queens',
-    zip: '11430',
-    building: '',
-    street: 'JFK International Airport',
-    crossStreet: '',
-    pickupPoint: 'Terminal 4, arrivals door 3',
-    phoneUs: '7185550142',
-    phoneUsExt: '',
-    phoneIntlCode: '',
-    phoneIntl: '',
-    phoneIntlExt: '',
-    directions: 'Meet at the kerbside pickup lane, not the parking garage.',
-  },
-];
-
-// Ids only have to be unique within the session; the API will own them once
-// saving is real.
-let sequence = SEED_ADDRESSES.length;
-
-export function nextAddressId(): string {
-  sequence += 1;
-  return `addr-${sequence}`;
 }

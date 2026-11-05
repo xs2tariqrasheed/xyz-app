@@ -51,6 +51,8 @@ export function PasswordField({
         ]}
       >
         <TextInput
+          // The visible label is a separate Text, so name the input explicitly.
+          accessibilityLabel={label}
           {...inputProps}
           secureTextEntry={!revealed}
           placeholderTextColor={colors.textDisabled}

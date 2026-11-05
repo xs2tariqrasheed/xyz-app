@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { CheckboxCard } from '@/components/ui/Checkbox';
 import { Field } from '@/components/ui/Field';
+import { PREFERENCES_MESSAGES } from '@/constants/messages';
 import { space } from '@/theme';
 
 import type { PreferencesValue } from './preferences';
@@ -17,19 +18,19 @@ export function PreferencesForm({ value, onChange }: PreferencesFormProps) {
 
   return (
     <View style={styles.root}>
-      <Field label="Confirmation through">
+      <Field label={PREFERENCES_MESSAGES.CONFIRMATION_LABEL}>
         <CheckboxCard
           checked={value.confirmByPhone}
           onChange={(confirmByPhone) => patch({ confirmByPhone })}
-          label="Phone"
+          label={PREFERENCES_MESSAGES.CONFIRM_BY_PHONE}
         />
       </Field>
 
-      <Field label="Subscribe special offer">
+      <Field label={PREFERENCES_MESSAGES.SPECIAL_OFFERS_LABEL}>
         <CheckboxCard
           checked={value.subscribeSpecialOffers}
           onChange={(subscribeSpecialOffers) => patch({ subscribeSpecialOffers })}
-          label="Send me special offers"
+          label={PREFERENCES_MESSAGES.SPECIAL_OFFERS_OPTION}
         />
       </Field>
     </View>

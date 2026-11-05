@@ -1,9 +1,12 @@
 /**
- * Phone and email helpers for the callback fields.
+ * Phone helpers for the callback and address fields. The rules that decide
+ * whether a number is valid live in src/utils/validation.ts.
  *
  * Numbers are stored as bare digits and formatted only for display, so a
  * backspace can never get stuck on a separator the formatter re-adds.
  */
+
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
 
 /** One row of the international dialling picker. */
 export type Country = {
@@ -78,6 +81,22 @@ export function findCountry(code: string | null): Country | undefined {
   return code === null ? undefined : COUNTRIES.find((country) => country.code === code);
 }
 
+/**
+ * The picker row for a calling code such as `44` or `+44`. Codes shared by
+ * several countries (+1, +7) resolve to the first one listed — the saved
+ * number only keeps the code, so any of them round-trips the same digits.
+ */
+export function findCountryByDial(dial: string): Country | undefined {
+  const digits = dial.replace(/\D/g, '');
+  return digits ? COUNTRIES.find((country) => country.dial === digits) : undefined;
+}
+
+/** Calling code + number as one run of digits, or '' when there is no number. */
+export function toIntlDigits(phone: { country: string | null; number: string }): string {
+  if (!phone.number) return '';
+  return `${findCountry(phone.country)?.dial ?? ''}${phone.number}`;
+}
+
 /** Case-insensitive match on country name, ISO code or dialling code. */
 export function searchCountries(query: string): readonly Country[] {
   const needle = query.trim().toLowerCase().replace(/^\+/, '');
@@ -91,22 +110,30 @@ export function searchCountries(query: string): readonly Country[] {
   );
 }
 
-export const US_PHONE_DIGITS = 10;
+export const US_PHONE_DIGITS = FIELD_LIMITS.US_PHONE;
 /** E.164 caps a subscriber number at 15 digits including the calling code. */
 export const MAX_INTL_DIGITS = 15;
-const MAX_EXT_DIGITS = 6;
+
+/** Everything that is not a digit, dropped. */
+export function digitsOnly(input: string): string {
+  return input.replace(/\D/g, '');
+}
 
 /** Strips everything but digits and clamps to `max`. */
 export function toDigits(input: string, max: number): string {
-  return input.replace(/\D/g, '').slice(0, max);
+  return digitsOnly(input).slice(0, max);
 }
 
 export function toExtension(input: string): string {
-  return toDigits(input, MAX_EXT_DIGITS);
+  return toDigits(input, FIELD_LIMITS.EXTENSION);
 }
 
-/** `2125551234` → `(212) 555-1234`, and every partial state on the way there. */
-export function formatUsPhone(digits: string): string {
+/**
+ * `2125551234` → `(212) 555-1234`, and every partial state on the way there.
+ * Takes digits or an already formatted value; past ten digits is dropped.
+ */
+export function formatUsPhone(value: string): string {
+  const digits = toDigits(value, US_PHONE_DIGITS);
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
@@ -123,16 +150,6 @@ export function formatIntlPhone(digits: string): string {
     groups.splice(-2, 2, groups[groups.length - 2] + groups[groups.length - 1]);
   }
   return groups.join(' ');
-}
-
-export function isCompleteUsPhone(digits: string): boolean {
-  return digits.length === US_PHONE_DIGITS;
-}
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-export function isValidEmail(input: string): boolean {
-  return EMAIL.test(input.trim());
 }
 
 /** Appends `ext. 12` when there is one. */

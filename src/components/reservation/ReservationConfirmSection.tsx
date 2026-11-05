@@ -4,7 +4,6 @@ import type { BillingMethodValue } from "@/components/reservation/BillingMethodS
 import type { PassengerRideInfoValue } from "@/components/reservation/PassengerRideInfoSection";
 import type { PreferencesValue } from "@/components/reservation/PreferencesSection";
 import type { RideAddressInfoValue } from "@/components/reservation/RideAddressInfoSection";
-import { findCarType } from "@/components/reservation/carTypes";
 import { InfoCard } from "@/components/reservation/info/InfoCard";
 import { InfoList, InfoRow } from "@/components/reservation/info/InfoRow";
 import {
@@ -21,6 +20,8 @@ import {
   orEmpty,
 } from "@/components/reservation/summaryFormat";
 import { CheckGlyph } from "@/components/ui/Glyph";
+import { RESERVATION_MESSAGES } from "@/constants/messages";
+import { AIRPORT_PICKUP_OPTIONS, ccEmailList } from "@/services/reservation";
 import { breakpoints, colors, radii, space } from "@/theme";
 import { formatFullDate, formatTime } from "@/utils/datetime";
 
@@ -29,6 +30,12 @@ export type ReservationConfirmSectionProps = {
   addresses: RideAddressInfoValue;
   billing: BillingMethodValue;
   preferences: PreferencesValue;
+  /** Display name of the chosen car type (from `RES.S.VEHICLE_TYPE`). */
+  carLabel: string;
+  /** Who the ride is booked for, when it is not the customer themselves. */
+  bookingForLabel?: string;
+  /** Saving changes to an existing reservation rather than booking a new one. */
+  editing?: boolean;
   /** Jumps back to the step that owns a card, from its Edit button. */
   onEdit: (index: number) => void;
 };
@@ -45,12 +52,20 @@ export function ReservationConfirmSection({
   addresses,
   billing,
   preferences,
+  carLabel,
+  bookingForLabel,
+  editing,
   onEdit,
 }: ReservationConfirmSectionProps) {
   const { width } = useWindowDimensions();
   const twoUp = width >= breakpoints.md;
 
-  const car = findCarType(preferences.carType);
+  const pickupAirport =
+    addresses.pickupLeg.place?.kind === "airport" ? addresses.pickupLeg.airport : null;
+  const pickupOption = AIRPORT_PICKUP_OPTIONS.find(
+    (option) => option.value === pickupAirport?.pickupOption,
+  )?.label;
+  const cc = ccEmailList(preferences.ccEmails).join(", ");
   const editStep = (id: ReservationSectionId) => () => onEdit(sectionIndex(id));
   const title = (id: ReservationSectionId) =>
     RESERVATION_SECTIONS[sectionIndex(id)].title;
@@ -67,6 +82,9 @@ export function ReservationConfirmSection({
       style={twoUp ? styles.fill : null}
     >
       <InfoList>
+        {bookingForLabel ? (
+          <InfoRow label={RESERVATION_MESSAGES.BOOKING_FOR_LABEL} value={bookingForLabel} />
+        ) : null}
         <InfoRow label="First name" value={info.firstName} />
         <InfoRow label="Last name" value={info.lastName} />
         {info.isLive ? (
@@ -95,6 +113,13 @@ export function ReservationConfirmSection({
       <InfoList>
         <InfoRow label="Pickup from" value={addressOnly(addresses.pickup)} />
         <InfoRow label="Pickup directions" value={addresses.pickupNotes} />
+        {pickupAirport ? (
+          <>
+            <InfoRow label={RESERVATION_MESSAGES.AIRLINE_LABEL} value={pickupAirport.airline} />
+            <InfoRow label={RESERVATION_MESSAGES.FLIGHT_LABEL} value={pickupAirport.flightNumber} />
+            <InfoRow label={RESERVATION_MESSAGES.PICKUP_OPTION_LABEL} value={pickupOption ?? EMPTY} />
+          </>
+        ) : null}
         <InfoRow label="Going to" value={addressOnly(addresses.destination)} />
         <InfoRow
           label="Drop-off directions"
@@ -123,9 +148,16 @@ export function ReservationConfirmSection({
         {paysByCard ? (
           <>
             <InfoRow label="Name on card" value={billing.card.holder} />
-            <InfoRow label="Card" value={formatCard(billing.card.number)} />
-            <InfoRow label="Expires" value={billing.card.expiry} />
-            <InfoRow label="Billing ZIP" value={billing.card.postalCode} />
+            <InfoRow
+              label="Card"
+              value={formatCard(billing.card.number || billing.cardOnFile)}
+            />
+            {billing.card.number ? (
+              <>
+                <InfoRow label="Expires" value={billing.card.expiry} />
+                <InfoRow label="Billing ZIP" value={billing.card.postalCode} />
+              </>
+            ) : null}
           </>
         ) : (
           <InfoRow label="Card" value={EMPTY} />
@@ -140,10 +172,14 @@ export function ReservationConfirmSection({
       style={twoUp ? styles.fill : null}
     >
       <InfoList>
-        <InfoRow label="Car type" value={car.label} />
+        <InfoRow label="Car type" value={orEmpty(carLabel)} />
         <InfoRow label="No. of passengers" value={preferences.passengers} />
         <InfoRow label="No. of stops" value={preferences.stops} />
         <InfoRow label="Email" value={preferences.email} />
+        {cc ? <InfoRow label={RESERVATION_MESSAGES.CC_EMAIL_LABEL} value={cc} /> : null}
+        {preferences.ridePurpose.trim() ? (
+          <InfoRow label={RESERVATION_MESSAGES.RIDE_PURPOSE_LABEL} value={preferences.ridePurpose} />
+        ) : null}
         <InfoRow
           label="Confirmation by"
           value={preferences.confirmByPhone ? "Phone" : "Email"}
@@ -162,10 +198,7 @@ export function ReservationConfirmSection({
 
   return (
     <View style={styles.root}>
-      <Text style={styles.lede}>
-        Check the details below. Booking sends the ride to dispatch and issues
-        your receipt.
-      </Text>
+      <Text style={styles.lede}>{RESERVATION_MESSAGES.PREVIEW_LEDE}</Text>
 
       {twoUp ? (
         pairs(cards).map((pair, index) => (
@@ -184,9 +217,7 @@ export function ReservationConfirmSection({
           <CheckGlyph color={colors.success} size={14} />
         </View>
         <Text style={styles.noteText}>
-          Nothing has been booked yet. Use{" "}
-          <Text style={styles.noteStrong}>Book and Continue</Text> below to
-          confirm this ride.
+          {editing ? RESERVATION_MESSAGES.EDIT_PREVIEW_NOTE : RESERVATION_MESSAGES.PREVIEW_NOTE}
         </Text>
       </View>
     </View>
@@ -226,5 +257,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   noteText: { flex: 1, color: colors.textBody, fontSize: 13, lineHeight: 18 },
-  noteStrong: { color: colors.textStrong, fontWeight: "700" },
 });

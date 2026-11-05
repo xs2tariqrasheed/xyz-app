@@ -77,8 +77,8 @@ export type CalendarDay = {
   /** False for the leading/trailing days that belong to the neighbouring month. */
   inMonth: boolean;
   isToday: boolean;
-  /** Earlier than the selectable floor — rendered greyed out and inert. */
-  isPast: boolean;
+  /** Before the selectable floor or after the ceiling — rendered greyed out and inert. */
+  outOfRange: boolean;
 };
 
 /**
@@ -87,15 +87,17 @@ export type CalendarDay = {
  *
  * `minDate` is the earliest selectable day, defaulting to `today` — a booking
  * can never be placed in the past, but a history search reaches back, so that
- * floor is a parameter rather than baked in.
+ * floor is a parameter rather than baked in. `maxDate`, when given, is the
+ * latest selectable day (a booking's 90-day horizon).
  */
-export function buildMonthGrid(month: Date, today: Date, minDate?: Date): CalendarDay[] {
+export function buildMonthGrid(month: Date, today: Date, minDate?: Date, maxDate?: Date): CalendarDay[] {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const leading = new Date(year, monthIndex, 1).getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const cellCount = Math.ceil((leading + daysInMonth) / 7) * 7;
   const floor = startOfDay(minDate ?? today).getTime();
+  const ceiling = maxDate ? startOfDay(maxDate).getTime() : Infinity;
 
   return Array.from({ length: cellCount }, (_, index) => {
     const date = new Date(year, monthIndex, index + 1 - leading);
@@ -105,7 +107,7 @@ export function buildMonthGrid(month: Date, today: Date, minDate?: Date): Calend
       label: date.getDate(),
       inMonth: date.getMonth() === monthIndex && date.getFullYear() === year,
       isToday: isSameDay(date, today),
-      isPast: date.getTime() < floor,
+      outOfRange: date.getTime() < floor || date.getTime() > ceiling,
     };
   });
 }

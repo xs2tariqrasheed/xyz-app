@@ -2,8 +2,11 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { PhoneField, type PhoneValue } from '@/components/ui/PhoneField';
 import { TextField } from '@/components/ui/TextField';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { PROFILE_MESSAGES, VALIDATION_MESSAGES as V } from '@/constants/messages';
 import { breakpoints, space } from '@/theme';
-import { isCompleteUsPhone } from '@/utils/phone';
+import { findCountry } from '@/utils/phone';
+import { intlPhoneProblem, isValidExtension, isValidNameChars, isValidUsPhone } from '@/utils/validation';
 
 /** Everything the personal info panel edits. */
 export type PersonalInfoValue = {
@@ -28,42 +31,79 @@ export const EMPTY_PERSONAL_INFO: PersonalInfoValue = {
   fax: EMPTY_PHONE,
 };
 
-/** Shortest run of digits we will accept as a real international number. */
-const MIN_INTL_DIGITS = 4;
+type IntlMessages = { country: string; incomplete: string };
 
 /** An international number is only whole once it has a country and a number. */
-function intlProblem(phone: PhoneValue, what: string): string | undefined {
-  if (phone.number.length === 0 && phone.country === null) return undefined;
-  if (phone.country === null) return `Choose the country for the ${what}.`;
-  if (phone.number.length < MIN_INTL_DIGITS) return `Add the full ${what}.`;
+function intlProblem(phone: PhoneValue, messages: IntlMessages): string | undefined {
+  const problem = intlPhoneProblem(findCountry(phone.country)?.dial ?? '', phone.number);
+  if (problem === 'codeRequired') return messages.country;
+  return problem ? messages.incomplete : undefined;
+}
+
+function firstNameProblem(name: string, required: boolean): string | undefined {
+  if (name.length === 0) return required ? PROFILE_MESSAGES.FIRST_NAME_REQUIRED : undefined;
+  if (name.length > FIELD_LIMITS.FIRST_NAME) return V.FIRST_NAME_TOO_LONG;
+  if (!isValidNameChars(name)) return V.NAME_INVALID;
   return undefined;
 }
 
+function lastNameProblem(name: string): string | undefined {
+  if (name.length === 0) return PROFILE_MESSAGES.LAST_NAME_REQUIRED;
+  if (name.length < FIELD_LIMITS.LAST_NAME_MIN || name.length > FIELD_LIMITS.LAST_NAME) {
+    return V.LAST_NAME_LENGTH;
+  }
+  if (!isValidNameChars(name)) return V.NAME_INVALID;
+  return undefined;
+}
+
+export type ValidatePersonalInfoOptions = {
+  /** The profile treats the first name as optional; registration asks for it. Defaults to true. */
+  firstNameRequired?: boolean;
+};
+
 /** Checks the panel as a whole. */
-export function validatePersonalInfo(value: PersonalInfoValue): PersonalInfoErrors {
+export function validatePersonalInfo(
+  value: PersonalInfoValue,
+  { firstNameRequired = true }: ValidatePersonalInfoOptions = {},
+): PersonalInfoErrors {
   const errors: PersonalInfoErrors = {};
 
-  if (value.firstName.trim().length === 0) errors.firstName = 'Enter your first name.';
-  if (value.lastName.trim().length === 0) errors.lastName = 'Enter your last name.';
+  const firstNameError = firstNameProblem(value.firstName.trim(), firstNameRequired);
+  if (firstNameError) errors.firstName = firstNameError;
+
+  const lastNameError = lastNameProblem(value.lastName.trim());
+  if (lastNameError) errors.lastName = lastNameError;
 
   const hasUs = value.usPhone.number.length > 0;
   const hasIntl = value.intlPhone.number.length > 0 || value.intlPhone.country !== null;
 
-  if (hasUs && !isCompleteUsPhone(value.usPhone.number)) {
-    errors.usPhone = 'A US number needs 10 digits, area code first.';
-  }
+  if (hasUs && !isValidUsPhone(value.usPhone.number)) errors.usPhone = V.US_PHONE_INVALID;
 
-  const intlError = intlProblem(value.intlPhone, 'international number');
+  const intlError = intlProblem(value.intlPhone, {
+    country: PROFILE_MESSAGES.INTL_COUNTRY_REQUIRED,
+    incomplete: V.INTL_NUMBER_INCOMPLETE,
+  });
   if (intlError) errors.intlPhone = intlError;
 
   // A callback number is the whole point of the panel: a driver who cannot
   // find you has to be able to ring someone.
   if (!hasUs && !hasIntl) {
-    errors.usPhone = 'Add a callback number — US or international.';
+    errors.usPhone = PROFILE_MESSAGES.CALLBACK_REQUIRED;
   }
 
-  const faxError = intlProblem(value.fax, 'fax number');
+  const faxError = intlProblem(value.fax, {
+    country: PROFILE_MESSAGES.FAX_COUNTRY_REQUIRED,
+    incomplete: PROFILE_MESSAGES.FAX_NUMBER_INCOMPLETE,
+  });
   if (faxError) errors.fax = faxError;
+
+  // An over-long extension is the least of a field's problems, so it only
+  // speaks when nothing else has.
+  (['usPhone', 'intlPhone', 'fax'] as const).forEach((field) => {
+    if (!errors[field] && value[field].ext && !isValidExtension(value[field].ext)) {
+      errors[field] = V.EXTENSION_INVALID;
+    }
+  });
 
   return errors;
 }
@@ -86,9 +126,19 @@ export type PersonalInfoSectionProps = {
   value: PersonalInfoValue;
   onChange: (next: PersonalInfoValue) => void;
   errors?: PersonalInfoErrors;
+  /** Off where the fax is saved without an extension. Defaults to on. */
+  faxExtension?: boolean;
+  /** Marks the first name as required. Match the `validatePersonalInfo` option. Defaults to on. */
+  firstNameRequired?: boolean;
 };
 
-export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalInfoSectionProps) {
+export function PersonalInfoSection({
+  value,
+  onChange,
+  errors = {},
+  faxExtension = true,
+  firstNameRequired = true,
+}: PersonalInfoSectionProps) {
   const { width } = useWindowDimensions();
   const twoUp = width >= breakpoints.sm;
 
@@ -99,12 +149,13 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
       <View style={[styles.row, twoUp ? styles.rowWide : null]}>
         <TextField
           style={styles.field}
-          label="First name"
-          required
+          label={PROFILE_MESSAGES.FIRST_NAME_LABEL}
+          required={firstNameRequired}
           value={value.firstName}
           onChangeText={(firstName) => patch({ firstName })}
           error={errors.firstName}
-          placeholder="e.g. Amara"
+          placeholder={PROFILE_MESSAGES.FIRST_NAME_PLACEHOLDER}
+          maxLength={FIELD_LIMITS.FIRST_NAME}
           autoComplete="given-name"
           textContentType="givenName"
           autoCapitalize="words"
@@ -112,12 +163,13 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
         />
         <TextField
           style={styles.field}
-          label="Last name"
+          label={PROFILE_MESSAGES.LAST_NAME_LABEL}
           required
           value={value.lastName}
           onChangeText={(lastName) => patch({ lastName })}
           error={errors.lastName}
-          placeholder="e.g. Okafor"
+          placeholder={PROFILE_MESSAGES.LAST_NAME_PLACEHOLDER}
+          maxLength={FIELD_LIMITS.LAST_NAME}
           autoComplete="family-name"
           textContentType="familyName"
           autoCapitalize="words"
@@ -126,7 +178,7 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
       </View>
 
       <PhoneField
-        label="Callback phone (US)"
+        label={PROFILE_MESSAGES.US_PHONE_LABEL}
         variant="us"
         value={value.usPhone}
         onChange={(usPhone) => patch({ usPhone })}
@@ -134,7 +186,7 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
       />
 
       <PhoneField
-        label="Callback phone (international)"
+        label={PROFILE_MESSAGES.INTL_PHONE_LABEL}
         variant="international"
         value={value.intlPhone}
         onChange={(intlPhone) => patch({ intlPhone })}
@@ -142,11 +194,12 @@ export function PersonalInfoSection({ value, onChange, errors = {} }: PersonalIn
       />
 
       <PhoneField
-        label="Fax"
+        label={PROFILE_MESSAGES.FAX_LABEL}
         variant="international"
         value={value.fax}
         onChange={(fax) => patch({ fax })}
         error={errors.fax}
+        withExtension={faxExtension}
       />
     </View>
   );

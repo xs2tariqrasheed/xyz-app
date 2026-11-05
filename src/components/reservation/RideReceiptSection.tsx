@@ -1,83 +1,86 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { OFFICE_PHONE } from '@/config/support';
+import { RESERVATION_MESSAGES } from '@/constants/messages';
 import { colors, radii, space } from '@/theme';
-import { pad2 } from '@/utils/datetime';
-
-/** Where customers reach a human once the reservation is in. */
-export const SUPPORT_PHONE = '929-XYZLimo';
-
-/**
- * Confirmation number in the format the dispatch system hands back: a `W`
- * followed by the booking's month/day/hour and a four digit sequence.
- *
- * Generated on the client until a booking endpoint exists to return the real
- * one, so the receipt always has a number to show.
- */
-export function makeReservationNumber(bookedAt: Date): string {
-  const stamp =
-    pad2(bookedAt.getMonth() + 1) + pad2(bookedAt.getDate()) + pad2(bookedAt.getHours());
-  const sequence = pad2(bookedAt.getMinutes()) + pad2(bookedAt.getSeconds());
-
-  return `W${stamp}${sequence}`;
-}
 
 export type RideReceiptSectionProps = {
-  /** Confirmation number the booking came back with, e.g. `W6081210500`. */
-  reservationNumber: string;
-  /** Opens the online status page for this reservation. */
+  /** Number the booking came back with; `null` when the server sent none. */
+  reservationNumber: string | null;
+  /** The receipt follows saved changes rather than a new booking. */
+  updated?: boolean;
+  /** The confirmation e-mail could not be sent. */
+  emailFailed?: boolean;
+  /** Opens the reservation, or the upcoming list when there is no number. */
   onViewReservation?: () => void;
   /** Starts a fresh reservation for the return or next leg of the same trip. */
   onBookAnotherLeg?: () => void;
 };
 
 /**
- * Section 5 — the confirmation the customer lands on after booking.
- *
- * Unlike the earlier sections this one collects nothing: it hands back the
- * reservation number, says what happens next, and offers the two follow-on
- * actions plus the support and disclaimer copy.
+ * Section 6 — the confirmation the customer lands on after booking
+ * (reverse-engineer-implemented/guide/13). It shows the number the server issued, never
+ * one made up on the device.
  */
 export function RideReceiptSection({
   reservationNumber,
+  updated,
+  emailFailed,
   onViewReservation,
   onBookAnotherLeg,
 }: RideReceiptSectionProps) {
   return (
     <View style={styles.root}>
-      <Text style={styles.paragraph}>
-        <Text style={styles.strong}>Thank you</Text> for making a reservation with us. Your
-        reservation number is <Text style={styles.number}>{reservationNumber}</Text>.
-      </Text>
+      {updated ? (
+        <Text style={styles.paragraph}>
+          {RESERVATION_MESSAGES.RECEIPT_UPDATED}
+          {reservationNumber ? (
+            <>
+              {' '}
+              <Text style={styles.number}>{reservationNumber}</Text>
+            </>
+          ) : null}
+        </Text>
+      ) : (
+        <Text style={styles.paragraph}>
+          <Text style={styles.strong}>{RESERVATION_MESSAGES.RECEIPT_THANKS}</Text>{' '}
+          {reservationNumber ? (
+            <>
+              {RESERVATION_MESSAGES.RECEIPT_NUMBER}{' '}
+              <Text style={styles.number}>{reservationNumber}</Text>.
+            </>
+          ) : (
+            RESERVATION_MESSAGES.RECEIPT_NO_NUMBER
+          )}
+        </Text>
+      )}
 
-      <Text style={styles.paragraph}>
-        You can expect an acknowledgement of your reservation shortly through your preferred
-        confirmation method i.e email or phone. If you want to check the online status of your
-        reservation you can click on the links below.
-      </Text>
+      <Text style={styles.paragraph}>{RESERVATION_MESSAGES.RECEIPT_NEXT}</Text>
+
+      {emailFailed ? (
+        <View style={styles.warning}>
+          <Text style={styles.warningText}>{RESERVATION_MESSAGES.RECEIPT_EMAIL_FAILED}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.links}>
-        <ReceiptLink label="View Your Reservation" onPress={onViewReservation} />
         <ReceiptLink
-          label="Click here to make reservation for another leg of your trip"
-          onPress={onBookAnotherLeg}
+          label={reservationNumber ? RESERVATION_MESSAGES.VIEW_RESERVATION : RESERVATION_MESSAGES.VIEW_UPCOMING}
+          onPress={onViewReservation}
         />
+        {updated ? null : (
+          <ReceiptLink label={RESERVATION_MESSAGES.BOOK_ANOTHER_LEG} onPress={onBookAnotherLeg} />
+        )}
       </View>
 
-      <Text style={styles.paragraph}>
-        Need more <Text style={styles.strong}>help?</Text>
-      </Text>
-
-      <Text style={styles.paragraph}>
-        Contact us anytime at <Text style={styles.strong}>{SUPPORT_PHONE}</Text>
-      </Text>
+      {OFFICE_PHONE ? (
+        <Text style={styles.paragraph}>
+          {RESERVATION_MESSAGES.HELP_PREFIX} <Text style={styles.strong}>{OFFICE_PHONE}</Text>
+        </Text>
+      ) : null}
 
       <View style={styles.disclaimer}>
-        <Text style={styles.disclaimerText}>
-          <Text style={styles.strong}>Disclaimer:</Text> XYZ System is not responsible for any
-          problem regarding network connections to retrieve these reservation. Acceptance of this
-          reservation is subject to validity / approval of credit card, account number or vip
-          number.
-        </Text>
+        <Text style={styles.disclaimerText}>{RESERVATION_MESSAGES.DISCLAIMER}</Text>
       </View>
     </View>
   );
@@ -109,6 +112,15 @@ const styles = StyleSheet.create({
   paragraph: { color: colors.textBody, fontSize: 15, lineHeight: 24 },
   strong: { color: colors.textHeading, fontWeight: '700' },
   number: { color: colors.primary[600], fontWeight: '700', letterSpacing: 0.4 },
+
+  warning: {
+    backgroundColor: colors.warningBg,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+    borderRadius: radii.md,
+    padding: space.md,
+  },
+  warningText: { color: colors.textBody, fontSize: 14, lineHeight: 20 },
 
   // Wrapped so the two links sit closer to each other than to the surrounding
   // paragraphs, and stay centred at every width.

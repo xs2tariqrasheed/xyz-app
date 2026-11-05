@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { AuthCard } from '@/components/auth/AuthCard';
+import { AuthFooter } from '@/components/website/AuthFooter';
 import { HumanCheck } from '@/components/auth/HumanCheck';
 import { Screen } from '@/components/layout/Screen';
 import { Alert } from '@/components/ui/Alert';
@@ -10,7 +11,11 @@ import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Field, INLINE_LABEL_WIDTH } from '@/components/ui/Field';
 import { TextField } from '@/components/ui/TextField';
-import { AuthError, signIn } from '@/services/auth';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { CAPTCHA_MESSAGES, COMMON_MESSAGES, LOGIN_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages';
+import { useAuth } from '@/context/AuthContext';
+import { AuthError } from '@/services/auth';
+import { GatewayError } from '@/services/gateway';
 import { breakpoints, colors, space } from '@/theme';
 import { isValidEmail } from '@/utils/validation';
 
@@ -29,17 +34,27 @@ type LoginValue = {
 function validate({ email, password, human }: LoginValue): LoginErrors {
   const errors: LoginErrors = {};
 
-  if (!email.trim()) errors.email = 'Enter your email address.';
-  else if (!isValidEmail(email)) errors.email = "That doesn't look like an email address.";
+  if (!email.trim()) errors.email = LOGIN_MESSAGES.EMAIL_REQUIRED;
+  else if (!isValidEmail(email)) errors.email = VALIDATION_MESSAGES.EMAIL_INVALID;
 
-  if (!password) errors.password = 'Enter your password.';
-  if (!human) errors.human = 'Confirm you are not a robot.';
+  if (!password) errors.password = LOGIN_MESSAGES.PASSWORD_REQUIRED;
+  if (!human) errors.human = CAPTCHA_MESSAGES.REQUIRED;
 
   return errors;
 }
 
+function describeSignInError(error: unknown): string {
+  if (error instanceof AuthError) return error.message;
+  if (error instanceof GatewayError) {
+    if (error.kind === 'api') return error.message;
+    if (error.kind === 'parsing') return COMMON_MESSAGES.PARSING_ERROR;
+  }
+  return COMMON_MESSAGES.NETWORK_ERROR;
+}
+
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const { width } = useWindowDimensions();
   const inline = width >= breakpoints.md;
 
@@ -66,14 +81,10 @@ export default function LoginScreen() {
 
     setSubmitting(true);
     try {
-      await signIn({ email: email.trim(), password, remember });
+      await signIn({ email, password, remember });
       router.replace('/');
     } catch (error) {
-      setFormError(
-        error instanceof AuthError
-          ? error.message
-          : "We couldn't reach the server. Check your connection and try again.",
-      );
+      setFormError(describeSignInError(error));
       // A rejected sign-in invalidates the challenge, same as a real CAPTCHA.
       setHuman(false);
     } finally {
@@ -86,12 +97,12 @@ export default function LoginScreen() {
   const indent = inline ? { paddingLeft: INLINE_LABEL_WIDTH + space.lg } : null;
 
   return (
-    <Screen title="Log in">
+    <Screen title={LOGIN_MESSAGES.SCREEN_TITLE}>
       <AuthCard>
-        {formError ? <Alert tone="danger" title="Sign-in failed" message={formError} /> : null}
+        {formError ? <Alert tone="danger" title={LOGIN_MESSAGES.SIGN_IN_FAILED_TITLE} message={formError} /> : null}
 
         <TextField
-          label="Email Address"
+          label={LOGIN_MESSAGES.EMAIL_LABEL}
           required
           inline
           error={errors.email}
@@ -100,8 +111,9 @@ export default function LoginScreen() {
             setEmail(next);
             clear('email');
           }}
-          placeholder="you@example.com"
+          placeholder={LOGIN_MESSAGES.EMAIL_PLACEHOLDER}
           inputMode="email"
+          maxLength={FIELD_LIMITS.EMAIL}
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"
@@ -112,7 +124,7 @@ export default function LoginScreen() {
         />
 
         <TextField
-          label="Password"
+          label={LOGIN_MESSAGES.PASSWORD_LABEL}
           required
           inline
           error={errors.password}
@@ -122,6 +134,7 @@ export default function LoginScreen() {
             clear('password');
           }}
           secureTextEntry
+          maxLength={FIELD_LIMITS.PASSWORD}
           autoComplete="current-password"
           textContentType="password"
           autoCapitalize="none"
@@ -131,7 +144,7 @@ export default function LoginScreen() {
           editable={!submitting}
         />
 
-        <Field label="Captcha" required inline error={errors.human}>
+        <Field label={CAPTCHA_MESSAGES.LABEL} required inline error={errors.human}>
           <HumanCheck
             checked={human}
             onChange={(next) => {
@@ -147,30 +160,37 @@ export default function LoginScreen() {
             accessibilityState={{ checked: remember }}
             // react-native-web no longer derives aria-checked from accessibilityState.
             aria-checked={remember}
-            accessibilityLabel="Remember me"
-            accessibilityHint="Keeps you signed in on this device"
+            accessibilityLabel={LOGIN_MESSAGES.REMEMBER_ME}
+            accessibilityHint={LOGIN_MESSAGES.REMEMBER_ME_HINT}
             onPress={() => setRemember((current) => !current)}
             style={({ pressed }) => [styles.remember, pressed ? styles.pressed : null]}
           >
             <Checkbox checked={remember} />
-            <Text style={styles.rememberLabel}>Remember me</Text>
+            <Text style={styles.rememberLabel}>{LOGIN_MESSAGES.REMEMBER_ME}</Text>
           </Pressable>
 
           <Link href="/forgot-password" style={styles.link}>
-            Forgot your password?
+            {LOGIN_MESSAGES.FORGOT_PASSWORD_LINK}
           </Link>
         </View>
 
         <View style={[styles.actions, inline ? styles.actionsInline : null]}>
           <Button
-            label={submitting ? 'Logging in…' : 'Log In'}
+            label={submitting ? LOGIN_MESSAGES.SUBMITTING : LOGIN_MESSAGES.SUBMIT}
             size="lg"
             onPress={submit}
             disabled={submitting}
             style={inline ? styles.submitInline : undefined}
           />
         </View>
+
+        <View style={inline ? styles.actionsInline : null}>
+          <Link href="/register" style={styles.link}>
+            {LOGIN_MESSAGES.REGISTER_LINK}
+          </Link>
+        </View>
       </AuthCard>
+      <AuthFooter />
     </Screen>
   );
 }

@@ -16,12 +16,16 @@ export type DateFieldProps = {
   today: Date;
   /** Earliest selectable day. Defaults to `today`. */
   minDate?: Date;
+  /** Latest selectable day. Unbounded when omitted. */
+  maxDate?: Date;
   quickPicks?: readonly QuickPick[];
   /** Sheet copy. Defaults to the reservation wording. */
   sheetTitle?: string;
   sheetSubtitle?: string;
   required?: boolean;
   hint?: string;
+  /** Validation message; replaces the hint and reddens the control. */
+  error?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -32,11 +36,13 @@ export function DateField({
   onChange,
   today,
   minDate,
+  maxDate,
   quickPicks,
   sheetTitle = "Pick a date",
   sheetSubtitle = "",
   required,
   hint,
+  error,
   style,
 }: DateFieldProps) {
   const [open, setOpen] = useState(false);
@@ -48,6 +54,7 @@ export function DateField({
         label={label}
         required={required}
         hint={hint}
+        error={error}
         style={style}
         value={formatFullDate(value)}
         caption={formatDayDistance(value, today)}
@@ -74,6 +81,7 @@ export function DateField({
           onChange={setDraft}
           today={today}
           minDate={minDate}
+          maxDate={maxDate}
           quickPicks={quickPicks}
         />
       </Sheet>

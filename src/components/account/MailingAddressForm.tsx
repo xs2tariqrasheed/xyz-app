@@ -5,9 +5,12 @@ import { GlobeGlyph, PinGlyph } from '@/components/ui/Glyph';
 import { RadioGroup, type RadioOption } from '@/components/ui/RadioGroup';
 import { SelectField, type SelectOption } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { MAILING_ADDRESS_MESSAGES as M } from '@/constants/messages';
 import { COUNTRIES, US_STATES } from '@/data/regions';
 import { breakpoints, colors, space } from '@/theme';
-import { formatDialCode, formatIntlPhone, formatUsPhone, formatUsZip } from '@/utils/contact';
+import { formatDialCode, normalizeIntlPhone } from '@/utils/contact';
+import { formatUsPhone, toDigits } from '@/utils/phone';
 
 import {
   isUnitedStates,
@@ -24,8 +27,8 @@ export type MailingAddressFormProps = {
 };
 
 const ADDRESS_TYPES: readonly RadioOption<AddressType>[] = [
-  { value: 'home', label: 'This is my home address' },
-  { value: 'office', label: 'This is my office address' },
+  { value: 'office', label: M.ADDRESS_TYPE_OFFICE },
+  { value: 'home', label: M.ADDRESS_TYPE_HOME },
 ];
 
 export function MailingAddressForm({ value, onChange, errors }: MailingAddressFormProps) {
@@ -56,7 +59,7 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
       <View style={rowStyle}>
         <SelectField
           style={styles.field}
-          label="Country"
+          label={M.COUNTRY_LABEL}
           required
           value={value.country}
           options={countryOptions}
@@ -66,34 +69,35 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
             patch({ country, state: country === value.country ? value.state : '' })
           }
           icon={<GlobeGlyph color={colors.primary[600]} />}
-          placeholder="Select a country"
-          sheetTitle="Country"
-          searchPlaceholder="Search countries"
+          placeholder={M.COUNTRY_PLACEHOLDER}
+          sheetTitle={M.COUNTRY_LABEL}
+          searchPlaceholder={M.COUNTRY_SEARCH}
           error={errors.country}
         />
 
         {domestic ? (
           <SelectField
             style={styles.field}
-            label="State"
+            label={M.STATE_LABEL}
             required
             value={value.state}
             options={stateOptions}
             onChange={(state) => patch({ state })}
             icon={<PinGlyph color={colors.primary[600]} />}
-            placeholder="Select a state"
-            sheetTitle="State"
-            searchPlaceholder="Search states"
+            placeholder={M.STATE_PLACEHOLDER}
+            sheetTitle={M.STATE_LABEL}
+            searchPlaceholder={M.STATE_SEARCH}
             error={errors.state}
           />
         ) : (
           <TextField
             style={styles.field}
-            label="State / Province"
+            label={M.REGION_LABEL}
             required
             value={value.state}
             onChangeText={(state) => patch({ state })}
-            placeholder="Region"
+            placeholder={M.REGION_PLACEHOLDER}
+            maxLength={FIELD_LIMITS.CITY}
             autoCapitalize="words"
             autoComplete="postal-address-region"
             textContentType="addressState"
@@ -105,11 +109,12 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
       <View style={rowStyle}>
         <TextField
           style={styles.field}
-          label="City"
+          label={M.CITY_LABEL}
           required
           value={value.city}
           onChangeText={(city) => patch({ city })}
-          placeholder="e.g. Manhattan"
+          placeholder={M.CITY_PLACEHOLDER}
+          maxLength={FIELD_LIMITS.CITY}
           autoCapitalize="words"
           autoComplete="postal-address-locality"
           textContentType="addressCity"
@@ -117,13 +122,14 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
         />
         <TextField
           style={styles.field}
-          label={domestic ? 'ZIP' : 'Postal code'}
+          label={domestic ? M.ZIP_LABEL : M.POSTAL_CODE_LABEL}
           required
           value={value.postalCode}
           onChangeText={(postalCode) =>
-            patch({ postalCode: domestic ? formatUsZip(postalCode) : postalCode })
+            patch({ postalCode: domestic ? toDigits(postalCode, FIELD_LIMITS.ZIP) : postalCode })
           }
-          placeholder={domestic ? '10103' : 'Postal code'}
+          placeholder={domestic ? M.ZIP_PLACEHOLDER : M.POSTAL_CODE_PLACEHOLDER}
+          maxLength={domestic ? FIELD_LIMITS.ZIP : FIELD_LIMITS.CITY}
           keyboardType={domestic ? 'number-pad' : 'default'}
           autoComplete="postal-code"
           textContentType="postalCode"
@@ -134,21 +140,25 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
       <View style={rowStyle}>
         <TextField
           style={buildingStyle}
-          label="Building no."
+          label={M.BUILDING_LABEL}
           required
           value={value.buildingNumber}
-          onChangeText={(buildingNumber) => patch({ buildingNumber })}
-          placeholder="666"
-          keyboardType="default"
+          onChangeText={(buildingNumber) =>
+            patch({ buildingNumber: toDigits(buildingNumber, FIELD_LIMITS.BUILDING_NO) })
+          }
+          placeholder={M.BUILDING_PLACEHOLDER}
+          keyboardType="number-pad"
+          maxLength={FIELD_LIMITS.BUILDING_NO}
           error={errors.buildingNumber}
         />
         <TextField
           style={streetStyle}
-          label="Street name"
+          label={M.STREET_LABEL}
           required
           value={value.streetName}
           onChangeText={(streetName) => patch({ streetName })}
-          placeholder="5 Ave"
+          placeholder={M.STREET_PLACEHOLDER}
+          maxLength={FIELD_LIMITS.STREET}
           autoCapitalize="words"
           autoComplete="street-address"
           textContentType="streetAddressLine1"
@@ -159,31 +169,35 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
       <View style={rowStyle}>
         <TextField
           style={styles.field}
-          label="Cross street"
+          label={M.CROSS_STREET_LABEL}
           value={value.crossStreet}
           onChangeText={(crossStreet) => patch({ crossStreet })}
-          placeholder="53 St"
+          placeholder={M.CROSS_STREET_PLACEHOLDER}
+          maxLength={FIELD_LIMITS.MAILING_CROSS_STREET}
           autoCapitalize="words"
           autoComplete="address-line2"
+          error={errors.crossStreet}
         />
         <TextField
           style={styles.field}
-          label="Apt # / Mail stop"
+          label={M.UNIT_LABEL}
           value={value.unit}
           onChangeText={(unit) => patch({ unit })}
-          placeholder="Apt 4B"
+          placeholder={M.UNIT_PLACEHOLDER}
+          maxLength={FIELD_LIMITS.UNIT}
           autoComplete="address-line2"
           textContentType="streetAddressLine2"
+          error={errors.unit}
         />
       </View>
 
       <View style={styles.divider} />
 
       <TextField
-        label="Phone at this address (US)"
+        label={M.PHONE_LABEL}
         value={value.phone}
         onChangeText={(phone) => patch({ phone: formatUsPhone(phone) })}
-        placeholder="(212) 555-0134"
+        placeholder={M.PHONE_PLACEHOLDER}
         keyboardType="phone-pad"
         autoComplete="tel"
         textContentType="telephoneNumber"
@@ -191,23 +205,23 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
       />
 
       <View style={styles.intl}>
-        <Text style={styles.intlLabel}>International phone</Text>
+        <Text style={styles.intlLabel}>{M.INTL_PHONE_TITLE}</Text>
         <View style={rowStyle}>
           <TextField
             style={dialStyle}
-            label="Country + city code"
+            label={M.INTL_DIAL_LABEL}
             value={value.intlDialCode}
             onChangeText={(intlDialCode) => patch({ intlDialCode: formatDialCode(intlDialCode) })}
-            placeholder="+44 20"
+            placeholder={M.INTL_DIAL_PLACEHOLDER}
             keyboardType="phone-pad"
             error={errors.intlDialCode}
           />
           <TextField
             style={streetStyle}
-            label="Phone number"
+            label={M.INTL_NUMBER_LABEL}
             value={value.intlPhone}
-            onChangeText={(intlPhone) => patch({ intlPhone: formatIntlPhone(intlPhone) })}
-            placeholder="7123 456789"
+            onChangeText={(intlPhone) => patch({ intlPhone: normalizeIntlPhone(intlPhone) })}
+            placeholder={M.INTL_NUMBER_PLACEHOLDER}
             keyboardType="phone-pad"
             error={errors.intlPhone}
           />
@@ -217,7 +231,7 @@ export function MailingAddressForm({ value, onChange, errors }: MailingAddressFo
       <View style={styles.divider} />
 
       <RadioGroup
-        label="Address type"
+        label={M.ADDRESS_TYPE_LABEL}
         required
         value={value.addressType}
         options={ADDRESS_TYPES}

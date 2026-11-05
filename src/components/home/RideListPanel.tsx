@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
+import { HOME_MESSAGES } from '@/constants/messages';
 import type { Ride } from '@/services/rides';
 import { colors, radii, shadowValues, space } from '@/theme';
 import { formatClockTime, MONTHS_SHORT } from '@/utils/datetime';
@@ -28,12 +29,12 @@ export function RideListPanel({ title, rides, emptyText, loading, total }: RideL
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
         <Link href="/rides" style={styles.link}>
-          {hidden > 0 ? `View all ${total}` : 'View all'} →
+          {hidden > 0 ? HOME_MESSAGES.VIEW_ALL_COUNT(total ?? 0) : HOME_MESSAGES.VIEW_ALL} →
         </Link>
       </View>
 
       {loading ? (
-        <Text style={styles.note}>Loading…</Text>
+        <Text style={styles.note}>{HOME_MESSAGES.LOADING}</Text>
       ) : rides.length === 0 ? (
         <Text style={styles.note}>{emptyText}</Text>
       ) : (
@@ -49,7 +50,7 @@ export function RideListPanel({ title, rides, emptyText, loading, total }: RideL
                 {ride.destination}
               </Text>
               <Text numberOfLines={1} style={styles.detail}>
-                {formatClockTime(ride.pickupAt)} · from {ride.pickupLocation}
+                {HOME_MESSAGES.RIDE_FROM(formatClockTime(ride.pickupAt), ride.pickupLocation)}
               </Text>
             </View>
 

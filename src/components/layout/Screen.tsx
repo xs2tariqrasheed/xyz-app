@@ -5,6 +5,8 @@ import { colors, contentMaxWidth, space } from '@/theme';
 
 export type ScreenProps = AppHeaderProps & {
   children: React.ReactNode;
+  /** For screens that move the page themselves, e.g. back to the top on a new step. */
+  scrollRef?: React.Ref<ScrollView>;
 };
 
 /**
@@ -13,7 +15,7 @@ export type ScreenProps = AppHeaderProps & {
  * Screens with their own sticky footer (the reservation form) compose
  * `AppHeader` directly instead.
  */
-export function Screen({ children, ...header }: ScreenProps) {
+export function Screen({ children, scrollRef, ...header }: ScreenProps) {
   return (
     <View style={styles.root}>
       <AppHeader {...header} />
@@ -22,7 +24,11 @@ export function Screen({ children, ...header }: ScreenProps) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+        <ScrollView
+          ref={scrollRef}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.content}
+        >
           <View style={styles.page}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>

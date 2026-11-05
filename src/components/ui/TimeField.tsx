@@ -16,6 +16,8 @@ export type TimeFieldProps = {
   caption?: string;
   required?: boolean;
   hint?: string;
+  /** Validation message; replaces the hint and reddens the control. */
+  error?: string;
   tone?: "primary" | "accent";
   style?: StyleProp<ViewStyle>;
 };
@@ -28,6 +30,7 @@ export function TimeField({
   caption,
   required,
   hint,
+  error,
   tone = "primary",
   style,
 }: TimeFieldProps) {
@@ -40,6 +43,7 @@ export function TimeField({
         label={label}
         required={required}
         hint={hint}
+        error={error}
         tone={tone}
         style={style}
         value={formatTime(value)}

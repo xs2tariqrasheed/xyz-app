@@ -15,6 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { XyzLogo } from '@/components/brand/XyzLogo';
 import { ChevronGlyph } from '@/components/ui/Glyph';
+import { LEGAL_LINKS } from '@/components/website/footerLinks';
+import { WebsiteTextLinks } from '@/components/website/WebsiteTextLinks';
+import { useAuth } from '@/context/AuthContext';
 import { colors, radii, space } from '@/theme';
 
 import { isNavItemActive, NAV_ITEMS } from './navItems';
@@ -39,6 +42,7 @@ export function NavDrawer({ visible, onClose, pathname }: NavDrawerProps) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { status, signOut } = useAuth();
 
   const [progress] = useState(() => new Animated.Value(0));
   const [closing, setClosing] = useState(false);
@@ -144,7 +148,23 @@ export function NavDrawer({ visible, onClose, pathname }: NavDrawerProps) {
                 </Pressable>
               );
             })}
+
+            {status === 'signedIn' ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  onClose();
+                  void signOut();
+                }}
+                style={({ pressed }) => [styles.item, pressed ? styles.itemPressed : null]}
+              >
+                <View style={styles.itemBar} />
+                <Text style={styles.itemLabel}>Log out</Text>
+              </Pressable>
+            ) : null}
           </ScrollView>
+
+          <WebsiteTextLinks links={LEGAL_LINKS} tone="dark" style={styles.legal} />
 
           <Text style={styles.footnote}>XYZ Two Way Radio · Book in a few taps</Text>
         </Animated.View>
@@ -204,6 +224,8 @@ const styles = StyleSheet.create({
   itemBarActive: { backgroundColor: colors.navActive },
   itemLabel: { flex: 1, color: colors.headerFg, fontSize: 15, fontWeight: '600' },
   itemLabelActive: { color: colors.navActive },
+
+  legal: { alignItems: 'flex-start', paddingBottom: space.md },
 
   footnote: {
     color: colors.headerFgMuted,

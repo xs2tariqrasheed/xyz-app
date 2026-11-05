@@ -4,7 +4,8 @@ import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from '
 import { RideRoute } from '@/components/rides/RideRoute';
 import { RideStatusBadge } from '@/components/rides/RideStatusBadge';
 import { Button } from '@/components/ui/Button';
-import { PAYMENT_METHOD_LABELS, type Ride } from '@/services/rides';
+import { HOME_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
+import { paymentLabel, type Ride } from '@/services/rides';
 import { breakpoints, colors, radii, shadowValues, space } from '@/theme';
 import { formatClockTime, formatDayDistance, formatFullDate } from '@/utils/datetime';
 
@@ -15,6 +16,8 @@ export type NextRideCardProps = {
   ride: Ride | null;
   now: Date;
   loading: boolean;
+  /** Starts a new booking from the empty state. */
+  onBook: () => void;
 };
 
 /**
@@ -23,7 +26,7 @@ export type NextRideCardProps = {
  * A car already on the road outranks a future booking; with neither, the card
  * becomes the booking prompt rather than an empty slot.
  */
-export function NextRideCard({ ride, now, loading }: NextRideCardProps) {
+export function NextRideCard({ ride, now, loading, onBook }: NextRideCardProps) {
   const { width } = useWindowDimensions();
   const router = useRouter();
   const roomy = width >= breakpoints.sm;
@@ -32,7 +35,7 @@ export function NextRideCard({ ride, now, loading }: NextRideCardProps) {
     return (
       <View style={[styles.card, styles.placeholder]}>
         <ActivityIndicator color={colors.primary[600]} />
-        <Text style={styles.placeholderText}>Loading your next ride</Text>
+        <Text style={styles.placeholderText}>{HOME_MESSAGES.NEXT_LOADING}</Text>
       </View>
     );
   }
@@ -41,22 +44,21 @@ export function NextRideCard({ ride, now, loading }: NextRideCardProps) {
     return (
       <View style={[styles.card, styles.empty]}>
         <SedanIllustration style={styles.emptyArt} />
-        <Text style={styles.emptyTitle}>No rides booked</Text>
-        <Text style={styles.emptyBody}>
-          Book ahead for a set date and time, or have a car sent to you now.
-        </Text>
-        <Button label="Book a ride" size="lg" onPress={() => router.navigate('/reserve')} />
+        <Text style={styles.emptyTitle}>{HOME_MESSAGES.NEXT_EMPTY_TITLE}</Text>
+        <Text style={styles.emptyBody}>{HOME_MESSAGES.NEXT_EMPTY_BODY}</Text>
+        <Button label={HOME_MESSAGES.BOOK_RIDE} size="lg" onPress={onBook} />
       </View>
     );
   }
 
   const live = ride.status === 'in-progress';
+  const track = () => router.navigate({ pathname: '/track-ride', params: { rideno: ride.id } });
 
   return (
     <View style={styles.card}>
       <View style={styles.band}>
-        <Text style={styles.eyebrow}>{live ? 'Ride in progress' : 'Next ride'}</Text>
-        <RideStatusBadge status={ride.status} />
+        <Text style={styles.eyebrow}>{live ? HOME_MESSAGES.NEXT_LIVE : HOME_MESSAGES.NEXT_UPCOMING}</Text>
+        <RideStatusBadge status={ride.status} onPress={live ? track : undefined} />
       </View>
 
       <View style={styles.body}>
@@ -70,14 +72,18 @@ export function NextRideCard({ ride, now, loading }: NextRideCardProps) {
         <RideRoute pickup={ride.pickupLocation} destination={ride.destination} />
 
         <View style={styles.meta}>
-          <Meta label="Ride no." value={ride.id} />
-          <Meta label="Payment" value={PAYMENT_METHOD_LABELS[ride.paymentMethod]} />
-          {ride.voucherNo ? <Meta label="Voucher" value={ride.voucherNo} /> : null}
+          <Meta label={HOME_MESSAGES.RIDE_NO} value={ride.id} />
+          <Meta label={HOME_MESSAGES.PAYMENT} value={paymentLabel(ride)} />
         </View>
 
         <View style={[styles.actions, roomy ? styles.actionsWide : null]}>
-          <Button label="View details" onPress={() => router.navigate('/reservation-info')} />
-          <Button label="All rides" variant="outline" onPress={() => router.navigate('/rides')} />
+          {live ? <Button label={RIDES_MESSAGES.TRACK} onPress={track} /> : null}
+          <Button
+            label={HOME_MESSAGES.VIEW_DETAILS}
+            variant={live ? 'outline' : 'primary'}
+            onPress={() => router.navigate({ pathname: '/reservation-info', params: { rideno: ride.id } })}
+          />
+          <Button label={HOME_MESSAGES.ALL_RIDES} variant="outline" onPress={() => router.navigate('/rides')} />
         </View>
       </View>
     </View>

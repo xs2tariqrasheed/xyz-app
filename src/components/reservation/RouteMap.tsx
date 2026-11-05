@@ -1,12 +1,14 @@
-import { Image } from 'expo-image';
-import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { RouteMapView } from '@/components/reservation/RouteMapView';
 import { hasGoogleMapsKey } from '@/config/maps';
+import { ROUTE_MAP_MESSAGES } from '@/constants/messages';
 import type { AddressSuggestion } from '@/services/places';
 import { formatDistance, formatDuration, type RouteSummary } from '@/services/routes';
-import { buildStaticMapUrl } from '@/services/staticMap';
-import { colors, radii, space } from '@/theme';
+import { breakpoints, colors, radii, space } from '@/theme';
+import { placePoint } from '@/utils/coordinates';
+import { decodePolyline, type LatLngPoint } from '@/utils/polyline';
 
 export type RouteMapProps = {
   origin: AddressSuggestion | null;
@@ -14,52 +16,85 @@ export type RouteMapProps = {
   route: RouteSummary | null;
   loading: boolean;
   error: string | null;
+  /** Where the car has been and where it is now (Track your route). */
+  trail?: readonly LatLngPoint[];
+  car?: LatLngPoint | null;
+  carTitle?: string;
+  /** Distance and drive time under the map; the booking form shows them. */
+  showStats?: boolean;
+  /** Replaces the stand-in's note when there is no route to draw. */
+  emptyNote?: string;
+  /**
+   * Keep the interactive map, with whatever pins, trail and car there are,
+   * when there is no drive to draw (as-directed ride, no route found). Track
+   * your route sets it; the booking form keeps its stand-in until both ends are set.
+   */
+  mapWithoutRoute?: boolean;
 };
 
 /**
- * The pickup-to-drop-off leg, drawn on a Maps Static API image.
+ * The pickup-to-drop-off leg on an interactive map the customer can zoom and
+ * pan (`RouteMapView`: react-native-maps on iOS / Android, the Maps
+ * JavaScript API on web), with the distance and drive time under it.
  *
- * A static image rather than an interactive map: it renders identically on
- * web, iOS and Android with no extra dependency. Swapping in `expo-maps` on
- * native (plus the Maps JavaScript API on web) only touches this file.
+ * The A / B pins sit at each end's stored position (a loaded reservation's
+ * `oepickuplat/lon`, `oedropofflat/lon`) and fall back to where Directions
+ * starts and ends the drive when the place has none.
  */
-export function RouteMap({ origin, destination, route, loading, error }: RouteMapProps) {
-  const [width, setWidth] = useState(0);
-
-  const height = Math.round((width * 9) / 16);
-  const mapUrl = route && width > 0 ? buildStaticMapUrl({ route, width, height }) : null;
+export function RouteMap({
+  origin,
+  destination,
+  route,
+  loading,
+  error,
+  trail,
+  car,
+  carTitle,
+  showStats = true,
+  emptyNote,
+  mapWithoutRoute = false,
+}: RouteMapProps) {
+  const path = useMemo(() => (route ? decodePolyline(route.encodedPolyline) : []), [route]);
+  const start = useMemo(() => placePoint(origin?.place) ?? route?.start ?? null, [origin, route]);
+  const end = useMemo(() => (destination ? (placePoint(destination.place) ?? route?.end ?? null) : null), [destination, route]);
+  const drawable = Boolean(start || end || car || (trail && trail.length > 0));
+  const showMap = hasGoogleMapsKey && (route !== null || (mapWithoutRoute && drawable));
+  // A taller frame on phones leaves room to pinch and drag.
+  const { width } = useWindowDimensions();
+  const narrow = width < breakpoints.sm;
 
   return (
     <View style={styles.root}>
-      <View
-        style={styles.frame}
-        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-      >
-        {mapUrl ? (
-          <Image
-            source={{ uri: mapUrl }}
-            style={styles.image}
-            contentFit="cover"
-            transition={200}
-            accessibilityLabel={`Route from ${origin?.primary} to ${destination?.primary}`}
+      <View style={[styles.frame, narrow ? styles.frameNarrow : null]}>
+        {showMap ? (
+          <RouteMapView
+            start={start}
+            end={end}
+            path={path}
+            startTitle={origin?.primary ?? ''}
+            endTitle={destination?.primary ?? ''}
+            accessibilityLabel={`Route from ${origin?.primary ?? ROUTE_MAP_MESSAGES.PICKUP} to ${destination?.primary ?? ROUTE_MAP_MESSAGES.DESTINATION}`}
+            trail={trail}
+            car={car}
+            carTitle={carTitle}
           />
         ) : (
-          <Schematic origin={origin} destination={destination} error={error} />
+          <Schematic origin={origin} destination={destination} error={error} emptyNote={emptyNote} />
         )}
 
         {loading ? (
           <View style={styles.loading}>
             <ActivityIndicator color={colors.primary[500]} />
-            <Text style={styles.loadingLabel}>Finding the best route…</Text>
+            <Text style={styles.loadingLabel}>{ROUTE_MAP_MESSAGES.FINDING_ROUTE}</Text>
           </View>
         ) : null}
       </View>
 
-      {route ? (
+      {route && showStats ? (
         <View style={styles.stats}>
-          <Stat label="Distance" value={formatDistance(route.distanceMeters)} />
+          <Stat label={ROUTE_MAP_MESSAGES.DISTANCE} value={formatDistance(route.distanceMeters)} />
           <View style={styles.statDivider} />
-          <Stat label="Drive time" value={formatDuration(route.durationSeconds)} />
+          <Stat label={ROUTE_MAP_MESSAGES.DRIVE_TIME} value={formatDuration(route.durationSeconds)} />
         </View>
       ) : null}
     </View>
@@ -80,18 +115,22 @@ function Schematic({
   origin,
   destination,
   error,
+  emptyNote,
 }: {
   origin: AddressSuggestion | null;
   destination: AddressSuggestion | null;
   error: string | null;
+  emptyNote?: string;
 }) {
   const note = error
     ? error
-    : !hasGoogleMapsKey
-      ? 'Add a Google Maps API key to draw the live route here.'
-      : !origin || !destination
-        ? 'Choose both addresses to preview the route.'
-        : 'No route found between these two addresses.';
+    : emptyNote
+      ? emptyNote
+      : !hasGoogleMapsKey
+        ? ROUTE_MAP_MESSAGES.NO_KEY
+        : !origin || !destination
+          ? ROUTE_MAP_MESSAGES.CHOOSE_BOTH
+          : ROUTE_MAP_MESSAGES.NO_ROUTE;
 
   return (
     <View style={styles.schematic}>
@@ -107,10 +146,10 @@ function Schematic({
 
       <View style={styles.legLabels}>
         <Text style={styles.legLabel} numberOfLines={1}>
-          {origin?.primary ?? 'Pickup'}
+          {origin?.primary ?? ROUTE_MAP_MESSAGES.PICKUP}
         </Text>
         <Text style={[styles.legLabel, styles.legLabelEnd]} numberOfLines={1}>
-          {destination?.primary ?? 'Destination'}
+          {destination?.primary ?? ROUTE_MAP_MESSAGES.DESTINATION}
         </Text>
       </View>
 
@@ -130,7 +169,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSunken,
     overflow: 'hidden',
   },
-  image: { width: '100%', height: '100%' },
+  frameNarrow: { aspectRatio: 4 / 3 },
 
   loading: {
     position: 'absolute',

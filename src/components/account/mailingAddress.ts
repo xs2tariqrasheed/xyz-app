@@ -1,5 +1,16 @@
-import { UNITED_STATES, usStateName } from '@/data/regions';
-import { digitsOnly, isValidUsZip, US_PHONE_LENGTH } from '@/utils/contact';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { MAILING_ADDRESS_MESSAGES as M, VALIDATION_MESSAGES as V } from '@/constants/messages';
+import { UNITED_STATES } from '@/data/regions';
+import { digitsOnly } from '@/utils/phone';
+import {
+  hasNoDoubleQuote,
+  hasValidStreetChars,
+  intlPhoneProblem,
+  isValidBuildingNo,
+  isValidStreetName,
+  isValidUsPhone,
+  isValidZip,
+} from '@/utils/validation';
 
 export type AddressType = 'home' | 'office';
 
@@ -25,26 +36,10 @@ export type MailingAddress = {
 };
 
 /**
- * The address currently on file.
- *
- * Stands in for the profile API until it exists — the page reads its initial
- * state from here and writes back to it on save.
+ * A blank form: registration starts here, and so does the Update Mailing
+ * Address screen when the profile carries no address. Office is the legacy
+ * default.
  */
-export const SAVED_MAILING_ADDRESS: MailingAddress = {
-  country: UNITED_STATES,
-  state: 'NY',
-  city: 'Manhattan',
-  postalCode: '10103',
-  buildingNumber: '666',
-  streetName: '5 Ave',
-  crossStreet: '53 St',
-  unit: '',
-  phone: '',
-  intlDialCode: '',
-  intlPhone: '',
-  addressType: 'home',
-};
-
 export const EMPTY_MAILING_ADDRESS: MailingAddress = {
   country: UNITED_STATES,
   state: '',
@@ -57,7 +52,7 @@ export const EMPTY_MAILING_ADDRESS: MailingAddress = {
   phone: '',
   intlDialCode: '',
   intlPhone: '',
-  addressType: 'home',
+  addressType: 'office',
 };
 
 /** One message per field that failed. An empty object means the form is good. */
@@ -67,45 +62,69 @@ export function isUnitedStates(value: MailingAddress): boolean {
   return value.country === UNITED_STATES;
 }
 
+/** Flat by design — a value compare, so the Update button knows it has work. */
+export function mailingAddressEqual(a: MailingAddress, b: MailingAddress): boolean {
+  return (Object.keys(a) as (keyof MailingAddress)[]).every((field) => a[field] === b[field]);
+}
+
 /**
- * Validates the whole address at once.
- *
- * Rules follow what a carrier actually needs: country, region, city, postal
- * code and a street line. Phone numbers stay optional, but a partial one is an
- * error — a half-typed number is worse than none.
+ * Validates the whole address at once, to the legacy site's rules
+ * (reverse-engineer-implemented/guide/08, reverse-engineer-guide/26): a complete street address, and at least
+ * one phone at it — US, or a full international code + number pair.
  */
 export function validateMailingAddress(value: MailingAddress): MailingAddressErrors {
   const errors: MailingAddressErrors = {};
   const domestic = isUnitedStates(value);
 
-  if (!value.country.trim()) errors.country = 'Pick a country.';
+  if (!value.country.trim()) errors.country = M.COUNTRY_REQUIRED;
 
-  if (!value.state.trim()) {
-    errors.state = domestic ? 'Pick a state.' : 'Enter a state, province or region.';
+  if (!value.state.trim()) errors.state = domestic ? M.STATE_REQUIRED : M.REGION_REQUIRED;
+
+  if (!value.city.trim()) errors.city = M.CITY_REQUIRED;
+
+  const postalCode = value.postalCode.trim();
+  if (!postalCode) {
+    errors.postalCode = domestic ? M.ZIP_REQUIRED : M.POSTAL_CODE_REQUIRED;
+  } else if (domestic && !isValidZip(postalCode)) {
+    errors.postalCode = V.ZIP_INVALID;
   }
 
-  if (!value.city.trim()) errors.city = 'Enter a city.';
+  const building = value.buildingNumber.trim();
+  if (!building) errors.buildingNumber = M.BUILDING_REQUIRED;
+  else if (!isValidBuildingNo(building)) errors.buildingNumber = V.BUILDING_INVALID;
 
-  if (!value.postalCode.trim()) {
-    errors.postalCode = domestic ? 'Enter a ZIP code.' : 'Enter a postal code.';
-  } else if (domestic && !isValidUsZip(value.postalCode)) {
-    errors.postalCode = 'Use 5 digits, or 9 for ZIP+4.';
+  const street = value.streetName.trim();
+  if (!street) errors.streetName = M.STREET_REQUIRED;
+  else if (!isValidStreetName(street)) errors.streetName = V.STREET_INVALID;
+
+  const crossStreet = value.crossStreet.trim();
+  if (crossStreet && (!hasValidStreetChars(crossStreet) || crossStreet.length > FIELD_LIMITS.MAILING_CROSS_STREET)) {
+    errors.crossStreet = V.STREET_CHARACTERS;
   }
 
-  if (!value.buildingNumber.trim()) errors.buildingNumber = 'Enter a building number.';
-  if (!value.streetName.trim()) errors.streetName = 'Enter a street name.';
+  if (!hasNoDoubleQuote(value.unit)) errors.unit = M.UNIT_INVALID;
 
   const phoneDigits = digitsOnly(value.phone);
-  if (phoneDigits.length > 0 && phoneDigits.length !== US_PHONE_LENGTH) {
-    errors.phone = 'A US number needs 10 digits.';
-  }
+  if (phoneDigits.length > 0 && !isValidUsPhone(phoneDigits)) errors.phone = V.US_PHONE_INVALID;
 
+  // The gateway stores the code and number as one run of digits, so a loaded
+  // number's split is a guess — only the pair as a whole is checked.
   const intlDigits = digitsOnly(value.intlPhone);
   const dialDigits = digitsOnly(value.intlDialCode);
-  if (intlDigits.length > 0 && dialDigits.length === 0) {
-    errors.intlDialCode = 'Add the country and city code.';
-  } else if (dialDigits.length > 0 && intlDigits.length === 0) {
-    errors.intlPhone = 'Add the phone number.';
+  switch (intlPhoneProblem(dialDigits, intlDigits)) {
+    case 'codeRequired':
+      errors.intlDialCode = V.INTL_CODE_REQUIRED;
+      break;
+    case 'numberRequired':
+      errors.intlPhone = V.INTL_NUMBER_REQUIRED;
+      break;
+    case 'incomplete':
+      errors.intlPhone = V.INTL_NUMBER_INCOMPLETE;
+      break;
+  }
+
+  if (phoneDigits.length === 0 && intlDigits.length === 0 && dialDigits.length === 0) {
+    errors.phone = M.PHONE_REQUIRED;
   }
 
   return errors;
@@ -113,15 +132,4 @@ export function validateMailingAddress(value: MailingAddress): MailingAddressErr
 
 export function countErrors(errors: MailingAddressErrors): number {
   return Object.keys(errors).length;
-}
-
-/** One-line rendering of the address, for the read-back summary. */
-export function formatMailingAddress(value: MailingAddress): string {
-  const street = [value.buildingNumber, value.streetName].map((part) => part.trim()).filter(Boolean).join(' ');
-  const region = isUnitedStates(value) ? usStateName(value.state) : value.state;
-
-  return [street, value.unit, value.crossStreet, value.city, region, value.postalCode, value.country]
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join(', ');
 }

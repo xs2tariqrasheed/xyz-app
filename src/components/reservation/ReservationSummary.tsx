@@ -4,7 +4,6 @@ import type { BillingMethodValue } from '@/components/reservation/BillingMethodS
 import type { PassengerRideInfoValue } from '@/components/reservation/PassengerRideInfoSection';
 import type { PreferencesValue } from '@/components/reservation/PreferencesSection';
 import type { RideAddressInfoValue } from '@/components/reservation/RideAddressInfoSection';
-import { findCarType } from '@/components/reservation/carTypes';
 import { RESERVATION_SECTIONS, sectionIndex } from '@/components/reservation/sections';
 import {
   addressLine,
@@ -22,7 +21,10 @@ export type ReservationSummaryProps = {
   addresses: RideAddressInfoValue;
   billing: BillingMethodValue;
   preferences: PreferencesValue;
-  reservationNumber: string;
+  /** Display name of the chosen car type (from `RES.S.VEHICLE_TYPE`). */
+  carLabel: string;
+  /** Shown only once the server has issued one. */
+  reservationNumber: string | null;
   /** 0-based index of the step being filled in — its group is highlighted. */
   activeIndex: number;
   /** Jump back to an already-reached step from its group heading. */
@@ -42,12 +44,11 @@ export function ReservationSummary({
   addresses,
   billing,
   preferences,
+  carLabel,
   reservationNumber,
   activeIndex,
   onSelect,
-}: ReservationSummaryProps) {
-  const car = findCarType(preferences.carType);
-  const name = `${info.firstName} ${info.lastName}`.trim();
+}: ReservationSummaryProps) {  const name = `${info.firstName} ${info.lastName}`.trim();
 
   const group = (id: Parameters<typeof sectionIndex>[0], rows: Row[]) => {
     const index = sectionIndex(id);
@@ -86,7 +87,7 @@ export function ReservationSummary({
       ...(billing.vipNumber.trim() ? [{ label: 'VIP', value: billing.vipNumber.trim() }] : []),
     ]),
     group('preferences', [
-      { label: 'Vehicle', value: car.label },
+      { label: 'Vehicle', value: orEmpty(carLabel) },
       { label: 'Passengers', value: String(preferences.passengers) },
       { label: 'Extra stops', value: String(preferences.stops) },
       { label: 'Email', value: orEmpty(preferences.email) },
@@ -94,7 +95,7 @@ export function ReservationSummary({
         ? [{ label: 'Confirm by phone', value: formatPhone(preferences.callbackUs) }]
         : []),
     ]),
-    group('receipt', [{ label: 'Reservation #', value: reservationNumber }]),
+    ...(reservationNumber ? [group('receipt', [{ label: 'Reservation #', value: reservationNumber }])] : []),
   ];
 
   return (

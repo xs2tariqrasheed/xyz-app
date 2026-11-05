@@ -4,7 +4,17 @@ import { colors, radii, shadowValues, space } from '@/theme';
 
 import { RESERVATION_SECTIONS } from './sections';
 
+/** One marker on the bar. */
+export type StepTab = {
+  /** Full heading shown above the markers for the active step. */
+  title: string;
+  /** Label beside the marker, where space is tight. */
+  short: string;
+};
+
 export type StepTabsProps = {
+  /** Defaults to the reservation sections. */
+  steps?: readonly StepTab[];
   /** 0-based index of the section currently being filled in. */
   activeIndex: number;
   /** Jump back to an already-reached step. */
@@ -14,14 +24,19 @@ export type StepTabsProps = {
 };
 
 /**
- * Horizontal step navigation for the `/reserve-2` layout, where the rail moved
- * from the left column to the top of the page.
+ * Horizontal step navigation for the reservation wizard (`/reserver-2`) and
+ * the registration wizard.
  *
- * It scrolls horizontally rather than wrapping, so the five markers keep their
+ * It scrolls horizontally rather than wrapping, so the markers keep their
  * order and their connectors on any width.
  */
-export function StepTabs({ activeIndex, onSelect, compact = false }: StepTabsProps) {
-  const total = RESERVATION_SECTIONS.length;
+export function StepTabs({
+  steps = RESERVATION_SECTIONS,
+  activeIndex,
+  onSelect,
+  compact = false,
+}: StepTabsProps) {
+  const total = steps.length;
   const percent = ((activeIndex + 1) / total) * 100;
 
   return (
@@ -31,7 +46,7 @@ export function StepTabs({ activeIndex, onSelect, compact = false }: StepTabsPro
           STEP {activeIndex + 1} OF {total}
         </Text>
         <Text style={styles.headingTitle} numberOfLines={1}>
-          {RESERVATION_SECTIONS[activeIndex].title}
+          {steps[activeIndex].title}
         </Text>
       </View>
 
@@ -40,13 +55,13 @@ export function StepTabs({ activeIndex, onSelect, compact = false }: StepTabsPro
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >
-        {RESERVATION_SECTIONS.map((section, index) => {
+        {steps.map((section, index) => {
           const state = index === activeIndex ? 'active' : index < activeIndex ? 'done' : 'todo';
           const reachable = index < activeIndex;
           const last = index === total - 1;
 
           return (
-            <View key={section.id} style={styles.item}>
+            <View key={section.title} style={styles.item}>
               <Pressable
                 accessibilityRole={reachable ? 'button' : undefined}
                 accessibilityLabel={reachable ? `Go to ${section.title}` : undefined}

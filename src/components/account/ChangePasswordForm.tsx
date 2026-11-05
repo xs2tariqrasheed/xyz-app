@@ -1,12 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { FormCard } from '@/components/ui/FormCard';
 import { CheckGlyph } from '@/components/ui/Glyph';
 import { PasswordField } from '@/components/ui/PasswordField';
 import { Reveal } from '@/components/ui/Reveal';
+import { ACTION_CODES, GATEWAY_VIEW_NAME } from '@/constants/actionCodes';
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { CHANGE_PASSWORD_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages';
+import { useAuth } from '@/context/AuthContext';
+import { usePostData } from '@/hooks/usePostData';
+import { assertPasswordChanged, AuthError, changePasswordJData } from '@/services/auth';
+import { getErrorDisplay } from '@/services/gateway';
 import { breakpoints, colors, radii, space } from '@/theme';
+import { isAllowedPassword } from '@/utils/validation';
 
 type Values = {
   current: string;
@@ -19,68 +28,68 @@ type Errors = Partial<Record<FieldName, string>>;
 
 const EMPTY: Values = { current: '', next: '', confirm: '' };
 
-/** What a new password has to satisfy, shown live as a checklist. */
+/**
+ * What a new password has to satisfy, shown live as a checklist: the same
+ * rule registration applies (reverse-engineer-guide/26 §5).
+ */
 const RULES = [
-  { id: 'length', label: 'At least 8 characters', test: (value: string) => value.length >= 8 },
   {
-    id: 'case',
-    label: 'An upper and a lower case letter',
-    test: (value: string) => /[a-z]/.test(value) && /[A-Z]/.test(value),
+    id: 'length',
+    label: CHANGE_PASSWORD_MESSAGES.RULE_LENGTH,
+    test: isAllowedPassword,
   },
-  { id: 'number', label: 'At least one number', test: (value: string) => /\d/.test(value) },
 ] as const;
 
 function validate(values: Values): Errors {
   const errors: Errors = {};
 
   if (!values.current) {
-    errors.current = 'Enter your current password.';
+    errors.current = CHANGE_PASSWORD_MESSAGES.OLD_PASSWORD_REQUIRED;
   }
 
   if (!values.next) {
-    errors.next = 'Choose a new password.';
+    errors.next = CHANGE_PASSWORD_MESSAGES.NEW_PASSWORD_REQUIRED;
   } else if (!RULES.every((rule) => rule.test(values.next))) {
-    errors.next = 'This password does not meet the requirements below yet.';
+    errors.next = CHANGE_PASSWORD_MESSAGES.NEW_PASSWORD_WEAK;
   } else if (values.next === values.current) {
-    errors.next = 'Your new password must be different from your current one.';
+    errors.next = CHANGE_PASSWORD_MESSAGES.NEW_PASSWORD_UNCHANGED;
   }
 
   if (!values.confirm) {
-    errors.confirm = 'Re-type your new password.';
+    errors.confirm = CHANGE_PASSWORD_MESSAGES.CONFIRM_PASSWORD_REQUIRED;
   } else if (values.next && values.confirm !== values.next) {
-    errors.confirm = 'The two passwords do not match.';
+    errors.confirm = VALIDATION_MESSAGES.PASSWORD_MISMATCH;
   }
 
   return errors;
 }
 
+function describeChangeError(error: unknown): string {
+  if (error instanceof AuthError) return error.message;
+  return getErrorDisplay(error).customDescription;
+}
+
 /**
- * Old / new / confirm, validated on the client.
- *
- * There is no auth service in the project yet, so submitting runs a short
- * pending state and reports success locally — swap {@link save} for the real
- * call when the endpoint lands.
+ * Old / new / confirm, validated on the client, then sent as
+ * `PROF.U.PASSWORD` for the signed-in login. The session holds no password,
+ * so it stays valid after the change.
  */
 export function ChangePasswordForm() {
   const { width } = useWindowDimensions();
   // Only centre the action once the card is wider than a phone.
   const roomy = width >= breakpoints.sm;
 
+  const { session } = useAuth();
+  const change = usePostData();
+
   const [values, setValues] = useState<Values>(EMPTY);
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   // Bumped on success to remount the inputs, so a field left revealed does
   // not show the *next* password in the clear.
   const [formKey, setFormKey] = useState(0);
-
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
 
   const errors = validate(values);
   // A field only shows its error once it has been left, or once Update was hit.
@@ -89,65 +98,88 @@ export function ChangePasswordForm() {
   const patch = (next: Partial<Values>) => {
     setValues((current) => ({ ...current, ...next }));
     setSaved(false);
+    setFormError(null);
   };
 
   const blur = (field: FieldName) => () => setTouched((current) => ({ ...current, [field]: true }));
 
-  const save = () => {
+  const save = async () => {
+    // The (app) group only renders while signed in, so a session is always there.
+    if (saving || !session) return;
+
     if (Object.keys(errors).length > 0) {
       setTouched({ current: true, next: true, confirm: true });
       return;
     }
 
     setSaving(true);
-    timer.current = setTimeout(() => {
-      setSaving(false);
+    setFormError(null);
+    try {
+      const response = await change.mutateAsync(
+        ACTION_CODES.CHANGE_PASSWORD,
+        GATEWAY_VIEW_NAME,
+        changePasswordJData(session.loginId, values.current, values.next),
+        // A resend after a lost response would carry an old password that no
+        // longer matches, and report a change that worked as a failure.
+        { retry: false },
+      );
+      assertPasswordChanged(response);
       setSaved(true);
       setValues(EMPTY);
       setTouched({});
       setFormKey((current) => current + 1);
-    }, 700);
+    } catch (error) {
+      setFormError(describeChangeError(error));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <FormCard title="Please enter your old and new password">
+    <FormCard title={CHANGE_PASSWORD_MESSAGES.FORM_TITLE}>
+      {formError ? (
+        <Alert tone="danger" title={CHANGE_PASSWORD_MESSAGES.FAILED_TITLE} message={formError} />
+      ) : null}
+
       {saved ? (
         <Reveal style={styles.notice}>
           <View style={styles.noticeIcon}>
             <CheckGlyph size={16} />
           </View>
-          <Text style={styles.noticeText}>
-            Password updated. Use your new password the next time you sign in.
-          </Text>
+          <Text style={styles.noticeText}>{CHANGE_PASSWORD_MESSAGES.SUCCESS_MESSAGE}</Text>
         </Reveal>
       ) : null}
 
       <PasswordField
+        maxLength={FIELD_LIMITS.PASSWORD}
         key={`current-${formKey}`}
-        label="Old password"
+        label={CHANGE_PASSWORD_MESSAGES.OLD_PASSWORD_LABEL}
         required
         value={values.current}
         onChangeText={(current) => patch({ current })}
         onBlur={blur('current')}
         error={errorFor('current')}
-        placeholder="Your current password"
+        placeholder={CHANGE_PASSWORD_MESSAGES.OLD_PASSWORD_PLACEHOLDER}
         autoComplete="current-password"
         textContentType="password"
         returnKeyType="next"
+        editable={!saving}
       />
 
       <PasswordField
+        maxLength={FIELD_LIMITS.PASSWORD}
         key={`next-${formKey}`}
-        label="New password"
+        label={CHANGE_PASSWORD_MESSAGES.NEW_PASSWORD_LABEL}
         required
         value={values.next}
         onChangeText={(next) => patch({ next })}
         onBlur={blur('next')}
         error={errorFor('next')}
-        placeholder="At least 8 characters"
+        placeholder={CHANGE_PASSWORD_MESSAGES.NEW_PASSWORD_PLACEHOLDER}
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="next"
+        editable={!saving}
       />
 
       <View style={styles.rules}>
@@ -166,23 +198,25 @@ export function ChangePasswordForm() {
       </View>
 
       <PasswordField
+        maxLength={FIELD_LIMITS.PASSWORD}
         key={`confirm-${formKey}`}
-        label="Confirm new password"
+        label={CHANGE_PASSWORD_MESSAGES.CONFIRM_PASSWORD_LABEL}
         required
         value={values.confirm}
         onChangeText={(confirm) => patch({ confirm })}
         onBlur={blur('confirm')}
         error={errorFor('confirm')}
-        placeholder="Re-type the new password"
+        placeholder={CHANGE_PASSWORD_MESSAGES.CONFIRM_PASSWORD_PLACEHOLDER}
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="done"
         onSubmitEditing={save}
+        editable={!saving}
       />
 
       <View style={[styles.actions, roomy ? styles.actionsRoomy : null]}>
         <Button
-          label={saving ? 'Updating…' : 'Update'}
+          label={saving ? CHANGE_PASSWORD_MESSAGES.SUBMITTING : CHANGE_PASSWORD_MESSAGES.SUBMIT}
           size="lg"
           onPress={save}
           disabled={saving}

@@ -3,19 +3,21 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from "react-native";
 
+import { CardDetailsFields, type CardFieldsErrors } from "@/components/payment/CardDetailsFields";
 import { Button } from "@/components/ui/Button";
-import { CheckboxCard } from "@/components/ui/Checkbox";
 import { Field } from "@/components/ui/Field";
 import { BuildingGlyph, CardGlyph } from "@/components/ui/Glyph";
 import { OptionCards } from "@/components/ui/OptionCards";
 import { Reveal } from "@/components/ui/Reveal";
+import { SelectField } from "@/components/ui/SelectField";
 import { TextField } from "@/components/ui/TextField";
+import { FIELD_LIMITS } from "@/constants/fieldLimits";
+import { RESERVATION_MESSAGES } from "@/constants/messages";
+import type { RequirementField } from "@/services/billing";
 import {
-  breakpoints,
   colors,
   focusedFieldStyle,
   nativeFocusRingReset,
@@ -24,17 +26,11 @@ import {
 } from "@/theme";
 import {
   BRAND_LABEL,
-  cardNumberLength,
-  cvvLength,
   detectBrand,
-  digitsOnly,
-  formatCardNumber,
-  formatExpiry,
   isCompleteCardNumber,
   isCompleteCvv,
   isValidExpiry,
   maskCardNumber,
-  passesLuhn,
   type CardBrand,
 } from "@/utils/payment";
 
@@ -59,8 +55,45 @@ export type BillingMethodValue = {
   /** Priority code issued by the company travel desk. Optional. */
   vipNumber: string;
   card: CardDetails;
-  saveCard: boolean;
+  /** Answers to the account's requirement fields, by number (1–4). */
+  requirements: Partial<Record<number, string>>;
+  /** `P_APPROVAL_NUM` from the card authorisation; '' until approved. */
+  approvalNumber: string;
+  /** Which card details the approval covers, so a changed card is re-authorised. */
+  approvedFor: string;
+  /**
+   * An edited reservation's card, masked as the server stores it. Sent back
+   * unchanged unless a new number is typed; never a full number.
+   */
+  cardOnFile: string;
+  cardTypeOnFile: string;
 };
+
+export function emptyBilling(accountNumber = ""): BillingMethodValue {
+  return {
+    method: "corporate",
+    accountNumber,
+    vipNumber: "",
+    card: emptyCardDetails,
+    requirements: {},
+    approvalNumber: "",
+    approvedFor: "",
+    cardOnFile: "",
+    cardTypeOnFile: "",
+  };
+}
+
+export type BillingField =
+  | "method"
+  | "account"
+  | "vip"
+  | "postalCode"
+  | "requirement1"
+  | "requirement2"
+  | "requirement3"
+  | "requirement4"
+  | keyof CardFieldsErrors;
+export type BillingErrors = Partial<Record<BillingField, string>>;
 
 export const emptyCardDetails: CardDetails = {
   holder: "",
@@ -113,37 +146,52 @@ const BILLING_METHODS: readonly MethodOption[] = [
 ];
 
 /** The two branches each method needs — `corporate-card` asks for both. */
-const needsAccount = (method: BillingMethodId) => method !== "card";
-const needsCard = (method: BillingMethodId) => method !== "corporate";
+export const needsAccount = (method: BillingMethodId) => method !== "card";
+export const needsCard = (method: BillingMethodId) => method !== "corporate";
 
 export type BillingMethodSectionProps = {
   value: BillingMethodValue;
   onChange: (next: BillingMethodValue) => void;
   /** Screen-level "now", so an expiry check cannot disagree with the pickup date. */
   today: Date;
+  /** Methods the account allows (`RES.S.BILLING_METHOD`); all three when omitted. */
+  allowedMethods?: readonly BillingMethodId[];
+  /** Fields the account asks for (`RES.S.ACCOUNT_REQUIREMENTS_LIST`). */
+  requirementFields?: readonly RequirementField[];
+  /** Fired when the VIP field is left, so the number can be checked. */
+  onVipBlur?: () => void;
+  /** Card authorisation in progress — the waiting message replaces the summary. */
+  authorising?: boolean;
+  errors?: BillingErrors;
 };
 
 export function BillingMethodSection({
   value,
   onChange,
   today,
+  allowedMethods,
+  requirementFields = [],
+  onVipBlur,
+  authorising,
+  errors = {},
 }: BillingMethodSectionProps) {
-  const { width } = useWindowDimensions();
-  const twoUp = width >= breakpoints.sm;
-
   const patch = (next: Partial<BillingMethodValue>) =>
     onChange({ ...value, ...next });
   const patchCard = (next: Partial<CardDetails>) =>
     patch({ card: { ...value.card, ...next } });
 
   const brand = detectBrand(value.card.number);
+  const methods = BILLING_METHODS.filter(
+    (option) => !allowedMethods || allowedMethods.includes(option.id) || option.id === value.method,
+  );
 
   return (
     <View style={styles.root}>
       <OptionCards
-        label="Billing method"
+        label={RESERVATION_MESSAGES.BILLING_METHOD_LABEL}
         required
-        options={BILLING_METHODS.map((option) => ({
+        error={errors.method}
+        options={methods.map((option) => ({
           value: option.id,
           label: option.label,
           caption: option.caption,
@@ -160,17 +208,33 @@ export function BillingMethodSection({
           <>
             <AccountNumberField
               value={value.accountNumber}
-              onChange={(accountNumber) => patch({ accountNumber })}
+              // A new account has its own requirements, answers and approval.
+              onChange={(accountNumber) => patch({ accountNumber, requirements: {} })}
+              error={errors.account}
             />
             <TextField
               label="VIP number"
               value={value.vipNumber}
-              onChangeText={(vipNumber) => patch({ vipNumber })}
-              placeholder="e.g. VIP-204"
-              autoCapitalize="characters"
+              onChangeText={(vipNumber) => patch({ vipNumber: vipNumber.replace(/\D/g, "") })}
+              onBlur={onVipBlur}
+              placeholder="e.g. 204"
+              keyboardType="number-pad"
+              maxLength={FIELD_LIMITS.VIP_NUMBER}
               autoCorrect={false}
               returnKeyType="done"
+              error={errors.vip}
             />
+            {requirementFields.map((field) => (
+              <RequirementInput
+                key={field.index}
+                field={field}
+                value={value.requirements[field.index] ?? ""}
+                onChange={(answer) =>
+                  patch({ requirements: { ...value.requirements, [field.index]: answer } })
+                }
+                error={errors[`requirement${field.index}` as BillingField]}
+              />
+            ))}
           </>
         ) : null}
 
@@ -185,18 +249,60 @@ export function BillingMethodSection({
         {needsCard(value.method) ? (
           <CardFields
             card={value.card}
-            brand={brand}
             onChange={patchCard}
-            saveCard={value.saveCard}
-            onSaveCardChange={(saveCard) => patch({ saveCard })}
-            twoUp={twoUp}
+            cardOnFile={value.cardOnFile}
             today={today}
+            errors={errors}
           />
         ) : null}
       </Reveal>
 
-      <Summary value={value} brand={brand} today={today} />
+      {authorising ? (
+        <View style={styles.pending}>
+          <Text style={styles.pendingText}>{RESERVATION_MESSAGES.CARD_PENDING}</Text>
+        </View>
+      ) : (
+        <Summary value={value} brand={brand} today={today} />
+      )}
     </View>
+  );
+}
+
+/** One of the account's own fields: a pick-list when it lists answers, else free text. */
+function RequirementInput({
+  field,
+  value,
+  onChange,
+  error,
+}: {
+  field: RequirementField;
+  value: string;
+  onChange: (next: string) => void;
+  error?: string;
+}) {
+  const label = field.label || `${RESERVATION_MESSAGES.REQUIREMENT_FALLBACK_LABEL} ${field.index}`;
+  if (field.options.length > 0) {
+    return (
+      <SelectField
+        label={label}
+        required
+        value={value}
+        options={field.options}
+        onChange={onChange}
+        error={error}
+      />
+    );
+  }
+  return (
+    <TextField
+      label={label}
+      required
+      value={value}
+      onChangeText={onChange}
+      maxLength={FIELD_LIMITS.REQUIREMENT_ANSWER}
+      autoCorrect={false}
+      error={error}
+    />
   );
 }
 
@@ -207,9 +313,11 @@ export function BillingMethodSection({
 function AccountNumberField({
   value,
   onChange,
+  error,
 }: {
   value: string;
   onChange: (next: string) => void;
+  error?: string;
 }) {
   // A blank account opens straight into edit mode, so there is nothing to press first.
   const [editing, setEditing] = useState(() => value.trim().length === 0);
@@ -218,7 +326,7 @@ function AccountNumberField({
 
   if (!editing) {
     return (
-      <Field label="Account number" required>
+      <Field label="Account number" required error={error}>
         <View style={styles.locked}>
           <View style={styles.iconWell}>
             <BuildingGlyph color={colors.primary[600]} size={16} />
@@ -243,11 +351,12 @@ function AccountNumberField({
   const trimmed = draft.trim();
 
   return (
-    <Field label="Account number" required>
+    <Field label="Account number" required error={error}>
       <TextInput
         value={draft}
         onChangeText={setDraft}
-        placeholder="e.g. CORP-48213"
+        placeholder="e.g. 99005"
+        maxLength={FIELD_LIMITS.BOOKING_ACCOUNT_NO}
         placeholderTextColor={colors.textDisabled}
         autoCapitalize="characters"
         autoCorrect={false}
@@ -291,97 +400,26 @@ function AccountNumberField({
 
 function CardFields({
   card,
-  brand,
   onChange,
-  saveCard,
-  onSaveCardChange,
-  twoUp,
+  cardOnFile,
   today,
+  errors,
 }: {
   card: CardDetails;
-  brand: CardBrand;
   onChange: (next: Partial<CardDetails>) => void;
-  saveCard: boolean;
-  onSaveCardChange: (next: boolean) => void;
-  twoUp: boolean;
+  cardOnFile: string;
   today: Date;
+  errors: BillingErrors;
 }) {
-  const digits = digitsOnly(card.number);
-  // Only complain once there is a whole number to judge — not mid-typing.
-  const numberError =
-    digits.length === cardNumberLength(brand) && !passesLuhn(card.number)
-      ? "Check this number — the digits do not add up."
-      : undefined;
-  const expiryError =
-    digitsOnly(card.expiry).length === 4 && !isValidExpiry(card.expiry, today)
-      ? "Enter a future MM/YY."
-      : undefined;
-
   return (
     <>
-      <TextField
-        label="Name on card"
-        required
-        value={card.holder}
-        onChangeText={(holder) => onChange({ holder })}
-        placeholder="e.g. Amara Okafor"
-        autoComplete="cc-name"
-        textContentType="creditCardName"
-        autoCapitalize="words"
-        autoCorrect={false}
-        returnKeyType="next"
-      />
-
-      <TextField
-        label="Card number"
-        required
-        value={card.number}
-        onChangeText={(next) => onChange({ number: formatCardNumber(next) })}
-        placeholder={
-          brand === "amex" ? "3782 822463 10005" : "4242 4242 4242 4242"
-        }
-        keyboardType="number-pad"
-        inputMode="numeric"
-        autoComplete="cc-number"
-        textContentType="creditCardNumber"
-        maxLength={brand === "amex" ? 17 : 19}
-        returnKeyType="next"
-        error={numberError}
-      />
-
-      <View style={[styles.row, twoUp ? styles.rowWide : null]}>
-        <TextField
-          style={styles.field}
-          label="Expiry"
-          required
-          value={card.expiry}
-          onChangeText={(next) => onChange({ expiry: formatExpiry(next) })}
-          placeholder="MM/YY"
-          keyboardType="number-pad"
-          inputMode="numeric"
-          autoComplete="cc-exp"
-          textContentType="creditCardExpiration"
-          maxLength={5}
-          returnKeyType="next"
-          error={expiryError}
-        />
-        <TextField
-          style={styles.field}
-          label="Security code"
-          required
-          value={card.cvv}
-          onChangeText={(next) =>
-            onChange({ cvv: digitsOnly(next).slice(0, cvvLength(brand)) })
-          }
-          placeholder={brand === "amex" ? "4 digits" : "3 digits"}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          autoComplete="cc-csc"
-          textContentType="creditCardSecurityCode"
-          maxLength={cvvLength(brand)}
-          returnKeyType="next"
-        />
-      </View>
+      <Text style={styles.cardNote}>{RESERVATION_MESSAGES.CARD_PRESENT_NOTE}</Text>
+      {cardOnFile && !card.number ? (
+        <Text style={styles.cardNote}>
+          {RESERVATION_MESSAGES.CARD_UNCHANGED} {maskCardNumber(cardOnFile)}
+        </Text>
+      ) : null}
+      <CardDetailsFields value={card} onChange={onChange} today={today} errors={errors} />
 
       <TextField
         label="Billing ZIP / postal code"
@@ -393,14 +431,9 @@ function CardFields({
         textContentType="postalCode"
         autoCapitalize="characters"
         autoCorrect={false}
-        maxLength={10}
+        maxLength={FIELD_LIMITS.ZIP}
         returnKeyType="done"
-      />
-
-      <CheckboxCard
-        checked={saveCard}
-        onChange={onSaveCardChange}
-        label="Save this card for next time"
+        error={errors.postalCode}
       />
     </>
   );
@@ -420,13 +453,17 @@ function Summary({
   const vip = value.vipNumber.trim();
   const masked = maskCardNumber(value.card.number);
 
+  const onFile = !value.card.number && value.cardOnFile.length > 0;
   const cardReady =
-    isCompleteCardNumber(value.card.number) &&
-    isValidExpiry(value.card.expiry, today) &&
-    isCompleteCvv(value.card.cvv, brand);
-  const cardLine = cardReady
-    ? `${BRAND_LABEL[brand]} ${masked}`
-    : "Card details incomplete";
+    onFile ||
+    (isCompleteCardNumber(value.card.number) &&
+      isValidExpiry(value.card.expiry, today) &&
+      isCompleteCvv(value.card.cvv, brand));
+  const cardLine = onFile
+    ? maskCardNumber(value.cardOnFile)
+    : cardReady
+      ? `${BRAND_LABEL[brand]} ${masked}`
+      : "Card details incomplete";
 
   let title: string;
   let detail: string;
@@ -471,10 +508,16 @@ function Summary({
 const styles = StyleSheet.create({
   root: { gap: space.lg },
   branch: { gap: space.lg },
+  cardNote: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
+  pending: {
+    backgroundColor: colors.warningBg,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+    borderRadius: radii.lg,
+    padding: space.md,
+  },
+  pendingText: { color: colors.textBody, fontSize: 13, lineHeight: 18 },
   iconPair: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  row: { gap: space.lg },
-  rowWide: { flexDirection: "row" },
-  field: { flex: 1 },
 
   input: {
     ...nativeFocusRingReset,

@@ -1,0 +1,63 @@
+import { FIELD_LIMITS } from '@/constants/fieldLimits';
+import { FEEDBACK_MESSAGES } from '@/constants/messages';
+import type { GatewayJData, GatewayResponse } from '@/services/gateway';
+import { assertResultCode, readRecords } from '@/services/gatewayRows';
+
+/**
+ * "Ask about this ride" — the predefined questions and the rider's answer
+ * (reverse-engineer-implemented/guide/21, reverse-engineer-guide/24): `RES.S.ALL_PREDEFINED_QUESTIONS` and
+ * `RES.I.ASKED_QUESTIONS`, keeping feedback inside the app instead of the
+ * marketing site's forms.
+ */
+
+/** Thrown when the server refuses a question, as opposed to failing. */
+export class FeedbackError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FeedbackError';
+  }
+}
+
+export type PredefinedQuestion = { id: string; text: string };
+
+/** Letters, digits, spaces and full stops — guide 21's rule — plus everyday punctuation it never blocked. */
+const MESSAGE_CHARACTERS = /^[\p{L}\p{N}\s.,?!'-]*$/u;
+
+/** `RES.S.ALL_PREDEFINED_QUESTIONS` headings (guide §10). */
+const QUESTION_HEADINGS = ['question_id', 'question'] as const;
+
+export function toPredefinedQuestions(response: GatewayResponse): PredefinedQuestion[] {
+  return readRecords(response, QUESTION_HEADINGS).flatMap((row) => {
+    const id = row.question_id.trim();
+    const text = row.question.trim();
+    return id && text ? [{ id, text }] : [];
+  });
+}
+
+/** `JData` for {@link ACTION_CODES.ASK_QUESTION}. `P_QUESTION_ID` is a number in the contract. */
+export function askQuestionJData(
+  loginId: string,
+  reservationNumber: string,
+  questionId: string,
+  message: string,
+): GatewayJData {
+  const numeric = Number(questionId);
+  return {
+    P_LOGIN_ID: loginId,
+    P_RESERVATION_NUM: reservationNumber,
+    P_QUESTION_ID: Number.isFinite(numeric) ? numeric : questionId,
+    P_ADDITIONAL_MESSAGE: message.trim(),
+  };
+}
+
+export function assertQuestionSent(response: GatewayResponse): void {
+  assertResultCode(response, (message) => new FeedbackError(message), FEEDBACK_MESSAGES.REJECTED);
+}
+
+export function validateQuestionMessage(message: string): string | null {
+  const trimmed = message.trim();
+  if (trimmed.length > FIELD_LIMITS.QUESTION_MESSAGE || !MESSAGE_CHARACTERS.test(trimmed)) {
+    return FEEDBACK_MESSAGES.MESSAGE_INVALID;
+  }
+  return null;
+}

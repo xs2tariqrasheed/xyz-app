@@ -1,11 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import {
-  canLeaveFeedback,
-  canModifyRide,
-  PAYMENT_METHOD_LABELS,
-  type Ride,
-} from '@/services/rides';
+import { RECEIPTS_MESSAGES, RESERVATION_INFO_MESSAGES, RIDES_MESSAGES } from '@/constants/messages';
+import { canAskAboutRide, canLeaveFeedback, hasReceipt, paymentLabel, type Ride } from '@/services/rides';
 import { colors, radii, shadowValues, space } from '@/theme';
 import { formatClockTime, formatSlashDate } from '@/utils/datetime';
 
@@ -15,23 +11,27 @@ import { RideStatusBadge } from './RideStatusBadge';
 
 export type RideCardProps = {
   ride: Ride;
-  now: Date;
   onAction: RideActionHandler;
 };
 
 /** One ride on a phone: the same ten fields, stacked instead of columned. */
-export function RideCard({ ride, now, onAction }: RideCardProps) {
-  const modifiable = canModifyRide(ride, now);
+export function RideCard({ ride, onAction }: RideCardProps) {
+  const modifiable = ride.canUpdate;
+  const cancelable = ride.canCancel;
+  const askable = canAskAboutRide(ride);
   const feedback = canLeaveFeedback(ride);
+  const receipt = hasReceipt(ride);
+  const live = ride.status === 'in-progress';
+  const track = live ? () => onAction('track', ride) : undefined;
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.rideNo}>{ride.id}</Text>
+          <RideActionLink label={ride.id} onPress={() => onAction('view', ride)} />
           <Text style={styles.passenger}>{ride.passengerName}</Text>
         </View>
-        <RideStatusBadge status={ride.status} />
+        <RideStatusBadge status={ride.status} onPress={track} />
       </View>
 
       <View style={styles.pickupRow}>
@@ -42,24 +42,32 @@ export function RideCard({ ride, now, onAction }: RideCardProps) {
       <RideRoute pickup={ride.pickupLocation} destination={ride.destination} />
 
       <View style={styles.meta}>
-        <Meta label="Payment" value={PAYMENT_METHOD_LABELS[ride.paymentMethod]} />
-        <Meta label="Voucher" value={ride.voucherNo ?? '—'} />
+        <Meta label="Payment" value={paymentLabel(ride)} />
+        <View style={styles.metaItem}>
+          <Text style={styles.metaLabel}>Voucher</Text>
+          {ride.canPrintVoucher ? (
+            <RideActionLink label={RESERVATION_INFO_MESSAGES.VOUCHER} onPress={() => onAction('voucher', ride)} />
+          ) : (
+            <Text style={styles.metaValue}>—</Text>
+          )}
+        </View>
       </View>
 
-      {modifiable || feedback ? (
+      {live || modifiable || cancelable || askable || receipt || feedback ? (
         <View style={styles.actions}>
-          {modifiable ? (
-            <>
-              <RideActionLink label="Modify ride" onPress={() => onAction('modify', ride)} />
-              <RideActionLink
-                label="Cancel ride"
-                tone="danger"
-                onPress={() => onAction('cancel', ride)}
-              />
-            </>
+          {track ? <RideActionLink label={RIDES_MESSAGES.TRACK} onPress={track} /> : null}
+          {modifiable ? <RideActionLink label="Modify ride" onPress={() => onAction('modify', ride)} /> : null}
+          {cancelable ? (
+            <RideActionLink label="Cancel ride" tone="danger" onPress={() => onAction('cancel', ride)} />
+          ) : null}
+          {receipt ? (
+            <RideActionLink label={RECEIPTS_MESSAGES.VIEW} onPress={() => onAction('receipt', ride)} />
           ) : null}
           {feedback ? (
-            <RideActionLink label="Leave feedback" onPress={() => onAction('feedback', ride)} />
+            <RideActionLink label={RIDES_MESSAGES.LEAVE_FEEDBACK} onPress={() => onAction('feedback', ride)} />
+          ) : null}
+          {askable ? (
+            <RideActionLink label={RIDES_MESSAGES.ASK} onPress={() => onAction('ask', ride)} />
           ) : null}
         </View>
       ) : null}
@@ -89,7 +97,6 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
   headerText: { flex: 1, gap: 2 },
-  rideNo: { color: colors.textLink, fontSize: 15, fontWeight: '700' },
   passenger: { color: colors.textMuted, fontSize: 13 },
 
   pickupRow: {

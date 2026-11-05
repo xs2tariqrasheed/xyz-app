@@ -5,6 +5,8 @@
  * reservation is submitted. The real authorisation happens server side.
  */
 
+import { digitsOnly } from '@/utils/phone';
+
 export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown';
 
 export const BRAND_LABEL: Record<CardBrand, string> = {
@@ -14,10 +16,6 @@ export const BRAND_LABEL: Record<CardBrand, string> = {
   discover: 'Discover',
   unknown: 'Card',
 };
-
-export function digitsOnly(value: string): string {
-  return value.replace(/\D/g, '');
-}
 
 /**
  * Brand from the leading digits. Ranges are deliberately loose — this only

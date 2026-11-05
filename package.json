@@ -11,7 +11,10 @@
     "expo-glass-effect": "~57.0.1",
     "expo-image": "~57.0.3",
     "expo-linking": "~57.0.6",
+    "expo-location": "~57.0.21",
+    "expo-print": "~57.0.2",
     "expo-router": "~57.0.14",
+    "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.7",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.2",
@@ -21,24 +24,35 @@
     "react-dom": "19.2.3",
     "react-native": "0.86.2",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-maps": "1.27.2",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
+    "react-native-webview": "13.16.1",
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^24.19.2",
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
+    "recaptcha:dev": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/recaptcha-dev-server.mjs",
     "lint": "expo lint",
-    "build:web": "expo export -p web && cp dist/+not-found.html dist/404.html"
+    "gateway:probe": "node scripts/probe-action-code.mjs",
+    "build:web": "expo export -p web && cp dist/+not-found.html dist/404.html",
+    "build:android:dev": "bash scripts/build-android-apk.sh dev",
+    "build:android:prod": "bash scripts/build-android-apk.sh prod",
+    "test:e2e": "playwright test"
   },
   "private": true
 }
